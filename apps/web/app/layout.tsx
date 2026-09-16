@@ -3,7 +3,7 @@ import { ThemeProvider } from '@/components/shared/ThemeProvider';
 import { QueryProvider } from '@/components/shared/QueryProvider';
 import './globals.css';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://homewolves.com';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

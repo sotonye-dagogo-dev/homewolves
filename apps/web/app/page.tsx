@@ -9,7 +9,7 @@ import { BlogSection } from '@/components/landing/blog-section';
 import { Footer } from '@/components/landing/footer';
 import { MobileBar } from '@/components/landing/mobile-bar';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://homewolves.com';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
 const orgJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',

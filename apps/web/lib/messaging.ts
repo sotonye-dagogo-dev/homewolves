@@ -1,8 +1,27 @@
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '@/hooks/use-auth';
+import { getApiBase } from '@/lib/api-base';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? 'http://localhost:4000';
+
+function getWsUrl(): string {
+  const env = process.env.NEXT_PUBLIC_WS_URL?.trim();
+  if (typeof window === 'undefined') return env && env.length > 0 ? env : 'http://localhost:4000';
+  if (!env || env.length === 0) return window.location.origin.replace(/^http/, 'ws');
+  if (env.startsWith('/')) return `${window.location.origin.replace(/^http/, 'ws')}${env}`;
+  try {
+    const envUrl = new URL(env);
+    const locHost = window.location.host;
+    const envHost = envUrl.host;
+    const stripWww = (h: string) => h.replace(/^www\./i, '');
+    if (stripWww(envHost) === stripWww(locHost) && envHost !== locHost) {
+      return env.replace(envHost, locHost);
+    }
+    if (locHost.endsWith('homewolves.com') && envHost.endsWith('homewolves.com') && envHost !== locHost) {
+      return env.replace(envHost, locHost);
+    }
+  } catch {}
+  return env;
+}
 
 function authHeaders(token?: string | null): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -22,17 +41,17 @@ async function handleResponse(res: Response) {
 // ─── REST API ────────────────────────────────────────────
 
 export async function fetchConversations() {
-  const res = await fetch(`${API_BASE}/messaging/conversations`, { headers: authHeaders() });
+  const res = await fetch(`${getApiBase()}/messaging/conversations`, { headers: authHeaders() });
   return handleResponse(res);
 }
 
 export async function fetchConversation(id: string) {
-  const res = await fetch(`${API_BASE}/messaging/conversations/${id}`, { headers: authHeaders() });
+  const res = await fetch(`${getApiBase()}/messaging/conversations/${id}`, { headers: authHeaders() });
   return handleResponse(res);
 }
 
 export async function createConversation(participantIds: string[], propertyId?: string) {
-  const res = await fetch(`${API_BASE}/messaging/conversations`, {
+  const res = await fetch(`${getApiBase()}/messaging/conversations`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ participantIds, propertyId }),
@@ -41,12 +60,12 @@ export async function createConversation(participantIds: string[], propertyId?: 
 }
 
 export async function fetchMessages(conversationId: string) {
-  const res = await fetch(`${API_BASE}/messaging/conversations/${conversationId}/messages`, { headers: authHeaders() });
+  const res = await fetch(`${getApiBase()}/messaging/conversations/${conversationId}/messages`, { headers: authHeaders() });
   return handleResponse(res);
 }
 
 export async function markConversationRead(conversationId: string) {
-  const res = await fetch(`${API_BASE}/messaging/conversations/${conversationId}/read`, {
+  const res = await fetch(`${getApiBase()}/messaging/conversations/${conversationId}/read`, {
     method: 'POST',
     headers: authHeaders(),
   });
@@ -54,7 +73,7 @@ export async function markConversationRead(conversationId: string) {
 }
 
 export async function fetchUnreadCount() {
-  const res = await fetch(`${API_BASE}/messaging/unread`, { headers: authHeaders() });
+  const res = await fetch(`${getApiBase()}/messaging/unread`, { headers: authHeaders() });
   return handleResponse(res);
 }
 
@@ -69,7 +88,7 @@ export function getSocket(): Socket | null {
 export function connectSocket(userId: string, token: string): Socket {
   if (socketInstance?.connected) return socketInstance;
 
-  socketInstance = io(`${WS_URL}/ws`, {
+  socketInstance = io(`${getWsUrl()}/ws`, {
     query: { userId },
     auth: { token },
     transports: ['websocket', 'polling'],

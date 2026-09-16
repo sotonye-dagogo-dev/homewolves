@@ -2,8 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+import { getApiBase } from '@/lib/api-base';
 
 interface AuthUser {
   id: string;
@@ -50,7 +49,7 @@ export const useAuth = create<AuthState>()(
       register: async (email: string) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${API_BASE}/auth/register`, {
+          const res = await fetch(`${getApiBase()}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email }),
@@ -72,7 +71,7 @@ export const useAuth = create<AuthState>()(
       verifyOtp: async (email: string, otp: string) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+          const res = await fetch(`${getApiBase()}/auth/verify-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, otp }),
@@ -97,7 +96,7 @@ export const useAuth = create<AuthState>()(
       completeProfile: async (data) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${API_BASE}/auth/complete-profile`, {
+          const res = await fetch(`${getApiBase()}/auth/complete-profile`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -122,7 +121,7 @@ export const useAuth = create<AuthState>()(
       login: async (email: string) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${API_BASE}/auth/login`, {
+          const res = await fetch(`${getApiBase()}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email }),
@@ -144,7 +143,7 @@ export const useAuth = create<AuthState>()(
       exchangeSupabase: async (accessToken, opts) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${API_BASE}/auth/supabase`, {
+          const res = await fetch(`${getApiBase()}/auth/supabase`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accessToken, ...opts }),
@@ -169,7 +168,7 @@ export const useAuth = create<AuthState>()(
       logout: async () => {
         const { accessToken } = get();
         try {
-          await fetch(`${API_BASE}/auth/logout`, {
+          await fetch(`${getApiBase()}/auth/logout`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

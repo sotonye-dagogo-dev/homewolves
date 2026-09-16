@@ -46,6 +46,38 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    // Proxy same-origin /api/v1/* to the actual NestJS API. This makes browser
+    // fetches stay same-origin (no CORS, no apex→www 308) while the server
+    // forwards to the real backend.
+    // Priority: explicit API_PROXY_URL / API_URL env, then NEXT_PUBLIC_API_URL.
+    // If none are absolute external hosts, the rewrite is no-op (returns []).
+    const raw =
+      process.env.API_PROXY_URL ??
+      process.env.API_URL ??
+      process.env.NEXT_PUBLIC_API_URL ??
+      '';
+    // Only create a rewrite when the target is an absolute external URL
+    // that is NOT the same origin as the Next.js site itself. If target host
+    // equals NEXT_PUBLIC_SITE_URL host, skip rewrite to avoid loop.
+    try {
+      if (!raw || raw.startsWith('/')) return [];
+      const target = new URL(raw);
+      const siteRaw = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
+      const siteHost = new URL(siteRaw).host;
+      // If API host is same as site host (e.g. both www.homewolves.com), the
+      // fetch is already same-origin — no rewrite needed.
+      if (target.host === siteHost) return [];
+      // For localhost dev, proxy to local NestJS
+      if (target.host.startsWith('localhost')) {
+        return [{ source: '/api/v1/:path*', destination: `${target.origin}/api/v1/:path*` }];
+      }
+      // External API (e.g. api.homewolves.africa, homewolves.com) — proxy
+      return [{ source: '/api/v1/:path*', destination: `${target.origin}/api/v1/:path*` }];
+    } catch {
+      return [];
+    }
+  },
 };
 
 module.exports = nextConfig;

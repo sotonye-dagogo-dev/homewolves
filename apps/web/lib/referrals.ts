@@ -1,4 +1,5 @@
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/referrals`;
+import { getApiBase } from '@/lib/api-base';
+function getApi() { return `${getApiBase()}/referrals`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -22,22 +23,22 @@ async function handleRes(r: Response) {
 }
 
 export async function fetchMyReferral() {
-  const r = await fetch(`${API}/me`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/me`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function fetchMyCommissions() {
-  const r = await fetch(`${API}/commissions`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/commissions`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function resolveReferralCode(code: string) {
-  const r = await fetch(`${API}/resolve?code=${encodeURIComponent(code)}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/resolve?code=${encodeURIComponent(code)}`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function applyReferralCode(code: string) {
-  const r = await fetch(`${API}/apply`, {
+  const r = await fetch(`${getApi()}/apply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ code }),
@@ -46,12 +47,12 @@ export async function applyReferralCode(code: string) {
 }
 
 export async function fetchReferralStats() {
-  const r = await fetch(`${API}/stats`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/stats`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function fetchAllReferrals(params?: Record<string, string>) {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-  const r = await fetch(`${API}/all${qs}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/all${qs}`, { headers: authHeaders() });
   return handleRes(r);
 }

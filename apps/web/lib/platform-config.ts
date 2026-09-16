@@ -1,6 +1,7 @@
 import { FALLBACK_AMENITIES, FALLBACK_FILTER_PILLS, FALLBACK_NAV_ITEMS, FALLBACK_PROPERTY_TYPES, FALLBACK_FEATURE_FLAGS } from '@/config/fallbacks';
+import { getApiBase } from '@/lib/api-base';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+
 
 export interface ConfigResponse {
   key: string;
@@ -9,7 +10,7 @@ export interface ConfigResponse {
 
 async function fetchConfig(key: string): Promise<unknown | null> {
   try {
-    const res = await fetch(`${API_BASE}/config/${key}`);
+    const res = await fetch(`${getApiBase()}/config/${key}`);
     if (!res.ok) return null;
     const data: ConfigResponse = await res.json();
     return data.value;
@@ -20,7 +21,7 @@ async function fetchConfig(key: string): Promise<unknown | null> {
 
 async function fetchAllConfigs(): Promise<Record<string, unknown>> {
   try {
-    const res = await fetch(`${API_BASE}/config`);
+    const res = await fetch(`${getApiBase()}/config`);
     if (!res.ok) return {};
     return await res.json();
   } catch {

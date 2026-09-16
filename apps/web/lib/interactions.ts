@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+import { getApiBase } from '@/lib/api-base';
+
 
 function getSessionId(): string {
   if (typeof window === 'undefined') return '';
@@ -27,7 +28,7 @@ function authHeaders(): Record<string, string> {
 }
 
 export async function recordView(listingId: string, _userId?: string) {
-  await fetch(`${API_BASE}/recently-viewed`, {
+  await fetch(`${getApiBase()}/recently-viewed`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({
@@ -43,13 +44,13 @@ export async function getRecentViews(_userId?: string) {
   if (token) params.set('userId', 'me');
   else params.set('sessionId', getSessionId());
 
-  const res = await fetch(`${API_BASE}/recently-viewed?${params}`, { headers: authHeaders() });
+  const res = await fetch(`${getApiBase()}/recently-viewed?${params}`, { headers: authHeaders() });
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function toggleSave(listingId: string, token: string) {
-  const res = await fetch(`${API_BASE}/saved/${listingId}/toggle`, {
+  const res = await fetch(`${getApiBase()}/saved/${listingId}/toggle`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -61,7 +62,7 @@ export async function toggleSave(listingId: string, token: string) {
 }
 
 export async function getSavedListings(token: string) {
-  const res = await fetch(`${API_BASE}/saved`, {
+  const res = await fetch(`${getApiBase()}/saved`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return [];
@@ -69,7 +70,7 @@ export async function getSavedListings(token: string) {
 }
 
 export async function checkSaved(listingId: string, token: string) {
-  const res = await fetch(`${API_BASE}/saved/${listingId}/check`, {
+  const res = await fetch(`${getApiBase()}/saved/${listingId}/check`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return { saved: false };

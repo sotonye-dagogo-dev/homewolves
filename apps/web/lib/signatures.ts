@@ -1,4 +1,5 @@
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/signatures`;
+import { getApiBase } from '@/lib/api-base';
+function getApi() { return `${getApiBase()}/signatures`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -28,7 +29,7 @@ export async function createSignatureRequest(data: {
   signerEmail: string;
   signerName: string;
 }) {
-  const r = await fetch(API, {
+  const r = await fetch(getApi(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
@@ -37,16 +38,16 @@ export async function createSignatureRequest(data: {
 }
 
 export async function fetchTransactionSignatures(transactionId: string) {
-  const r = await fetch(`${API}/transaction/${transactionId}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/transaction/${transactionId}`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function fetchSignature(id: string) {
-  const r = await fetch(`${API}/${id}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/${id}`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function getSignatureEmbedUrl(id: string) {
-  const r = await fetch(`${API}/${id}/embed`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/${id}/embed`, { headers: authHeaders() });
   return handleRes(r);
 }
