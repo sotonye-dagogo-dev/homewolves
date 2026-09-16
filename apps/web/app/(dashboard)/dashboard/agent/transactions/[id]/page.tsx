@@ -1,4 +1,5 @@
 'use client';
+import { getApiBase } from '@/lib/api-base';
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -23,7 +24,7 @@ import { useEntityAudit } from '@/hooks/use-audit';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { HwButton, HwBadge, HwInput } from '@/components/ui';
 
-const TX_API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/transactions`;
+function getTxApi() { return `${getApiBase()}/transactions`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -82,7 +83,7 @@ export default function TransactionDetailPage() {
 
   const uploadEvidenceMutation = useMutation({
     mutationFn: async ({ paymentId, url }: { paymentId: string; url: string }) => {
-      const r = await fetch(`${TX_API}/payments/${paymentId}/evidence`, {
+      const r = await fetch(`${getTxApi()}/payments/${paymentId}/evidence`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ evidenceUrl: url }),

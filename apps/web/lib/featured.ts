@@ -1,4 +1,5 @@
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/featured-listings`;
+import { getApiBase } from '@/lib/api-base';
+function getApi() { return `${getApiBase()}/featured-listings`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -22,22 +23,22 @@ async function handleRes(r: Response) {
 }
 
 export async function fetchFeaturedListings(take = 6) {
-  const r = await fetch(`${API}?take=${take}`);
+  const r = await fetch(`${getApi()}?take=${take}`);
   return handleRes(r);
 }
 
 export async function fetchMyFeaturedPlacements() {
-  const r = await fetch(`${API}/my`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/my`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function fetchFeaturedProviderStatus() {
-  const r = await fetch(`${API}/provider-status`);
+  const r = await fetch(`${getApi()}/provider-status`);
   return handleRes(r);
 }
 
 export async function purchaseFeaturedPlacement(listingId: string, days: number) {
-  const r = await fetch(`${API}/purchase`, {
+  const r = await fetch(`${getApi()}/purchase`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ listingId, days }),
@@ -46,6 +47,6 @@ export async function purchaseFeaturedPlacement(listingId: string, days: number)
 }
 
 export async function cancelFeaturedPlacement(id: string) {
-  const r = await fetch(`${API}/${id}/cancel`, { method: 'POST', headers: authHeaders() });
+  const r = await fetch(`${getApi()}/${id}/cancel`, { method: 'POST', headers: authHeaders() });
   return handleRes(r);
 }

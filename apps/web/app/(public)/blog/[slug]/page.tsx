@@ -41,7 +41,7 @@ export default function BlogPostPage() {
       publisher: { '@type': 'Organization', name: 'Homewolves' },
       mainEntityOfPage: {
         '@type': 'WebPage',
-        '@id': `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://homewolves.com'}/blog/${slug}`,
+        '@id': `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com'}/blog/${slug}`,
       },
     };
   }, [post, slug]);
