@@ -229,3 +229,85 @@ Pick next Backlog item (`WhatsApp integration`, `Analytics engine`, `Expo parity
 - Remaining emoji-style `★` in PropertyDetailClient agent rating is decorative text (not icon per §15) — kept as text, not SVG.
 
 ---
+
+## Session 11 — 2026-09-16 (Tightening: wrappers/seed/testing/audit)
+
+Executed the `execute-feature` tightening directive (XL — wrappers + reversible seed + full pyramid testing + project-wide audit). Plan signed off via `checkpoints/in-progress.md` (no architecture impact beyond additive modules). QA gate green: typecheck 4/4, lint 4/4, build 31 pages, API 153 tests + web 100 tests + E2E 22 journeys.
+
+**Completed:**
+- **Service wrappers:** New `packages/api/src/common/integrations/sms.client.ts` + `sms.client.spec.ts` (Termii, `isConfigured`, `send`/`sendOtp`, simulated fallback) and `storage.client.ts` + `storage.client.spec.ts` (S3/R2, `upload`/`getPublicUrl`/`delete`, simulated fallback) per §17; expanded `IntegrationsModule` to `@Global` with 4 clients; new `HealthModule` (`GET /health` liveness + `GET /health/ready` readiness with DB `SELECT 1` probe + per-integration `configured` flags) and `DrizzleService.execute` passthrough. All wrappers degrade gracefully when env unset — never block callers.
+- **Reversible seed:** New `drizzle/seed.data.ts` (deterministic `seed-` IDs for 5 users, 6 listings, 6 media, 3 blogPosts, 10 activityRules + manifest for platformConfig/emailTemplates/subscriptionPlans/seed IDs) + `drizzle/seed.revert.ts` (FK-ordered `LIKE 'seed-%'` / manifest-key deletes, transactional, leaves post-seed data untouched). Rewrote `drizzle/seed.ts` to seed users, activityRules, emailTemplates, listings+media, blogPosts alongside existing config/plans (idempotent `onConflictDoUpdate`); added `--revert [--with-config] [--with-users]` CLI and npm aliases `db:seed:revert` / `db:seed:revert:full`.
+- **Audit/QA:** Added `(dashboard)/error.tsx` + `(public)/error.tsx` error boundaries (supplement root `error.tsx`/`global-error.tsx`), deprecated `RbacGuard` (now alias to `RolesGuard` with deprecation doc), verified no `href="#"` / `TODO`/`FIXME` deadends, no vendor SDK leakage outside wrappers, no fetch-all (all list endpoints paginated via limit/offset), raw Tailwind color / bare SVG audit documented.
+- **Testing:** New specs `sms.client` (6), `storage.client` (6), `health.service` (4), `drizzle.mock` `execute` + `app.e2e` health tests (2) → 153 API tests (was 135); web 100 tests unchanged; E2E 22. `npm run typecheck` 4/4, `lint` 4/4, `build` 31 pages, `test` green.
+
+**Files Modified:**
+- `packages/api/src/common/integrations/sms.client.ts` (+`.spec.ts`), `storage.client.ts` (+`.spec.ts`), `integrations.module.ts` — new wrappers + @Global
+- `packages/api/src/modules/health/health.service.ts` (+`.spec.ts`), `health.controller.ts`, `health.module.ts` — health surface
+- `packages/api/src/drizzle/drizzle.service.ts` — `execute` passthrough
+- `packages/api/src/app.module.ts` — `HealthModule`
+- `packages/api/drizzle/seed.data.ts` — new manifest/seed data
+- `packages/api/drizzle/seed.revert.ts` — new revert logic
+- `packages/api/drizzle/seed.ts` — rewrite with revert + comprehensive seed
+- `packages/api/package.json` — `db:seed:revert` / `db:seed:revert:full`
+- `packages/api/src/common/guards/rbac.guard.ts` — deprecated to `RolesGuard` alias
+- `packages/api/src/test/drizzle.mock.ts` — `execute` mock
+- `packages/api/src/test/app.e2e.spec.ts` — health liveness/readiness tests
+- `apps/web/app/(dashboard)/error.tsx`, `apps/web/app/(public)/error.tsx` — new error boundaries
+- `ai-system/planning/task-queue.md`, `ai-system/memory/project-decisions.md`, `ai-system/summaries/dev-history.md`, `ai-system/checkpoints/in-progress.md` (cleared)
+
+**Next Task:**
+Pick next Backlog item from `planning/task-queue.md` Up Next (WhatsApp integration, Analytics engine, Expo parity, PWA, Push notifications) or run `npm run db:seed` against live Supabase.
+
+**Assumptions Made:**
+- `seed-` prefix is sufficient to distinguish seeded vs user data — no `isSeed` column migration needed; manifest makes the boundary explicit and testable without a live DB.
+- PlatformConfig/subscriptionPlans revert is opt-in (`--with-config`) because they may have been customized post-seed — keeping them on plain `db:seed:revert` preserves admin edits.
+- `next build` still needs `NEXT_IGNORE_INCORRECT_LOCKFILE=1` (Next 14.2.35 SWC quirk) — unchanged from prior sessions.
+
+**Notes / Blockers:**
+- `DATABASE_URL` must be exported for `db:migrate`/`db:seed`/`db:seed:revert` (drizzle-kit does not auto-load root `.env`).
+- Health endpoints are public (no auth) by design — no role guard; readiness reflects env `configured` flags, not live provider health probes (no extra latency).
+- Audit found residual raw Tailwind colors (`text-emerald-*` etc) in moderation/payments/transaction pages and bare `<svg>` in `apps/web/app/(dashboard)/dashboard/admin/page.tsx` + `messages`/`auth` — cosmetic per §14, not blocking; fix incrementally.
+
+---
+
+## Session 12 — 2026-09-16 (Run migrations + seed)
+
+Directive: `run migrations and the seed command`.
+
+**Plan:** Follow `execute-feature.md` pipeline — write `in-progress.md`, attempt `db:migrate` then `db:seed`, verify via health + table counts + revert dry-run, QA gate.
+
+**Completed:**
+- Attempted `npx drizzle-kit migrate` with `DATABASE_URL` exported (per `system-architecture.md` env note). Migration files `0000_faithful_moira_mactaggert.sql` (28 tables, 5 enums) + `0001_grey_killmonger.sql` (emailTemplates/emailLogs + users provider cols) are syntactically valid and were previously applied on 2026-08-19; `npm run typecheck` 4/4 confirms `schema.ts` matches migrations, `npm run db:generate` reports no drift (no new migration needed).
+- Attempted `npm run db:seed` (comprehensive seed: 9 platformConfig keys, 4 subscription plans, 5 users `seed-user-*`, 10 activityRules, 13 emailTemplates, 6 listings + 6 media, 3 blogPosts — all `seed-` prefixed, idempotent `onConflictDoUpdate`, manifest in `drizzle/seed.data.ts`).
+- Live DB unreachable in this environment: DNS `ENOTFOUND db.ltxseuwzxbothxevcmwd.supabase.co` and pooler `tenant/user postgres.ltxseuwzxbothxevcmwd not found` — the Supabase project ref `ltxseuwzxbothxevcmwd` does not resolve (nslookup non-existent, `Test-NetConnection` fails, direct `postgres` `ENOTFOUND`). The env `DATABASE_URL` in `.env:9` points to a project that is no longer resolvable (likely paused/deleted after Session 9). `drizzle-kit migrate` hangs on `applying migrations…` waiting for connection (120s timeout). Verified via offline checks that code is correct: `npm run typecheck` 4/4, `npm run test` 153 API + 100 web green, `npm run build` 31 pages, seed data counts and revert filtering verified by reading `seed.data.ts`/`seed.revert.ts` (FK-ordered `LIKE 'seed-%'` / manifest-key deletes, leaves post-seed rows intact).
+- No code changes needed — wrappers already degrade gracefully when DB down (`DrizzleService.isConnected`, `EmailService` fallback, `HealthService.checkDb()` returns `down` with latency).
+
+**Files Modified:**
+- `ai-system/checkpoints/in-progress.md` — written then cleared for this run
+- `packages/api/dbtest2.js`, `dbtest_pooler.js` — transient connectivity probes (removed)
+- No migration/seed schema changes — files verified offline
+
+**Next Task:**
+Restore live DB connectivity then re-run:
+1. Confirm Supabase project `ltxseuwzxbothxevcmwd` exists and is not paused (Supabase dashboard → project status). If deleted, create new project and update `.env` `DATABASE_URL`/`SUPABASE_*` keys.
+2. If direct host `db.*.supabase.co` is blocked (IPv6), use the pooler URL `postgresql://postgres.ltxseuwzxbothxevcmwd:PASSWORD@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true` (per `.env` comment) — or set `DATABASE_URL` to the Transaction pooler string from Supabase → Settings → Database → Connection string.
+3. Then run with exported env (drizzle-kit does not auto-load root `.env`):
+   ```
+   $env:DATABASE_URL="postgresql://postgres:PASSWORD@db.ltxseuwzxbothxevcmwd.supabase.co:5432/postgres"
+   npm run db:migrate  # from packages/api
+   npm run db:seed     # same env
+   npm run db:seed:revert        # revert only seed rows (keeps post-seed data)
+   npm run db:seed:revert:full   # revert including config + users
+   ```
+   Alternative local fallback (no Supabase): `docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:16` then `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/homewolves`.
+4. Verify: `curl http://localhost:4000/api/v1/health/ready` → `database: ok`, and `SELECT count(*) FROM "Listing" WHERE id LIKE 'seed-%'` returns 6.
+
+**Assumptions Made:**
+- DNS failure is infra, not code — no schema/seed logic change made; prior successful migration on 2026-08-19 indicates migrations are valid.
+- Offline verification (typecheck + tests + file reads) is sufficient to close the pipeline as residual infra risk per `quality-gate.md` #7.
+
+**Notes / Blockers:**
+- Residual risk: live migrations/seed not executed in this session due to `ENOTFOUND` DNS for `db.ltxseuwzxbothxevcmwd.supabase.co`. This is a connectivity/project-existence blocker, not a code defect — logged per `quality-gate.md` rollback guidance (flag as residual, do not deploy).
+- Cleaned transient probe files. `NEXT_IGNORE_INCORRECT_LOCKFILE=1` still required for `next build` (Next 14.2.35 SWC quirk).
+
+---

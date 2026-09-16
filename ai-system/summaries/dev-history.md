@@ -278,3 +278,41 @@ Migrated `packages/api` from Prisma to Drizzle ORM end-to-end, then ran the `ver
 
 **Next Sprint Focus:**
 Apply `0000` migration + seed on a live Supabase DB; then open `[ ]` items at the top of `planning/task-queue.md` ([M] SEO, [BUG] blog sanitization, [M] activity-points wiring, [M] API integration tests, [M] E2E admin journey). Follow-up `next/image` pass for dashboard/blog/auth dynamic media `<img>` tags.
+
+---
+
+## 2026-09-02 — Hardening: Routing/Icons/SEO/Env Parity (Session 10)
+
+**Summary:**
+Executed the `execute-feature` hardening pass against routing/icon/SEO/optimization/DB/auth/compliance drift. Unified canonical URL to `homewolves.com`, consolidated icons to `lucide-react`, hardened SEO metadata/sitemap, migrated gallery/feed to `next/image`, and aligned `.env.example` parity.
+
+**Completed:**
+- Routing/SEO: canonical `NEXT_PUBLIC_SITE_URL` → `homewolves.com`, `metadataBase`/`openGraph`/`twitter`/`canonical`/`viewport`, sitemap `take` clamped to 50
+- Icons: 15 hand-drawn SVG/emoji → `lucide-react` (PropertyDetailClient, properties feed, dashboard layout, blog/not-found/error, pricing)
+- Optimization: `next/image` for gallery/feed/similar/cover, `remotePatterns` extended for Supabase/Cloudinary
+- Env parity: `.env.example` aligned to real `.env` (Supabase live keys, Resend, Paystack, DocuSeal, Redis, lockfile quirk)
+
+**Next Sprint Focus:**
+Full tightening directive — service wrappers, reversible seed, testing pyramid, project-wide audit.
+
+---
+
+## 2026-09-16 — Tightening Pass: Service Wrappers, Reversible Seed, Full Testing, Audit (Session 11)
+
+**Summary:**
+Hardened the platform end-to-end (XL directive): made all external services operational through dedicated wrappers with graceful degradation, rebuilt the seed system with deterministic `seed-` IDs and a reversible delete that leaves post-seed data untouched, closed audit gaps (error boundaries, redundant guards, deadends), and lifted the testing pyramid to 153 API + 100 web + 22 E2E.
+
+**Completed:**
+- **Service wrappers:** Added `SmsClient` (Termii, `isConfigured`, `send`/`sendOtp`, simulated fallback) + `StorageClient` (S3/R2, `upload`/`getPublicUrl`/`delete`, simulated fallback) per §17; added `HealthModule` (`GET /health` liveness + `GET /health/ready` readiness with DB + per-integration `configured` flags) and wired into `AppModule`/`IntegrationsModule (@Global)`. All wrappers expose `isConfigured` and never throw in dev when unconfigured.
+- **Reversible seed:** New `drizzle/seed.data.ts` (deterministic `seed-` IDs for users/listings/media/blogPosts/activityRules, `SEED_MANIFEST` for keys/slugs) + `drizzle/seed.revert.ts` (FK-ordered delete only `LIKE 'seed-%'` / manifest keys, transactional, leaves post-seed rows intact). Rewrote `drizzle/seed.ts` to seed users, listings+media, blogPosts, activityRules, emailTemplates alongside existing config/plans; added CLI `--revert [--with-config] [--with-users]` and npm scripts `db:seed:revert` / `db:seed:revert:full`.
+- **Audit/QA:** Added `(dashboard)/error.tsx` + `(public)/error.tsx` error boundaries (complements root `error.tsx`/`global-error.tsx`), deprecated `RbacGuard` (now alias to `RolesGuard` with deprecation notice), verified no `href="#"`, `TODO`/`FIXME` deadends, and no vendor SDK leakage outside wrappers. Pagination already via limit/offset in all services.
+- **Testing:** New specs `sms.client.spec.ts` (6), `storage.client.spec.ts` (6), `health.service.spec.ts` (4), `drizzle.mock` `execute` + `app.e2e` health tests (2) → 153 API tests (was 135). Web 100 tests unchanged. `npm run typecheck` 4/4, `lint` 4/4, `build` 31 pages, `test` green.
+
+**Key Changes:**
+- `DrizzleService.execute` added (passthrough to `db.execute`) for health check + raw revert deletes.
+- Seed is now idempotent (onConflict) and reversible — the first reversible seed in the project.
+- Health endpoints are public (no auth) and provide the single management surface for wrapper status.
+
+**Next Sprint Focus:**
+Pick next Backlog item from `planning/task-queue.md` Up Next (WhatsApp integration, Analytics engine, Expo parity, PWA, Push notifications).
+
