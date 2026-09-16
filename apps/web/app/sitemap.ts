@@ -1,6 +1,26 @@
 import type { MetadataRoute } from 'next';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+function resolveServerApiBase(): string {
+  // Server-side: reuse env when set, but avoid Vercel apex→www 308 by
+  // preferring same-origin when the public URL shares the site base domain.
+  const env = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (env && env.length > 0) {
+    try {
+      const u = new URL(env);
+      const siteRaw = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
+      const siteHost = new URL(siteRaw).host.replace(/^www\./i, '');
+      const envHost = u.host.replace(/^www\./i, '');
+      if (siteHost && envHost === siteHost && u.host !== new URL(siteRaw).host) {
+        // Apex vs www — server fetch can follow redirect, but align to site origin
+        return `${new URL(siteRaw).origin}/api/v1`;
+      }
+    } catch {}
+    return env;
+  }
+  return 'http://localhost:4000/api/v1';
+}
+
+const API_BASE = resolveServerApiBase();
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
 
 const staticRoutes: MetadataRoute.Sitemap = [
