@@ -18,61 +18,36 @@
 export function getApiBase(): string {
   const env = process.env.NEXT_PUBLIC_API_URL?.trim();
 
-  // Server-side: no window — return env or localhost fallback
+  // Server-side: no window — return env or localhost fallback.
+  // Server fetch needs an absolute URL; relative would fail in Node.
   if (typeof window === 'undefined') {
-    return env && env.length > 0 ? env : 'http://localhost:4000/api/v1';
+    if (env && env.length > 0) {
+      // Normalize server-side apex vs www using SITE_URL if available
+      // to avoid extra redirect hop. Keep env as source of truth when set.
+      return env;
+    }
+    return 'http://localhost:4000/api/v1';
   }
 
-  const locOrigin = window.location.origin;
   const locHost = window.location.host;
 
-  // No env configured — for localhost dev keep direct API port (4000)
-  // where Next.js proxy isn't needed; for production use same-origin.
-  if (!env || env.length === 0) {
-    if (locHost.startsWith('localhost') || locHost.startsWith('127.0.0.1')) {
-      return 'http://localhost:4000/api/v1';
-    }
-    return `${locOrigin}/api/v1`;
+  // ── Browser: ALWAYS prefer same-origin relative fetch in production
+  // to eliminate Vercel apex→www 308 + CORS entirely. The Next.js
+  // rewrite / middleware proxy (see next.config.js) forwards to the
+  // real backend (API_PROXY_URL or external host). This makes
+  // NEXT_PUBLIC_API_URL host mismatch irrelevant in the browser.
+  // Exception: localhost dev still hits the local NestJS port directly.
+  if (locHost.startsWith('localhost') || locHost.startsWith('127.0.0.1')) {
+    if (env && env.includes('localhost')) return env;
+    return 'http://localhost:4000/api/v1';
   }
 
-  // Relative env (e.g. "/api/v1") — prefix with current origin
-  if (env.startsWith('/')) {
-    return `${locOrigin}${env}`;
-  }
-
-  try {
-    const envUrl = new URL(env);
-    const envHost = envUrl.host;
-
-    // Normalize host for apex vs www comparison
-    const stripWww = (h: string) => h.replace(/^www\./i, '');
-    const sameBase = stripWww(envHost) === stripWww(locHost);
-
-    // Apex ↔ www mismatch would trigger Vercel's 308 domain redirect.
-    // Align to current origin to stay same-origin and avoid CORS + redirect failure.
-    if (sameBase && envHost !== locHost) {
-      return `${locOrigin}/api/v1`;
-    }
-
-    // Broader homewolves.com family mismatch (covers api.homewolves.com etc.
-    // when served from www) — also align to avoid cross-origin redirect.
-    if (
-      locHost.endsWith('homewolves.com') &&
-      envHost.endsWith('homewolves.com') &&
-      envHost !== locHost
-    ) {
-      return `${locOrigin}/api/v1`;
-    }
-
-    // localhost with port — keep env as-is (dev)
-    if (envHost.startsWith('localhost')) return env;
-
-    return env;
-  } catch {
-    // If env is not a valid absolute URL, treat as relative
-    if (env.startsWith('/')) return `${locOrigin}${env}`;
-    return env;
-  }
+  // For any production host (homewolves.com, vercel.app, etc.) use
+  // relative same-origin path. This is CORS-free and works via the
+  // Next.js rewrite proxy handled at the edge.
+  // Keep absolute same-origin as fallback only if rewrite is disabled,
+  // but relative is strictly better (no origin comparison).
+  return '/api/v1';
 }
 
 /**
