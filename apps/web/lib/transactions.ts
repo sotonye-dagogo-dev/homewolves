@@ -1,4 +1,5 @@
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/transactions`;
+import { getApiBase } from '@/lib/api-base';
+function getApi() { return `${getApiBase()}/transactions`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -27,17 +28,17 @@ export async function fetchTransactions(params?: { status?: string; page?: numbe
   if (params?.page) qs.set('page', String(params.page));
   if (params?.limit) qs.set('limit', String(params.limit));
   const q = qs.toString();
-  const r = await fetch(`${API}${q ? `?${q}` : ''}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}${q ? `?${q}` : ''}`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function fetchMyTransactions() {
-  const r = await fetch(`${API}/my`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/my`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function fetchTransaction(id: string) {
-  const r = await fetch(`${API}/${id}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/${id}`, { headers: authHeaders() });
   return handleRes(r);
 }
 
@@ -47,7 +48,7 @@ export async function createTransaction(data: {
   type: 'PURCHASE' | 'RENTAL' | 'SHORTLET';
   customSteps?: { id: string; label: string; order: number }[];
 }) {
-  const r = await fetch(API, {
+  const r = await fetch(getApi(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
@@ -56,7 +57,7 @@ export async function createTransaction(data: {
 }
 
 export async function advanceTransaction(id: string, notes?: string) {
-  const r = await fetch(`${API}/${id}/advance`, {
+  const r = await fetch(`${getApi()}/${id}/advance`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ notes }),
@@ -65,7 +66,7 @@ export async function advanceTransaction(id: string, notes?: string) {
 }
 
 export async function rejectTransaction(id: string, reason: string) {
-  const r = await fetch(`${API}/${id}/reject`, {
+  const r = await fetch(`${getApi()}/${id}/reject`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ reason }),
@@ -74,7 +75,7 @@ export async function rejectTransaction(id: string, reason: string) {
 }
 
 export async function cancelTransaction(id: string) {
-  const r = await fetch(`${API}/${id}/cancel`, {
+  const r = await fetch(`${getApi()}/${id}/cancel`, {
     method: 'PUT',
     headers: { ...authHeaders() },
   });
@@ -88,7 +89,7 @@ export async function addPayment(data: {
   currency?: string;
   evidenceUrl?: string;
 }) {
-  const r = await fetch(`${API}/payments`, {
+  const r = await fetch(`${getApi()}/payments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
@@ -97,7 +98,7 @@ export async function addPayment(data: {
 }
 
 export async function confirmPayment(paymentId: string, status: 'confirmed' | 'rejected', confirmedBy: string) {
-  const r = await fetch(`${API}/payments/confirm`, {
+  const r = await fetch(`${getApi()}/payments/confirm`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ paymentId, status, confirmedBy }),
@@ -106,7 +107,7 @@ export async function confirmPayment(paymentId: string, status: 'confirmed' | 'r
 }
 
 export async function attachPaymentEvidence(paymentId: string, evidenceUrl: string) {
-  const r = await fetch(`${API}/payments/${paymentId}/evidence`, {
+  const r = await fetch(`${getApi()}/payments/${paymentId}/evidence`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ evidenceUrl }),
@@ -115,12 +116,12 @@ export async function attachPaymentEvidence(paymentId: string, evidenceUrl: stri
 }
 
 export async function fetchPendingPayments() {
-  const r = await fetch(`${API}/payments/pending`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/payments/pending`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function getPaymentUploadUrl(filename: string, contentType: string) {
-  const r = await fetch(`${API}/payments/upload-url`, {
+  const r = await fetch(`${getApi()}/payments/upload-url`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ filename, contentType }),

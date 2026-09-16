@@ -1,4 +1,5 @@
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/subscriptions`;
+import { getApiBase } from '@/lib/api-base';
+function getApi() { return `${getApiBase()}/subscriptions`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -22,22 +23,22 @@ async function handleRes(r: Response) {
 }
 
 export async function fetchPlans() {
-  const r = await fetch(`${API}/plans`);
+  const r = await fetch(`${getApi()}/plans`);
   return handleRes(r);
 }
 
 export async function fetchPlan(slug: string) {
-  const r = await fetch(`${API}/plans/${slug}`);
+  const r = await fetch(`${getApi()}/plans/${slug}`);
   return handleRes(r);
 }
 
 export async function fetchMySubscription() {
-  const r = await fetch(`${API}/my`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/my`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function initiateCheckout(planId: string) {
-  const r = await fetch(`${API}/checkout`, {
+  const r = await fetch(`${getApi()}/checkout`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ planId }),
@@ -46,12 +47,12 @@ export async function initiateCheckout(planId: string) {
 }
 
 export async function cancelSubscription() {
-  const r = await fetch(`${API}/cancel`, { method: 'POST', headers: authHeaders() });
+  const r = await fetch(`${getApi()}/cancel`, { method: 'POST', headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function checkFeatureAccess(feature: string) {
-  const r = await fetch(`${API}/check-feature`, {
+  const r = await fetch(`${getApi()}/check-feature`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ feature }),

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import PropertyDetailClient from '@/components/listings/PropertyDetailClient';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://homewolves.com';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
 
 async function fetchListing(id: string) {
   try {

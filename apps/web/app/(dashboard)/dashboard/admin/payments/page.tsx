@@ -1,10 +1,11 @@
 'use client';
+import { getApiBase } from '@/lib/api-base';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { HwButton, HwBadge, HwCard } from '@/components/ui';
 import { useState } from 'react';
 
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/transactions`;
+function getApi() { return `${getApiBase()}/transactions`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -20,13 +21,13 @@ function authHeaders(): Record<string, string> {
 }
 
 async function fetchPendingPayments() {
-  const r = await fetch(`${API}/payments/pending`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/payments/pending`, { headers: authHeaders() });
   if (!r.ok) throw new Error('Failed to fetch');
   return r.json();
 }
 
 async function confirmPaymentApi(paymentId: string, status: 'confirmed' | 'rejected') {
-  const r = await fetch(`${API}/payments/confirm`, {
+  const r = await fetch(`${getApi()}/payments/confirm`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ paymentId, status, confirmedBy: 'admin' }),

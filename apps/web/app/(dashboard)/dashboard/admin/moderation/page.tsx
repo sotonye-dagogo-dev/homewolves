@@ -1,10 +1,11 @@
 'use client';
+import { getApiBase } from '@/lib/api-base';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { HwButton, HwBadge, HwCard } from '@/components/ui';
 import Link from 'next/link';
 
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/listings`;
+function getApi() { return `${getApiBase()}/listings`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -20,13 +21,13 @@ function authHeaders(): Record<string, string> {
 }
 
 async function fetchPending() {
-  const r = await fetch(`${API}/admin/pending`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/admin/pending`, { headers: authHeaders() });
   if (!r.ok) throw new Error('Failed to fetch');
   return r.json();
 }
 
 async function moderateListing(id: string, action: 'approve' | 'reject') {
-  const r = await fetch(`${API}/${id}/moderate`, {
+  const r = await fetch(`${getApi()}/${id}/moderate`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ action }),

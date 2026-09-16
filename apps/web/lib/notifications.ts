@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+import { getApiBase } from '@/lib/api-base';
+
 
 async function fetchApi(path: string, options?: RequestInit) {
   const stored = typeof window !== 'undefined' ? localStorage.getItem('hw-auth') : null;
@@ -10,7 +11,7 @@ async function fetchApi(path: string, options?: RequestInit) {
       void error;
     }
   }
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${getApiBase()}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

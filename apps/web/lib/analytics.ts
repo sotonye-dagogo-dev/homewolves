@@ -1,4 +1,5 @@
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/analytics`;
+import { getApiBase } from '@/lib/api-base';
+function getApi() { return `${getApiBase()}/analytics`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -28,7 +29,7 @@ export async function trackEvent(payload: {
   agentId?: string;
   metadata?: Record<string, unknown>;
 }) {
-  const r = await fetch(`${API}/events`, {
+  const r = await fetch(`${getApi()}/events`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -38,25 +39,25 @@ export async function trackEvent(payload: {
 
 export async function fetchListingAnalytics(listingId: string, days?: number) {
   const qs = days ? `?days=${days}` : '';
-  const r = await fetch(`${API}/listing/${listingId}${qs}`);
+  const r = await fetch(`${getApi()}/listing/${listingId}${qs}`);
   return handleRes(r);
 }
 
 export async function fetchAgentAnalytics(agentId: string, days?: number) {
   const qs = days ? `?days=${days}` : '';
-  const r = await fetch(`${API}/agent/${agentId}${qs}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/agent/${agentId}${qs}`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function fetchMyAnalytics(days?: number) {
   const qs = days ? `?days=${days}` : '';
-  const r = await fetch(`${API}/me${qs}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/me${qs}`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function fetchFunnel(days?: number) {
   const qs = days ? `?days=${days}` : '';
-  const r = await fetch(`${API}/funnel${qs}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/funnel${qs}`, { headers: authHeaders() });
   return handleRes(r);
 }
 
@@ -64,6 +65,6 @@ export async function fetchTopListings(days?: number, limit = 10) {
   const qs = [];
   if (days) qs.push(`days=${days}`);
   if (limit) qs.push(`limit=${limit}`);
-  const r = await fetch(`${API}/top-listings?${qs.join('&')}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/top-listings?${qs.join('&')}`, { headers: authHeaders() });
   return handleRes(r);
 }

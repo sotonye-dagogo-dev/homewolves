@@ -1,4 +1,5 @@
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/activity`;
+import { getApiBase } from '@/lib/api-base';
+function getApi() { return `${getApiBase()}/activity`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -22,27 +23,27 @@ async function handleRes(r: Response) {
 }
 
 export async function fetchLeaderboard(limit = 20) {
-  const r = await fetch(`${API}/leaderboard?limit=${limit}`);
+  const r = await fetch(`${getApi()}/leaderboard?limit=${limit}`);
   return handleRes(r);
 }
 
 export async function fetchMyStats() {
-  const r = await fetch(`${API}/stats`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/stats`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function fetchAgentStats(agentId: string) {
-  const r = await fetch(`${API}/stats/${agentId}`);
+  const r = await fetch(`${getApi()}/stats/${agentId}`);
   return handleRes(r);
 }
 
 export async function fetchTiers() {
-  const r = await fetch(`${API}/tiers`);
+  const r = await fetch(`${getApi()}/tiers`);
   return handleRes(r);
 }
 
 export async function awardPoints(ruleKey: string) {
-  const r = await fetch(`${API}/award/${ruleKey}`, {
+  const r = await fetch(`${getApi()}/award/${ruleKey}`, {
     method: 'POST',
     headers: authHeaders(),
   });

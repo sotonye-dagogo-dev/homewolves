@@ -1,4 +1,5 @@
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/documents`;
+import { getApiBase } from '@/lib/api-base';
+function getApi() { return `${getApiBase()}/documents`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -29,7 +30,7 @@ export async function uploadDocument(data: {
   size?: number;
   visibility?: string;
 }) {
-  const r = await fetch(API, {
+  const r = await fetch(getApi(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
@@ -38,22 +39,22 @@ export async function uploadDocument(data: {
 }
 
 export async function fetchTransactionDocuments(transactionId: string) {
-  const r = await fetch(`${API}/transaction/${transactionId}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/transaction/${transactionId}`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function fetchDocument(id: string) {
-  const r = await fetch(`${API}/${id}`, { headers: authHeaders() });
+  const r = await fetch(`${getApi()}/${id}`, { headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function deleteDocument(id: string) {
-  const r = await fetch(`${API}/${id}`, { method: 'DELETE', headers: authHeaders() });
+  const r = await fetch(`${getApi()}/${id}`, { method: 'DELETE', headers: authHeaders() });
   return handleRes(r);
 }
 
 export async function updateDocumentVisibility(id: string, visibility: string) {
-  const r = await fetch(`${API}/${id}/visibility`, {
+  const r = await fetch(`${getApi()}/${id}/visibility`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ visibility }),
@@ -62,7 +63,7 @@ export async function updateDocumentVisibility(id: string, visibility: string) {
 }
 
 export async function getDocumentUploadUrl(filename: string, contentType: string) {
-  const r = await fetch(`${API}/upload-url`, {
+  const r = await fetch(`${getApi()}/upload-url`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ filename, contentType }),

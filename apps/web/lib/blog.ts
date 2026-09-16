@@ -1,4 +1,5 @@
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/blog`;
+import { getApiBase } from '@/lib/api-base';
+function getApi() { return `${getApiBase()}/blog`; }
 
 function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -37,17 +38,17 @@ export async function fetchBlogPosts(params?: {
   if (params?.page) qs.set('page', String(params.page));
   if (params?.limit) qs.set('limit', String(params.limit));
   const q = qs.toString();
-  const r = await fetch(`${API}${q ? `?${q}` : ''}`);
+  const r = await fetch(`${getApi()}${q ? `?${q}` : ''}`);
   return handleRes(r);
 }
 
 export async function fetchBlogPost(slug: string) {
-  const r = await fetch(`${API}/${slug}`);
+  const r = await fetch(`${getApi()}/${slug}`);
   return handleRes(r);
 }
 
 export async function fetchBlogCategories() {
-  const r = await fetch(`${API}/categories`);
+  const r = await fetch(`${getApi()}/categories`);
   return handleRes(r);
 }
 
@@ -62,7 +63,7 @@ export async function createBlogPost(data: {
   published?: boolean;
   featured?: boolean;
 }) {
-  const r = await fetch(API, {
+  const r = await fetch(getApi(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
@@ -71,7 +72,7 @@ export async function createBlogPost(data: {
 }
 
 export async function updateBlogPost(id: string, data: any) {
-  const r = await fetch(`${API}/${id}`, {
+  const r = await fetch(`${getApi()}/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
@@ -80,7 +81,7 @@ export async function updateBlogPost(id: string, data: any) {
 }
 
 export async function deleteBlogPost(id: string) {
-  const r = await fetch(`${API}/${id}`, {
+  const r = await fetch(`${getApi()}/${id}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });

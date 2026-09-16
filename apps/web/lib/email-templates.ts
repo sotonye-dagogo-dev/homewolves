@@ -1,6 +1,7 @@
 import { FALLBACK_EMAIL_TEMPLATES } from '@/config/fallbacks';
+import { getApiBase } from '@/lib/api-base';
 
-const API = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}/email-templates`;
+function getApi() { return `${getApiBase()}/email-templates`; }
 
 export interface EmailTemplateDto {
   id?: string;
@@ -39,7 +40,7 @@ async function handleRes<T>(r: Response): Promise<T> {
 
 export async function fetchEmailTemplates(): Promise<EmailTemplateDto[]> {
   try {
-    const res = await fetch(API, { headers: authHeaders() });
+    const res = await fetch(getApi(), { headers: authHeaders() });
     if (!res.ok) return [...FALLBACK_EMAIL_TEMPLATES];
     return handleRes<EmailTemplateDto[]>(res);
   } catch {
@@ -54,7 +55,7 @@ export async function previewEmailTemplate(data: {
   textBody?: string | null;
   variables?: Record<string, unknown>;
 }) {
-  const res = await fetch(`${API}/preview`, {
+  const res = await fetch(`${getApi()}/preview`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
@@ -71,7 +72,7 @@ export async function saveEmailTemplate(data: {
   fromEmail?: string | null;
   active?: boolean;
 }) {
-  const res = await fetch(`${API}/${encodeURIComponent(data.key)}`, {
+  const res = await fetch(`${getApi()}/${encodeURIComponent(data.key)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
@@ -80,7 +81,7 @@ export async function saveEmailTemplate(data: {
 }
 
 export async function seedEmailTemplates() {
-  const res = await fetch(`${API}/seed`, {
+  const res = await fetch(`${getApi()}/seed`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
   });

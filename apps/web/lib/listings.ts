@@ -1,6 +1,5 @@
 import { useAuth } from '@/hooks/use-auth';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+import { getApiBase } from '@/lib/api-base';
 
 function authHeaders(token?: string | null): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -21,7 +20,7 @@ export interface CreateListingPayload {
 }
 
 export async function createListing(data: CreateListingPayload) {
-  const res = await fetch(`${API_BASE}/listings`, {
+  const res = await fetch(`${getApiBase()}/listings`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(data),
@@ -34,7 +33,7 @@ export async function createListing(data: CreateListingPayload) {
 }
 
 export async function updateListing(id: string, data: Partial<CreateListingPayload> & { status?: string }) {
-  const res = await fetch(`${API_BASE}/listings/${id}`, {
+  const res = await fetch(`${getApiBase()}/listings/${id}`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(data),
@@ -47,7 +46,7 @@ export async function updateListing(id: string, data: Partial<CreateListingPaylo
 }
 
 export async function deleteListing(id: string) {
-  const res = await fetch(`${API_BASE}/listings/${id}`, {
+  const res = await fetch(`${getApiBase()}/listings/${id}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });
@@ -59,7 +58,7 @@ export async function deleteListing(id: string) {
 
 export async function fetchListings(params?: Record<string, string>) {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-  const res = await fetch(`${API_BASE}/listings${qs}`);
+  const res = await fetch(`${getApiBase()}/listings${qs}`);
   if (!res.ok) {
     throw new Error('Failed to fetch listings');
   }
@@ -67,7 +66,7 @@ export async function fetchListings(params?: Record<string, string>) {
 }
 
 export async function fetchFeaturedListings() {
-  const res = await fetch(`${API_BASE}/listings/featured`);
+  const res = await fetch(`${getApiBase()}/listings/featured`);
   if (!res.ok) {
     throw new Error('Failed to fetch featured listings');
   }
@@ -75,7 +74,7 @@ export async function fetchFeaturedListings() {
 }
 
 export async function fetchListingById(id: string) {
-  const res = await fetch(`${API_BASE}/listings/${id}`);
+  const res = await fetch(`${getApiBase()}/listings/${id}`);
   if (!res.ok) {
     throw new Error('Listing not found');
   }
@@ -83,5 +82,5 @@ export async function fetchListingById(id: string) {
 }
 
 export async function incrementView(id: string) {
-  await fetch(`${API_BASE}/listings/${id}/view`, { method: 'POST' });
+  await fetch(`${getApiBase()}/listings/${id}/view`, { method: 'POST' });
 }
