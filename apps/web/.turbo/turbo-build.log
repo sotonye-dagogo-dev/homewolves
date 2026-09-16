@@ -2,93 +2,73 @@
 > @hw/web@1.0.0 build
 > next build
 
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
   ▲ Next.js 14.2.35
 
    Creating an optimized production build ...
- ⚠ Found lockfile missing swc dependencies, patching...
-npm error code ENOWORKSPACES
-npm error This command does not support workspaces.
-npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-16T08_46_13_239Z-debug-0.log
- ⨯ Failed to patch lockfile, please try uninstalling and reinstalling next in this workspace
-TypeError: Cannot read properties of undefined (reading 'os')
-    at fetchPkgInfo (C:\Users\Harvesters WebDev\Downloads\web-dev\homewolves\node_modules\next\dist\lib\patch-incorrect-lockfile.js:73:25)
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at async Promise.all (index 6)
-    at async patchIncorrectLockfile (C:\Users\Harvesters WebDev\Downloads\web-dev\homewolves\node_modules\next\dist\lib\patch-incorrect-lockfile.js:162:26)
- ⚠ Found lockfile missing swc dependencies, patching...
-npm error code ENOWORKSPACES
-npm error This command does not support workspaces.
-npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-16T08_46_32_755Z-debug-0.log
- ⚠ Found lockfile missing swc dependencies, patching...
-npm error code ENOWORKSPACES
-npm error This command does not support workspaces.
-npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-16T08_46_39_166Z-debug-0.log
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
  ✓ Compiled successfully
    Linting and checking validity of types ...
+
+./app/(public)/properties/[id]/page.tsx
+15:13  Warning: Empty block statement.  no-empty
+
+./app/sitemap.ts
+17:13  Warning: Empty block statement.  no-empty
+
+./lib/messaging.ts
+22:11  Warning: Empty block statement.  no-empty
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
    Collecting page data ...
- ⚠ Found lockfile missing swc dependencies, patching...
-npm error code ENOWORKSPACES
-npm error This command does not support workspaces.
-npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-16T08_47_31_721Z-debug-0.log
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
    Generating static pages (0/31) ...
-(node:15004) Warning: `--localstorage-file` was provided without a valid path
-(Use `node --trace-warnings ...` to show where the warning was created)
-(node:12760) Warning: `--localstorage-file` was provided without a valid path
-(Use `node --trace-warnings ...` to show where the warning was created)
-(node:21112) Warning: `--localstorage-file` was provided without a valid path
-(Use `node --trace-warnings ...` to show where the warning was created)
-(node:17504) Warning: `--localstorage-file` was provided without a valid path
-(Use `node --trace-warnings ...` to show where the warning was created)
    Generating static pages (7/31) 
-(node:7548) Warning: `--localstorage-file` was provided without a valid path
-(Use `node --trace-warnings ...` to show where the warning was created)
-(node:6200) Warning: `--localstorage-file` was provided without a valid path
-(Use `node --trace-warnings ...` to show where the warning was created)
    Generating static pages (15/31) 
-(node:17520) Warning: `--localstorage-file` was provided without a valid path
-(Use `node --trace-warnings ...` to show where the warning was created)
    Generating static pages (23/31) 
  ✓ Generating static pages (31/31)
    Finalizing page optimization ...
    Collecting build traces ...
- ⨯ Failed to patch lockfile, please try uninstalling and reinstalling next in this workspace
-TypeError: Cannot read properties of undefined (reading 'os')
-    at fetchPkgInfo (C:\Users\Harvesters WebDev\Downloads\web-dev\homewolves\node_modules\next\dist\lib\patch-incorrect-lockfile.js:73:25)
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at async Promise.all (index 6)
-    at async patchIncorrectLockfile (C:\Users\Harvesters WebDev\Downloads\web-dev\homewolves\node_modules\next\dist\lib\patch-incorrect-lockfile.js:162:26)
 
 Route (app)                              Size     First Load JS
 ┌ ○ /                                    3.99 kB         113 kB
 ├ ○ /_not-found                          174 B          87.5 kB
 ├ ○ /about                               174 B          87.5 kB
-├ ○ /auth                                69.8 kB         160 kB
-├ ○ /auth/callback                       2.51 kB        92.3 kB
-├ ○ /blog                                2.59 kB         108 kB
-├ ƒ /blog/[slug]                         13.9 kB         132 kB
+├ ƒ /api/v1/[...path]                    0 B                0 B
+├ ○ /auth                                69.9 kB         160 kB
+├ ○ /auth/callback                       2.6 kB         92.4 kB
+├ ○ /blog                                2.68 kB         108 kB
+├ ƒ /blog/[slug]                         14 kB           133 kB
 ├ ○ /contact                             174 B          87.5 kB
-├ ○ /dashboard                           4.9 kB          116 kB
-├ ○ /dashboard/admin                     5.42 kB         114 kB
+├ ○ /dashboard                           4.83 kB         116 kB
+├ ○ /dashboard/admin                     5.5 kB          114 kB
 ├ ○ /dashboard/admin/blog                1.78 kB         113 kB
 ├ ƒ /dashboard/admin/blog/[id]/edit      3.02 kB         106 kB
-├ ○ /dashboard/admin/blog/new            2.8 kB          105 kB
-├ ○ /dashboard/admin/email-templates     4.72 kB         106 kB
-├ ○ /dashboard/admin/moderation          4.29 kB         117 kB
-├ ○ /dashboard/admin/payments            4.6 kB          109 kB
+├ ○ /dashboard/admin/blog/new            2.8 kB          106 kB
+├ ○ /dashboard/admin/email-templates     4.67 kB         106 kB
+├ ○ /dashboard/admin/moderation          4.38 kB         117 kB
+├ ○ /dashboard/admin/payments            4.69 kB         109 kB
 ├ ○ /dashboard/agent/clients             1.92 kB         105 kB
-├ ƒ /dashboard/agent/clients/[id]        3.97 kB         115 kB
-├ ○ /dashboard/agent/listings            4.39 kB         113 kB
-├ ○ /dashboard/agent/listings/new        6.19 kB         108 kB
-├ ○ /dashboard/agent/transactions        4.2 kB          122 kB
-├ ƒ /dashboard/agent/transactions/[id]   8.69 kB         115 kB
-├ ○ /dashboard/client                    6.04 kB         130 kB
-├ ○ /dashboard/notifications             4.72 kB         117 kB
+├ ƒ /dashboard/agent/clients/[id]        3.91 kB         115 kB
+├ ○ /dashboard/agent/listings            4.47 kB         113 kB
+├ ○ /dashboard/agent/listings/new        6.13 kB         108 kB
+├ ○ /dashboard/agent/transactions        4.14 kB         122 kB
+├ ƒ /dashboard/agent/transactions/[id]   8.58 kB         115 kB
+├ ○ /dashboard/client                    6 kB            130 kB
+├ ○ /dashboard/notifications             4.81 kB         117 kB
 ├ ○ /faq                                 174 B          87.5 kB
-├ ○ /messages                            5.15 kB         117 kB
-├ ○ /pricing                             5.75 kB         105 kB
+├ ○ /messages                            5.36 kB         118 kB
+├ ○ /pricing                             5.84 kB         105 kB
 ├ ○ /privacy                             174 B          87.5 kB
-├ ○ /properties                          8.81 kB         125 kB
-├ ƒ /properties/[id]                     10.3 kB         124 kB
+├ ○ /properties                          8.75 kB         125 kB
+├ ƒ /properties/[id]                     10.4 kB         124 kB
 ├ ○ /robots.txt                          0 B                0 B
 ├ ○ /sitemap.xml                         0 B                0 B
 ├ ○ /terms                               174 B          87.5 kB

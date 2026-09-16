@@ -1,7 +1,23 @@
 import type { Metadata } from 'next';
 import PropertyDetailClient from '@/components/listings/PropertyDetailClient';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+function resolveServerApiBase(): string {
+  const env = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (env && env.length > 0) {
+    try {
+      const u = new URL(env);
+      const siteRaw = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
+      const siteHost = new URL(siteRaw).host.replace(/^www\./i, '');
+      const envHost = u.host.replace(/^www\./i, '');
+      if (siteHost && envHost === siteHost && u.host !== new URL(siteRaw).host) {
+        return `${new URL(siteRaw).origin}/api/v1`;
+      }
+    } catch {}
+    return env;
+  }
+  return 'http://localhost:4000/api/v1';
+}
+const API_BASE = resolveServerApiBase();
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
 
 async function fetchListing(id: string) {
