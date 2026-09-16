@@ -2,7 +2,21 @@
 // `EmailTemplate` DB table is empty/unreachable and to seed the table.
 // Keys match the flows wired in EmailService. Variables use `{{varName}}`.
 
-export const DEFAULT_EMAIL_TEMPLATES: EmailTemplate[] = [
+// Local shape mirrors global `EmailTemplate` but avoids requiring global.d.ts
+// when this file is loaded via ts-node from drizzle/seed.ts (outside src).
+export interface EmailTemplateDefault {
+  key: string;
+  name: string;
+  subject: string;
+  htmlBody: string;
+  textBody?: string;
+  fromEmail?: string;
+  active: boolean;
+  description?: string;
+  variables: { name: string; label: string; example?: string }[];
+}
+
+export const DEFAULT_EMAIL_TEMPLATES: EmailTemplateDefault[] = [
   {
     key: 'otp_code',
     name: 'Login / Signup Code',
