@@ -21,10 +21,10 @@ const footerNav = [
 ];
 
 const socialLinks = [
-  { icon: Instagram, href: '#', aria: 'Instagram' },
-  { icon: Twitter, href: '#', aria: 'Twitter' },
-  { icon: Linkedin, href: '#', aria: 'LinkedIn' },
-  { icon: Youtube, href: '#', aria: 'YouTube' },
+  { icon: Instagram, href: 'https://instagram.com/homewolves', aria: 'Instagram' },
+  { icon: Twitter, href: 'https://x.com/homewolves', aria: 'Twitter' },
+  { icon: Linkedin, href: 'https://linkedin.com/company/homewolves', aria: 'LinkedIn' },
+  { icon: Youtube, href: 'https://youtube.com/@homewolves', aria: 'YouTube' },
 ];
 
 export function Footer() {
@@ -71,6 +71,8 @@ export function Footer() {
                   <a
                     key={s.aria}
                     href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     aria-label={s.aria}
                     className="w-10 h-10 rounded-full bg-[var(--color-bg-glass)] backdrop-blur-[var(--glass-blur-subtle)] border border-[var(--color-border-glass)] grid place-items-center text-muted-foreground transition-all duration-fast hover:text-accent hover:border-accent"
                   >

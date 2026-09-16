@@ -2,6 +2,8 @@
 
 import { useListings, useDeleteListing } from '@/hooks/use-listings';
 import Link from 'next/link';
+import Image from 'next/image';
+import { Home } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function AgentListingsPage() {
@@ -45,7 +47,7 @@ export default function AgentListingsPage() {
 
       {!isLoading && (!data?.listings || data.listings.length === 0) && (
         <div className="text-center py-16">
-          <div className="text-4xl mb-3">🏠</div>
+          <div className="flex justify-center mb-3 text-muted-foreground"><Home className="w-10 h-10" /></div>
           <p className="text-base font-medium text-[var(--color-text-secondary)]">
             No listings yet
           </p>
@@ -69,15 +71,11 @@ export default function AgentListingsPage() {
               className="rounded-xl p-4 md:p-5 transition-all bg-[var(--color-bg-elevated)]"
             >
               <div className="flex items-start gap-4">
-                <div className="w-20 h-20 rounded-lg shrink-0 flex items-center justify-center text-2xl bg-[var(--color-bg-glass)]">
+                <div className="w-20 h-20 rounded-lg shrink-0 flex items-center justify-center bg-[var(--color-bg-glass)] overflow-hidden relative">
                   {listing.media?.[0]?.url ? (
-                    <img
-                      src={listing.media[0].url}
-                      alt=""
-                      className="w-full h-full object-cover rounded-lg"
-                    />
+                    <Image src={listing.media[0].url} alt="" fill className="object-cover rounded-lg" sizes="80px" />
                   ) : (
-                    '🏠'
+                    <Home className="w-6 h-6 text-muted-foreground" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">

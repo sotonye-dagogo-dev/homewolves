@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { fetchBlogPosts, fetchBlogCategories } from '@/lib/blog';
+import { Home } from 'lucide-react';
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Market News': 'bg-blue-500/10 text-blue-400',
@@ -107,8 +108,8 @@ export default function BlogPage() {
                     {post.coverImage ? (
                       <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--color-bg-elevated)' }}>
-                        <span className="text-4xl">🏠</span>
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--color-bg-elevated)', color: 'var(--color-text-muted)' }}>
+                        <Home className="w-8 h-8" />
                       </div>
                     )}
                     {post.categories?.[0] && (
