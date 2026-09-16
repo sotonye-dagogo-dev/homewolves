@@ -1,9 +1,22 @@
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
 import * as schema from '../src/drizzle/schema';
 import { SEED_USERS, SEED_LISTINGS, SEED_MEDIA, SEED_BLOG_POSTS, SEED_ACTIVITY_RULES } from './seed.data';
 import { DEFAULT_EMAIL_TEMPLATES } from '../src/modules/email/email-templates.defaults';
 import { revertSeed, revertPlatformConfigAndPlans, revertSeedUsers } from './seed.revert';
+
+// Auto-load .env from repo root so `npm run db:seed` works from root without manual export.
+for (const candidate of [
+  path.resolve(__dirname, '../../.env'),
+  path.resolve(__dirname, '../../../.env'),
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), 'packages/api/.env'),
+]) {
+  dotenv.config({ path: candidate });
+  if (process.env.DATABASE_URL) break;
+}
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
