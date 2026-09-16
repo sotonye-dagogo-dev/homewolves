@@ -123,6 +123,23 @@ describe('API integration (supertest)', () => {
     });
   });
 
+  describe('health (public)', () => {
+    it('returns liveness on /health', async () => {
+      const res = await request(app.getHttpServer()).get('/api/v1/health').expect(200);
+      expect(res.body.status).toBe('ok');
+      expect(res.body.timestamp).toBeDefined();
+    });
+
+    it('returns readiness shape on /health/ready', async () => {
+      (mocks.db as unknown as { execute: ReturnType<typeof import('vitest').vi.fn> }).execute.mockResolvedValue([]);
+      const res = await request(app.getHttpServer()).get('/api/v1/health/ready').expect(200);
+      expect(res.body.services).toBeDefined();
+      expect(res.body.services.database).toBeDefined();
+      expect(res.body.services.paystack).toBeDefined();
+      expect(res.body.services.email).toBeDefined();
+    });
+  });
+
   describe('public routes (200)', () => {
     it('returns the listings feed', async () => {
       const res = await request(app.getHttpServer()).get('/api/v1/listings').expect(200);

@@ -1,8 +1,8 @@
 # System Architecture
 
 > **Metadata**
-> - last-updated-by: update-ai-system
-> - last-verified-against-code: 2026-08-19
+> - last-updated-by: execute-feature
+> - last-verified-against-code: 2026-09-16
 > - staleness-policy: re-verify before trusting if any architecture-affecting commits have been made since last-verified-against-code
 
 > **Overview:** Homewolves is a multi-sided PropTech marketplace + Agent CRM + Transaction Management Platform targeting the Nigerian/African market. It uses a modular monolith architecture (Next.js 14 frontend + NestJS backend + PostgreSQL) designed to decompose into microservices as the platform scales. The system is metadata-driven — all configurable UI elements and business rules are stored in the database via `PlatformConfig`, with hardcoded fallbacks in `packages/config/src/fallbacks.ts`.
@@ -48,6 +48,7 @@
 
 | Module | Responsibility | Key Files | Dependencies |
 |--------|----------------|-----------|--------------|
+| `health` | Liveness + readiness probes, per-service `configured` flags, DB latency check | health.service.ts, health.controller.ts | Drizzle, integrations (Paystack/DocuSeal/Sms/Storage/Email), Redis |
 | `auth` | Email/phone OTP, JWT, session management, Supabase Google OAuth exchange | auth.service.ts, auth.controller.ts | users, notifications, email, Drizzle |
 | `email` | DB-backed transactional email templates, `{{var}}` rendering, Resend send + logging, graceful dev fallback (no key → simulated) | email.service.ts, email.controller.ts | emailTemplates, emailLogs, Drizzle |
 | `listings` | Property CRUD, search, media upload, featured/verified flags, moderation | listing.service.ts, listing.controller.ts | users, notifications, audit, alerts, email, Drizzle |
@@ -145,7 +146,8 @@ Business event (e.g. transaction created)
 | `SUPABASE_JWT_SECRET` | Supabase JWT secret — verifies OAuth access tokens at `/auth/supabase` | .env | — |
 | `REDIS_URL` | Redis connection string | .env | — |
 | `JWT_SECRET` | Token signing secret | .env | — |
-| `TERMII_API_KEY` | SMS provider key | .env | — |
+| `TERMII_API_KEY` / `TERMII_SENDER_ID` / `TERMII_API_URL` | SMS (Termii) — unset → simulated (log-only) via `SmsClient` | .env | — |
+| `S3_ENDPOINT` / `R2_ENDPOINT` + `S3_BUCKET` / `R2_BUCKET` + `S3_ACCESS_KEY_ID` / `R2_ACCESS_KEY_ID` + `S3_SECRET_ACCESS_KEY` / `R2_SECRET_ACCESS_KEY` + `S3_PUBLIC_URL` | S3/R2 storage — unset → simulated URLs via `StorageClient` | .env | — |
 | `RESEND_API_KEY` | Email provider key (unset → simulated log-only emails) | .env | — |
 | `RESEND_FROM_EMAIL` / `RESEND_FROM_NAME` | Email sender identity | .env | noreply@homewolves.africa / Homewolves |
 | `ENABLE_DESIGN_VIEWER` | Mounts the dev-only design-asset viewer at `/__design/*`; must be false in production builds | .env | false |
@@ -154,7 +156,10 @@ Business event (e.g. transaction created)
 
 ## Verification CLI (agent-verifiable behavior)
 
-The project exposes no standalone verification CLI today — verification is script-driven (`npm test`, `npm run typecheck`, `npm run build`, `npm run lint` at the turbo root, `db:generate`/`db:migrate` in `packages/api`). If a dedicated verification CLI is added later (engineering principle §24), list its commands here.
+Verification is script-driven (`npm test`, `npm run typecheck`, `npm run build`, `npm run lint` at the turbo root, `db:generate`/`db:migrate`/`db:seed`/`db:seed:revert` in `packages/api`) plus runtime health endpoints. If a dedicated standalone CLI is added later (engineering principle §24), list its commands here.
+
+- `GET /api/v1/health` — liveness (`{ status: 'ok', timestamp }`)
+- `GET /api/v1/health/ready` — readiness (`{ status, services: { database, paystack, docuseal, sms, storage, email, redis } }` with `configured` flags + DB latency)
 
 ---
 
@@ -164,6 +169,7 @@ This is the "undo" instinct applied one layer up from data (§22 covers user-fac
 
 - **Previous-build promotion** — deploys are build-artifact based (Vercel web / Railway API); rollback = redeploy the previous build from the provider's release history. No separate release pipeline exists.
 - **DB migration reversibility** — Drizzle migrations live in `packages/api/drizzle/migrations/` (`0000`, `0001`) generated via `npm run db:generate`; applied with `npm run db:migrate`. Not down-migrated in practice today.
+- **Seed reversibility** — `packages/api/drizzle/seed.data.ts` (`seed-` IDs + `SEED_MANIFEST`) + `seed.revert.ts` (FK-ordered `LIKE 'seed-%'` delete, leaves post-seed rows intact). CLI: `npm run db:seed -- --revert [--with-config] [--with-users]` (aliases `db:seed:revert`/`db:seed:revert:full`). Seed is idempotent (`onConflictDoUpdate`).
 - **Feature-flag kill switch** — yes: the `feature_flags` PlatformConfig table + `FeatureFlagGuard` / `useFeatureFlag()` can disable a bad feature without a deploy (this is the primary rollback lever).
 
 ---

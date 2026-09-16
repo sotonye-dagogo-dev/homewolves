@@ -60,6 +60,10 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
     return this.db.delete.bind(this.db);
   }
 
+  get execute(): Database['execute'] {
+    return this.db.execute.bind(this.db);
+  }
+
   async onModuleDestroy() {
     if (this.client) {
       await this.client.end({ timeout: 5 });

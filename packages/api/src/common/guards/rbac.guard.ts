@@ -1,6 +1,11 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
+/**
+ * @deprecated Use `RolesGuard` + `@Roles(...)` instead. This guard required
+ * `user.hasPermission()` which the JWT plain-object user does not implement.
+ * Kept only so existing imports do not break — new code must use `RolesGuard`.
+ */
 @Injectable()
 export class RbacGuard implements CanActivate {
   constructor(private reflector: Reflector) {}

@@ -507,3 +507,59 @@ Real `.env` already uses `homewolves.com` (Supabase live keys, Resend sender `he
 - SEO URLs (og, jsonLd, sitemap, robots) derive from `NEXT_PUBLIC_SITE_URL` at runtime; unset → `homewolves.com`.
 
 ---
+
+## Service wrappers cover all external providers + Health check surface (Session 11)
+
+**Decision:** Every external provider is accessed through a dedicated wrapper in `packages/api/src/common/integrations/` per §17: `PaystackClient`, `DocuSealClient`, `SmsClient` (Termii), `StorageClient` (S3/R2), `EmailService` (Resend), `Redis` (ioredis via `RateLimitModule`). New `HealthModule` (`GET /health` liveness, `GET /health/ready` readiness) reports per-service `configured` + DB latency as the single management surface.
+**Date:** 2026-09-16
+**Made by:** Implementer (execute-feature tightening pass)
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+The directive requires all services operational through wrappers that make management/resolution easier and guarantee end-to-end operation even when providers are unconfigured (graceful degradation). The health endpoints make wrapper status observable without inspecting env/logs.
+
+**Alternatives Considered:**
+- One-off SDK calls per feature — rejected: violates §17, makes provider swaps costly.
+- Separate health per integration — rejected: single `/health/ready` already aggregates.
+
+**Implications:**
+- New integrations must add a wrapper in `common/integrations/` and export it from `IntegrationsModule (@Global)`.
+- `HealthService` uses `DrizzleService.execute(sql\`SELECT 1\`)` for DB probe — requires `DrizzleService.execute` passthrough.
+- `RbacGuard` is deprecated (alias to `RolesGuard`) — new code uses `@Roles` + `RolesGuard`.
+
+---
+
+## Reversible seed via deterministic `seed-` IDs + manifest (Session 11)
+
+**Decision:** Seed rows use deterministic `seed-` prefixed IDs (users, listings, media, blogPosts, activityRules) and manifest-driven keys/slugs (platformConfig, emailTemplates, subscriptionPlans). `drizzle/seed.data.ts` is the single source for IDs/keys; `drizzle/seed.revert.ts` deletes only `LIKE 'seed-%'` / manifest entries in FK-safe order, leaving post-seed user data untouched. CLI supports `npm run db:seed -- --revert [--with-config] [--with-users]` and npm aliases `db:seed:revert` / `db:seed:revert:full`.
+**Date:** 2026-09-16
+**Made by:** Implementer (execute-feature tightening pass)
+**Supersedes:** The previous seed that only handled platformConfig + subscriptionPlans with no revert.
+**Superseded by:** None
+
+**Reason:**
+The directive requires seeded data that can be reverted without affecting post-seed data. Prefix + manifest makes seeded vs user data disjoint by construction; no schema migration (`isSeed` column) needed.
+
+**Implications:**
+- New seed tables must use `seed-` IDs and be registered in `SEED_MANIFEST`.
+- Revert by default keeps platformConfig/subscriptionPlans (may have been customized) — pass `--with-config` to remove them; keeps users unless `--with-users` (FK-safe after clearing dependents).
+- Seed is idempotent (`onConflictDoUpdate`).
+
+---
+
+## Dashboard/public error boundaries complement root (Session 11)
+
+**Decision:** Added `apps/web/app/(dashboard)/error.tsx` and `apps/web/app/(public)/error.tsx` as segment-level error boundaries (in addition to existing `app/error.tsx` + `app/global-error.tsx`). Dashboard variant logs `[dashboard]`, public variant is standalone.
+**Date:** 2026-09-16
+**Made by:** Implementer (execute-feature tightening pass)
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+The directive requires error boundaries on all pages — root alone is insufficient for segment-isolated recovery (dashboard stays interactive when a public page fails and vice versa).
+
+**Implications:**
+- New route groups that need isolated recovery should add their own `error.tsx`.
+
+---

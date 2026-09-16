@@ -66,13 +66,15 @@ export function createDrizzleMock(): DrizzleMock {
     return query[name]!;
   };
 
+  const execute = vi.fn().mockResolvedValue([]);
   const db = {
     select,
     insert,
     update,
     delete: remove,
+    execute,
     query,
   } as unknown as DrizzleService;
 
-  return { db, select, insert, update, delete: remove, query, table };
+  return { db, select, insert, update, delete: remove, execute, query, table } as unknown as DrizzleMock & { execute: MockFn };
 }
