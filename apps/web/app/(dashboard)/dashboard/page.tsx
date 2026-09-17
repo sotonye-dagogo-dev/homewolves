@@ -6,6 +6,7 @@ import { useListings } from '@/hooks/use-listings';
 import { useInspections } from '@/hooks/use-crm';
 import { useMyStats } from '@/hooks/use-activity';
 import Link from 'next/link';
+import { Moon, Home, ClipboardList, Phone, BadgeCheck, Calendar, Link2, BarChart3, Plus, Wallet } from 'lucide-react';
 
 const chartData = [
   { month: 'Jan', views: 45, inquiries: 30 },
@@ -54,8 +55,8 @@ export default function AgentDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="w-10 h-10 rounded-full grid place-items-center text-lg" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }} aria-label="Theme toggle">
-            🌙
+          <button className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-secondary)' }} aria-label="Theme toggle">
+            <Moon className="w-5 h-5" />
           </button>
           <div className="w-9 h-9 rounded-full grid place-items-center text-sm font-bold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
             {user?.firstName?.[0]}{user?.lastName?.[0]}
@@ -213,15 +214,17 @@ export default function AgentDashboardPage() {
           </div>
           <div className="space-y-1">
             {[
-              { icon: '📋', title: 'New Listing', desc: '3-bedroom apartment in Ikoyi was published', time: '2 hours ago' },
-              { icon: '📞', title: 'Client Call', desc: 'Chidi Okafor requested a viewing', time: '4 hours ago' },
-              { icon: '💰', title: 'Offer Received', desc: '₦85M offer on 5-bedroom in Lekki', time: 'Yesterday' },
-              { icon: '🏠', title: 'Inspection Completed', desc: 'Property inspection at 12 Admiralty Way', time: 'Yesterday' },
-              { icon: '✓', title: 'Deal Closed', desc: 'Sale completed for 3-bedroom in VI', time: '2 days ago' },
-            ].map((item, i) => (
+              { Icon: ClipboardList, title: 'New Listing', desc: '3-bedroom apartment in Ikoyi was published', time: '2 hours ago' },
+              { Icon: Phone, title: 'Client Call', desc: 'Chidi Okafor requested a viewing', time: '4 hours ago' },
+              { Icon: Wallet, title: 'Offer Received', desc: '₦85M offer on 5-bedroom in Lekki', time: 'Yesterday' },
+              { Icon: Home, title: 'Inspection Completed', desc: 'Property inspection at 12 Admiralty Way', time: 'Yesterday' },
+              { Icon: BadgeCheck, title: 'Deal Closed', desc: 'Sale completed for 3-bedroom in VI', time: '2 days ago' },
+            ].map((item, i) => {
+              const Icon = item.Icon;
+              return (
               <div key={i} className="flex gap-3 py-3 border-b last:border-b-0" style={{ borderColor: 'var(--color-border-subtle)' }}>
-                <div className="w-9 h-9 rounded-full grid place-items-center text-sm shrink-0" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
-                  {item.icon}
+                <div className="w-9 h-9 rounded-full grid place-items-center shrink-0" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-brand-accent)' }}>
+                  <Icon className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
@@ -230,7 +233,8 @@ export default function AgentDashboardPage() {
                   <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{item.time}</div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -297,19 +301,19 @@ export default function AgentDashboardPage() {
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Link href="/dashboard/agent/listings/new" className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-center transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
-              <div className="w-10 h-10 rounded-full grid place-items-center text-lg" style={{ background: 'var(--color-brand-primary)', color: 'var(--color-text-inverse)' }}>＋</div>
+              <div className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-brand-primary)', color: 'var(--color-text-inverse)' }}><Plus className="w-5 h-5" /></div>
               <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>New Listing</span>
             </Link>
             <Link href="/dashboard/agent/clients" className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-center transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
-              <div className="w-10 h-10 rounded-full grid place-items-center text-lg" style={{ background: 'var(--color-brand-secondary)', color: 'var(--color-text-inverse)' }}>📅</div>
+              <div className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-brand-secondary)', color: 'var(--color-text-inverse)' }}><Calendar className="w-5 h-5" /></div>
               <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Schedule Visit</span>
             </Link>
             <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-center transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
-              <div className="w-10 h-10 rounded-full grid place-items-center text-lg" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>🔗</div>
+              <div className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}><Link2 className="w-5 h-5" /></div>
               <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Refer Client</span>
             </button>
             <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-center transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
-              <div className="w-10 h-10 rounded-full grid place-items-center text-lg" style={{ background: 'var(--color-success)', color: 'var(--color-text-inverse)' }}>📊</div>
+              <div className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-success)', color: 'var(--color-text-inverse)' }}><BarChart3 className="w-5 h-5" /></div>
               <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Analytics</span>
             </button>
           </div>

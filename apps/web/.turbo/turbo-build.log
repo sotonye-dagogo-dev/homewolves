@@ -2,12 +2,6 @@
 > @hw/web@1.0.0 build
 > next build
 
-⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
-Attention: Next.js now collects completely anonymous telemetry regarding usage.
-This information is used to shape Next.js' roadmap and prioritize features.
-You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
-https://nextjs.org/telemetry
-
   ▲ Next.js 14.2.35
 
    Creating an optimized production build ...
@@ -16,9 +10,6 @@ https://nextjs.org/telemetry
  ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
  ✓ Compiled successfully
    Linting and checking validity of types ...
-
-./app/(public)/properties/[id]/page.tsx
-15:13  Warning: Empty block statement.  no-empty
 
 ./app/sitemap.ts
 17:13  Warning: Empty block statement.  no-empty
@@ -38,37 +29,37 @@ info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/d
    Collecting build traces ...
 
 Route (app)                              Size     First Load JS
-┌ ○ /                                    3.99 kB         113 kB
+┌ ○ /                                    10.4 kB         131 kB
 ├ ○ /_not-found                          174 B          87.5 kB
 ├ ○ /about                               174 B          87.5 kB
 ├ ƒ /api/v1/[...path]                    0 B                0 B
 ├ ○ /auth                                69.9 kB         160 kB
 ├ ○ /auth/callback                       2.6 kB         92.4 kB
-├ ○ /blog                                2.68 kB         108 kB
-├ ƒ /blog/[slug]                         14 kB           133 kB
+├ ○ /blog                                3.25 kB         109 kB
+├ ƒ /blog/[slug]                         14 kB           132 kB
 ├ ○ /contact                             174 B          87.5 kB
-├ ○ /dashboard                           4.83 kB         116 kB
+├ ○ /dashboard                           8.17 kB         118 kB
 ├ ○ /dashboard/admin                     5.5 kB          114 kB
 ├ ○ /dashboard/admin/blog                1.78 kB         113 kB
 ├ ƒ /dashboard/admin/blog/[id]/edit      3.02 kB         106 kB
 ├ ○ /dashboard/admin/blog/new            2.8 kB          106 kB
 ├ ○ /dashboard/admin/email-templates     4.67 kB         106 kB
-├ ○ /dashboard/admin/moderation          4.38 kB         117 kB
-├ ○ /dashboard/admin/payments            4.69 kB         109 kB
-├ ○ /dashboard/agent/clients             1.92 kB         105 kB
-├ ƒ /dashboard/agent/clients/[id]        3.91 kB         115 kB
-├ ○ /dashboard/agent/listings            4.47 kB         113 kB
+├ ○ /dashboard/admin/moderation          4.3 kB          117 kB
+├ ○ /dashboard/admin/payments            4.61 kB         109 kB
+├ ○ /dashboard/agent/clients             3.64 kB         105 kB
+├ ƒ /dashboard/agent/clients/[id]        5.58 kB         115 kB
+├ ○ /dashboard/agent/listings            4.65 kB         119 kB
 ├ ○ /dashboard/agent/listings/new        6.13 kB         108 kB
-├ ○ /dashboard/agent/transactions        4.14 kB         122 kB
-├ ƒ /dashboard/agent/transactions/[id]   8.58 kB         115 kB
+├ ○ /dashboard/agent/transactions        4.06 kB         122 kB
+├ ƒ /dashboard/agent/transactions/[id]   8.49 kB         115 kB
 ├ ○ /dashboard/client                    6 kB            130 kB
-├ ○ /dashboard/notifications             4.81 kB         117 kB
+├ ○ /dashboard/notifications             6.57 kB         119 kB
 ├ ○ /faq                                 174 B          87.5 kB
 ├ ○ /messages                            5.36 kB         118 kB
 ├ ○ /pricing                             5.84 kB         105 kB
 ├ ○ /privacy                             174 B          87.5 kB
-├ ○ /properties                          8.75 kB         125 kB
-├ ƒ /properties/[id]                     10.4 kB         124 kB
+├ ○ /properties                          9.01 kB         125 kB
+├ ƒ /properties/[id]                     10.5 kB         124 kB
 ├ ○ /robots.txt                          0 B                0 B
 ├ ○ /sitemap.xml                         0 B                0 B
 ├ ○ /terms                               174 B          87.5 kB

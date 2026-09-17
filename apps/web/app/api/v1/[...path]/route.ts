@@ -18,6 +18,8 @@ import {
   FALLBACK_PROPERTY_TYPES,
   FALLBACK_FEATURE_FLAGS,
   FALLBACK_SUBSCRIPTION_PLANS,
+  FALLBACK_LISTINGS,
+  FALLBACK_BLOG_POSTS,
 } from '@/config/fallbacks';
 
 export const dynamic = 'force-dynamic';
@@ -77,9 +79,32 @@ function fallbackForPath(path: string, searchParams: URLSearchParams): unknown |
   }
 
   // Listings — paginated shape expected by useListings / fetchListings
+  // Uses demo seed data so production is explorable even without a live DB.
   if (p === 'listings' || p === 'listings/featured') {
-    if (p === 'listings/featured') return { listings: [] };
-    return { listings: [], total: 0, skip: Number(searchParams.get('skip') ?? 0), take: Number(searchParams.get('take') ?? 12) };
+    let items = [...FALLBACK_LISTINGS] as any[];
+    const cat = searchParams.get('category')?.toUpperCase();
+    const search = (searchParams.get('search') ?? '').toLowerCase();
+    const propertyType = searchParams.get('propertyType');
+    if (p === 'listings/featured') {
+      items = items.filter((l) => l.featured);
+      return { listings: items.slice(0, 6) };
+    }
+    if (cat) items = items.filter((l) => l.category === cat);
+    if (propertyType) items = items.filter((l) => l.propertyType === propertyType);
+    if (search) items = items.filter((l) => l.title.toLowerCase().includes(search) || l.description.toLowerCase().includes(search) || l.locationJson?.city?.toLowerCase().includes(search));
+    const skip = Number(searchParams.get('skip') ?? searchParams.get('offset') ?? 0);
+    const take = Number(searchParams.get('take') ?? searchParams.get('limit') ?? 12);
+    const paged = items.slice(skip, skip + take);
+    return { listings: paged, total: items.length, skip, take };
+  }
+  if (p.startsWith('listings/')) {
+    const id = p.slice('listings/'.length).split('/')[0];
+    if (id) {
+      const found = (FALLBACK_LISTINGS as any[]).find((l) => l.id === id);
+      if (found) return found;
+      // allow slug fallback to first
+      return null;
+    }
   }
 
   // Subscriptions plans
@@ -87,9 +112,26 @@ function fallbackForPath(path: string, searchParams: URLSearchParams): unknown |
     return { plans: FALLBACK_SUBSCRIPTION_PLANS };
   }
 
-  // Blog
-  if (p === 'blog' || p.startsWith('blog')) {
-    return { posts: [], total: 0 };
+  // Blog — paginated shape expected by fetchBlogPosts / blog page
+  if (p === 'blog' || p === 'blog/categories' || p === 'blog/categories/list' || p.startsWith('blog')) {
+    if (p === 'blog/categories' || p === 'blog/categories/list') {
+      const cats = Array.from(new Set((FALLBACK_BLOG_POSTS as any[]).flatMap((b) => b.categories)));
+      return cats;
+    }
+    if (p.startsWith('blog/') && p !== 'blog/categories') {
+      const slug = p.slice('blog/'.length);
+      const post = (FALLBACK_BLOG_POSTS as any[]).find((b) => b.slug === slug || b.id === slug);
+      if (post) return post;
+      return null;
+    }
+    const page = Number(searchParams.get('page') ?? 1);
+    const limit = Number(searchParams.get('limit') ?? searchParams.get('take') ?? 12);
+    const catFilter = searchParams.get('category');
+    let posts = [...FALLBACK_BLOG_POSTS] as any[];
+    if (catFilter) posts = posts.filter((b) => b.categories.includes(catFilter));
+    const total = posts.length;
+    const start = (page - 1) * limit;
+    return { posts: posts.slice(start, start + limit), total, page, limit };
   }
 
   // Health
