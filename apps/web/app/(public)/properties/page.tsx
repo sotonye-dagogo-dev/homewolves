@@ -7,7 +7,7 @@ import { incrementView } from '@/lib/listings';
 import { MobileBar } from '@/components/landing/mobile-bar';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, LayoutGrid, List, Map, Heart, Share2 } from 'lucide-react';
+import { Search, LayoutGrid, List, Map, Heart, Share2, X, ChevronDown, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 type ViewMode = 'grid' | 'list' | 'map';
@@ -165,20 +165,32 @@ export default function PropertiesPage() {
         >
           Homewolves
         </Link>
-        <Link
-          href="/properties"
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          <Search className="w-5 h-5" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => document.getElementById('search-input')?.focus()}
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ color: 'var(--color-text-secondary)' }}
+            aria-label="Focus search"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+          <Link
+            href="/"
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ color: 'var(--color-text-secondary)' }}
+            aria-label="Home"
+          >
+            <Map className="w-5 h-5" />
+          </Link>
+        </div>
       </header>
+      <div className="md:hidden h-[56px]" aria-hidden />
 
       {/* Filter section */}
       <section
-        className="sticky z-40"
+        className="sticky z-40 top-[56px] md:top-0"
         style={{
-          top: '0px',
           background: 'var(--color-bg-base)',
           borderBottom: '1px solid var(--color-border-subtle)',
           padding: 'var(--space-3) var(--space-4) var(--space-2)',
@@ -198,6 +210,7 @@ export default function PropertiesPage() {
               <Search className="w-4 h-4" />
             </span>
             <input
+              id="search-input"
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -299,11 +312,8 @@ export default function PropertiesPage() {
                 }}
               >
                 {f.label}
-                <span
-                  className="w-4 h-4 rounded-full flex items-center justify-center text-xs"
-                  style={{ background: 'transparent' }}
-                >
-                  ×
+                <span className="w-4 h-4 rounded-full flex items-center justify-center">
+                  <X className="w-3 h-3" />
                 </span>
               </div>
             ))}
@@ -325,7 +335,7 @@ export default function PropertiesPage() {
                 color: 'var(--color-text-secondary)',
               }}
             >
-              {sortOptions.find((o) => o.value === sort)?.label} ▼
+              {sortOptions.find((o) => o.value === sort)?.label} <ChevronDown className="w-3 h-3" />
             </button>
             {sortOpen && (
               <div
@@ -581,10 +591,10 @@ function PropertyCard({ listing, onClick }: { listing: any; onClick: () => void 
           </span>
           {listing.verified && (
             <span
-              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
               style={{ background: '#D1FAE5', color: '#065F46' }}
             >
-              Verified ✓
+              <Check className="w-3 h-3" /> Verified
             </span>
           )}
         </div>
@@ -688,11 +698,8 @@ function PropertyCardHorizontal({ listing, onClick }: { listing: any; onClick: (
             {listing.category}
           </span>
           {listing.verified && (
-            <span
-              className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-              style={{ background: '#D1FAE5', color: '#065F46' }}
-            >
-              Verified ✓
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: '#D1FAE5', color: '#065F46' }}>
+              <Check className="w-3 h-3" /> Verified
             </span>
           )}
         </div>

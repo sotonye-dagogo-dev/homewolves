@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Search, Moon, Share2, Heart, Home, BedDouble, Bath, Maximize2, Calendar, Map, Check, Zap, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Moon, Share2, Heart, Home, BedDouble, Bath, Maximize2, Calendar, Map, Check, Zap, ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useListing, useListings } from '@/hooks/use-listings';
 import { useCheckSaved, useToggleSave, useRecentViews } from '@/hooks/use-interactions';
 import { useAuth } from '@/hooks/use-auth';
@@ -469,8 +469,8 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
                   </p>
                   <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Licensed Agent</p>
                 </div>
-                <div className="flex" style={{ color: 'var(--color-brand-accent)' }}>
-                  {Array.from({ length: 5 }).map((_, i) => (<span key={i} className="text-sm">★</span>))}
+                <div className="flex gap-0.5" style={{ color: 'var(--color-brand-accent)' }}>
+                  {Array.from({ length: 5 }).map((_, i) => (<Star key={i} className="w-4 h-4 fill-current" />))}
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
