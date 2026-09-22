@@ -634,3 +634,44 @@ Users need a structured way to report bugs/features without leaving the platform
 - `emailService.send()` auto-injects `{{logoUrl}}` and `{{siteUrl}}` — all templates can use these variables.
 
 ---
+
+## Cloudinary replaces S3/R2 for file storage (Session 14)
+
+**Decision:** File storage uses Cloudinary (`cloudinary` npm SDK) instead of S3/R2-compatible HTTP PUT. Env vars: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER` (default: `"homewolves"`). `StorageClient` wraps `cloudinary.v2` — `uploader.upload()` for uploads, `uploader.destroy()` for deletes, `url()` for public URLs. Same graceful degradation: unconfigured → simulated mode.
+**Date:** 2026-09-22
+**Made by:** Implementer (execute-feature env audit)
+**Supersedes:** S3/R2 storage decision (Session 11 wrappers)
+**Superseded by:** None
+
+**Reason:**
+User prefers Cloudinary for easier setup, management, and familiarity. Cloudinary provides a managed media CDN with on-the-fly transformations, which is better suited for a marketplace with listing images than self-managed S3/R2 buckets. The 4-variable config (cloud name, API key, API secret, folder) is simpler than the 9 S3/R2 variables.
+
+**Alternatives Considered:**
+- Keep S3/R2 — rejected: user preference for Cloudinary; S3 requires more infra setup.
+- AWS S3 native SDK — rejected: same complexity as R2, additional dependency.
+- Uploadcare/Imgix — rejected: user chose Cloudinary specifically.
+
+**Implications:**
+- `CLOUDINARY_FOLDER` enables organised folder structures (e.g. `homewolves/listings`, `homewolves/avatars`).
+- Cloudinary auto-generates responsive image URLs — can be leveraged for listing galleries.
+- `next.config.js` `remotePatterns` may need `res.cloudinary.com` added (already has `**.supabase.co`).
+- Health check `storage` status now reports `cloudName` + `folder` instead of `endpoint` + `bucket`.
+
+---
+
+## Google OAuth env vars corrected (Session 14)
+
+**Decision:** `.env.example` now documents all three Google OAuth vars: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (web client), `GOOGLE_CLIENT_ID` (API audience check), `GOOGLE_CLIENT_SECRET` (server-side exchange). Both `GOOGLE_CLIENT_ID` and `NEXT_PUBLIC_GOOGLE_CLIENT_ID` should be set to the same value. `GOOGLE_CLIENT_SECRET` was in `.env` but undocumented; now added to `.env.example`, `turbo.json`, and `README.md`.
+**Date:** 2026-09-22
+**Made by:** Implementer (execute-feature env audit)
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+The web client (`google-auth.ts`) reads `NEXT_PUBLIC_GOOGLE_CLIENT_ID` but it was missing from `.env` — the Google sign-in button would show "Configure Google OAuth" instead of rendering. The API reads `GOOGLE_CLIENT_ID` with fallback. Both should be set to the same client ID value. `GOOGLE_CLIENT_SECRET` was defined in `.env` but never documented anywhere.
+
+**Implications:**
+- Users must set both `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_ID` to the same value.
+- `GOOGLE_CLIENT_SECRET` is available for future server-side token exchange if needed.
+
+---

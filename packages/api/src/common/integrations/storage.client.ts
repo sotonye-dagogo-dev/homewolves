@@ -1,4 +1,5 @@
 import { Injectable, Logger, BadGatewayException } from '@nestjs/common';
+import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
 
 export interface StorageUploadParams {
   key: string;
@@ -12,77 +13,91 @@ export interface StorageUploadResult {
 }
 
 /**
- * Thin wrapper around S3-compatible storage (Cloudflare R2 / AWS S3).
+ * Thin wrapper around Cloudinary for file storage.
  *
  * Config (all optional — unconfigured → simulated mode):
- *  - `S3_ENDPOINT` / `R2_ENDPOINT` — base endpoint
- *  - `S3_BUCKET` / `R2_BUCKET` — bucket name
- *  - `S3_ACCESS_KEY_ID` / `R2_ACCESS_KEY_ID`
- *  - `S3_SECRET_ACCESS_KEY` / `R2_SECRET_ACCESS_KEY`
- *  - `S3_PUBLIC_URL` — public base URL for returned URLs (fallback: endpoint/bucket)
+ *  - `CLOUDINARY_CLOUD_NAME` — Cloudinary cloud name
+ *  - `CLOUDINARY_API_KEY` — Cloudinary API key
+ *  - `CLOUDINARY_API_SECRET` — Cloudinary API secret
+ *  - `CLOUDINARY_FOLDER` — folder prefix for uploaded assets (default: "homewolves")
  *
  * When unconfigured `isConfigured === false`; `upload()` returns a simulated
- * URL and `getSignedUrl()` returns a deterministic placeholder — never throws
- * in dev so callers do not need a separate dev branch.
+ * URL and `delete()` is a no-op — never throws in dev so callers do not need
+ * a separate dev branch.
  */
 @Injectable()
 export class StorageClient {
   private readonly logger = new Logger(StorageClient.name);
+  private configured = false;
 
-  private get endpoint(): string {
-    return process.env.S3_ENDPOINT ?? process.env.R2_ENDPOINT ?? '';
+  constructor() {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? '';
+    const apiKey = process.env.CLOUDINARY_API_KEY ?? '';
+    const apiSecret = process.env.CLOUDINARY_API_SECRET ?? '';
+
+    if (cloudName && apiKey && apiSecret) {
+      cloudinary.config({
+        cloud_name: cloudName,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        secure: true,
+      });
+      this.configured = true;
+    }
   }
-  private get bucket(): string {
-    return process.env.S3_BUCKET ?? process.env.R2_BUCKET ?? '';
-  }
-  private get accessKeyId(): string {
-    return process.env.S3_ACCESS_KEY_ID ?? process.env.R2_ACCESS_KEY_ID ?? '';
-  }
-  private get secretAccessKey(): string {
-    return process.env.S3_SECRET_ACCESS_KEY ?? process.env.R2_SECRET_ACCESS_KEY ?? '';
-  }
-  private get publicUrl(): string {
-    return (process.env.S3_PUBLIC_URL ?? '').replace(/\/$/, '');
+
+  private get folder(): string {
+    return process.env.CLOUDINARY_FOLDER ?? 'homewolves';
   }
 
   get isConfigured(): boolean {
-    return Boolean(this.endpoint && this.bucket && this.accessKeyId && this.secretAccessKey);
+    return this.configured;
   }
 
-  private publicBase(): string {
-    if (this.publicUrl) return this.publicUrl;
-    if (this.endpoint && this.bucket) return `${this.endpoint.replace(/\/$/, '')}/${this.bucket}`;
-    return 'https://storage.local';
+  private simulatedUrl(key: string): string {
+    return `https://res.cloudinary.com/placeholder/image/upload/${this.folder}/${key}`;
   }
 
   async upload(params: StorageUploadParams): Promise<StorageUploadResult> {
     if (!this.isConfigured) {
       this.logger.log(`[Storage simulated] upload key=${params.key} (${typeof params.body === 'string' ? params.body.length : (params.body as Uint8Array).length} bytes)`);
-      return { key: params.key, url: `${this.publicBase()}/${params.key}` };
+      return { key: params.key, url: this.simulatedUrl(params.key) };
     }
+
     try {
-      const res = await fetch(`${this.endpoint.replace(/\/$/, '')}/${this.bucket}/${params.key}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': params.contentType ?? 'application/octet-stream',
-          Authorization: `Bearer ${this.accessKeyId}`,
-        },
-        body: params.body as BodyInit,
+      const buffer = Buffer.isBuffer(params.body)
+        ? params.body
+        : params.body instanceof Uint8Array
+          ? Buffer.from(params.body)
+          : Buffer.from(params.body);
+
+      const dataUrl = params.contentType
+        ? `data:${params.contentType};base64,${buffer.toString('base64')}`
+        : `data:application/octet-stream;base64,${buffer.toString('base64')}`;
+
+      const result: UploadApiResponse = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload(
+          dataUrl,
+          { folder: this.folder, public_id: params.key.replace(/\.[^.]+$/, '') },
+          (error, result) => {
+            if (error) reject(error);
+            else if (result) resolve(result);
+            else reject(new Error('Upload returned no result'));
+          },
+        );
       });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        this.logger.warn(`Storage upload failed (${res.status}): ${text.slice(0, 300)}`);
-        throw new BadGatewayException('Storage upload failed');
-      }
-      return { key: params.key, url: `${this.publicBase()}/${params.key}` };
+
+      return { key: result.public_id, url: result.secure_url };
     } catch (err) {
       if (err instanceof BadGatewayException) throw err;
+      this.logger.warn(`Storage upload failed: ${(err as Error).message}`);
       throw new BadGatewayException(`Storage upload error: ${(err as Error).message}`);
     }
   }
 
   getPublicUrl(key: string): string {
-    return `${this.publicBase()}/${key}`;
+    if (!this.isConfigured) return this.simulatedUrl(key);
+    return cloudinary.url(`${this.folder}/${key}`, { secure: true });
   }
 
   async delete(key: string): Promise<void> {
@@ -90,22 +105,20 @@ export class StorageClient {
       this.logger.log(`[Storage simulated] delete key=${key}`);
       return;
     }
-    const res = await fetch(`${this.endpoint.replace(/\/$/, '')}/${this.bucket}/${key}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${this.accessKeyId}` },
-    });
-    if (!res.ok && res.status !== 404) {
-      const text = await res.text().catch(() => '');
-      this.logger.warn(`Storage delete failed (${res.status}): ${text.slice(0, 300)}`);
-      throw new BadGatewayException('Storage delete failed');
+
+    try {
+      await cloudinary.uploader.destroy(`${this.folder}/${key}`);
+    } catch (err) {
+      this.logger.warn(`Storage delete failed: ${(err as Error).message}`);
+      throw new BadGatewayException(`Storage delete error: ${(err as Error).message}`);
     }
   }
 
-  getStatus(): { configured: boolean; endpoint: string | null; bucket: string | null } {
+  getStatus(): { configured: boolean; cloudName: string | null; folder: string } {
     return {
       configured: this.isConfigured,
-      endpoint: this.endpoint || null,
-      bucket: this.bucket || null,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME ?? null,
+      folder: this.folder,
     };
   }
 }

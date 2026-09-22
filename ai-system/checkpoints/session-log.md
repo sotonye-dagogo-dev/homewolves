@@ -370,3 +370,42 @@ Pick next Backlog item from `planning/task-queue.md` Up Next (WhatsApp integrati
 - 1 pre-existing lint error in `auth.service.ts:290` (`@typescript-eslint/no-explicit-any`) — not introduced by this session.
 
 ---
+
+## Session 14 — 2026-09-22 (Env audit + Cloudinary migration + Google OAuth fixes)
+
+Executed `execute-feature` pipeline for env variable corrections, storage provider migration (S3/R2 → Cloudinary), and documentation alignment.
+
+**Completed:**
+- **Google OAuth env correction:** `.env.example` now documents all 3 vars: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (web client), `GOOGLE_CLIENT_ID` (API audience check), `GOOGLE_CLIENT_SECRET` (server-side exchange). Added `GOOGLE_CLIENT_SECRET` to `turbo.json` globalPassThroughEnv and build task env. Updated `README.md` Google OAuth setup to include secret.
+- **Storage migration to Cloudinary:** Rewrote `StorageClient` from S3/R2 HTTP PUT to `cloudinary` npm SDK. New env vars: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER` (default: `"homewolves"`). Upload uses callback-based `cloudinary.uploader.upload()` with data URL encoding. Delete uses `cloudinary.uploader.destroy()`. Public URL via `cloudinary.url()`. Same graceful degradation: unconfigured → simulated mode. `cloudinary` package installed as dependency.
+- **Tests rewritten:** `storage.client.spec.ts` fully rewritten for Cloudinary — 10 tests covering configured/unconfigured states, upload (callback mock), delete, getPublicUrl, getStatus, default folder. Fixed callback-style mock timeout.
+- **turbo.json updated:** Added `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER` to both `globalPassThroughEnv` and build task `env` arrays.
+- **README.md updated:** Tech stack table now includes "Storage | Cloudinary". Env vars table updated with Google OAuth trio and Cloudinary quartet. Google OAuth setup section now includes secret.
+- **system-architecture.md updated:** Google OAuth row expanded to include `GOOGLE_CLIENT_SECRET`. Storage row changed from S3/R2 9-variable block to Cloudinary 4-variable block.
+- **project-decisions.md:** 3 new decisions — Cloudinary replaces S3/R2, Google OAuth env vars corrected, Bug report system (from Session 13).
+- **QA gate:** typecheck 4/4 ✅, lint 1 pre-existing error, 157 API + 100 web tests ✅.
+
+**Files Modified:**
+- `packages/api/src/common/integrations/storage.client.ts` — rewritten: S3/R2 → Cloudinary SDK
+- `packages/api/src/common/integrations/storage.client.spec.ts` — rewritten: 10 Cloudinary tests
+- `packages/api/package.json` — `cloudinary` dependency added
+- `.env.example` — added `GOOGLE_CLIENT_SECRET`, replaced S3/R2 with Cloudinary vars
+- `turbo.json` — Google + Cloudinary env vars added to pass-through
+- `README.md` — tech stack, env vars table, Google OAuth setup
+- `ai-system/system-architecture.md` — env var table updated
+- `ai-system/memory/project-decisions.md` — 3 new decisions
+
+**Next Task:**
+Pick next Backlog item from `planning/task-queue.md` Up Next (WhatsApp integration, Analytics engine, Expo parity, PWA, Push notifications) or restore live DB connectivity for migration `0002` + seed.
+
+**Assumptions Made:**
+- Cloudinary callback-style API (`upload(dataUrl, opts, cb)`) is the correct pattern for the Node.js SDK — confirmed by SDK types.
+- `CLOUDINARY_FOLDER` default `"homewolves"` matches the project name — users can override for organised folder structures.
+- `res.cloudinary.com` already in `next.config.js` `remotePatterns` — no additional config needed.
+
+**Notes / Blockers:**
+- Supabase DB `ltxseuwzxbothxevcmwd` still unreachable — migration `0002` not applied live. Same blocker as Session 12/13.
+- `NEXT_IGNORE_INCORRECT_LOCKFILE=1` still required for `next build`.
+- 1 pre-existing lint error in `auth.service.ts:290`.
+
+---

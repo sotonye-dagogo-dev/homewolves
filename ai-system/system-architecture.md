@@ -146,14 +146,14 @@ Business event (e.g. transaction created)
 | `transaction_step_templates` | Workflow step definitions | PlatformConfig table | FALLBACK_STEPS |
 | `property_types` | Property type categories and icons | PlatformConfig table | FALLBACK_TYPES |
 | `DATABASE_URL` | PostgreSQL connection string | .env | — |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID` | Direct Google OAuth client id (preferred) | .env | — |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Direct Google OAuth (client ID for web + API, secret for server-side exchange) | .env | — |
 | `SUPABASE_URL` | Supabase project URL (legacy fallback) | .env | — |
 | `SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key (web, legacy) | .env | — |
 | `SUPABASE_JWT_SECRET` | Supabase JWT secret — verifies OAuth access tokens at `/auth/supabase` (legacy) | .env | — |
 | `REDIS_URL` | Redis connection string | .env | — |
 | `JWT_SECRET` | Token signing secret | .env | — |
 | `TERMII_API_KEY` / `TERMII_SENDER_ID` / `TERMII_API_URL` | SMS (Termii) — unset → simulated (log-only) via `SmsClient` | .env | — |
-| `S3_ENDPOINT` / `R2_ENDPOINT` + `S3_BUCKET` / `R2_BUCKET` + `S3_ACCESS_KEY_ID` / `R2_ACCESS_KEY_ID` + `S3_SECRET_ACCESS_KEY` / `R2_SECRET_ACCESS_KEY` + `S3_PUBLIC_URL` | S3/R2 storage — unset → simulated URLs via `StorageClient` | .env | — |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` / `CLOUDINARY_FOLDER` | Cloudinary file storage — unset → simulated URLs via `StorageClient` | .env | — |
 | `RESEND_API_KEY` | Email provider key (unset → simulated log-only emails) | .env | — |
 | `RESEND_FROM_EMAIL` / `RESEND_FROM_NAME` | Email sender identity | .env | noreply@homewolves.africa / Homewolves |
 | `ENABLE_DESIGN_VIEWER` | Mounts the dev-only design-asset viewer at `/__design/*`; must be false in production builds | .env | false |
