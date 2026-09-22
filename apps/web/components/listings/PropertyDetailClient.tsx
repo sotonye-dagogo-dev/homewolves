@@ -2,13 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+function emitToast(msg: string) {
+  if (typeof window !== 'undefined') {
+    const ev = new CustomEvent('hw-toast', { detail: { message: msg, type: 'info' } });
+    window.dispatchEvent(ev);
+  }
+}
 import Image from 'next/image';
 import { Search, Moon, Share2, Heart, Home, BedDouble, Bath, Maximize2, Calendar, Map, Check, Zap, ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useListing, useListings } from '@/hooks/use-listings';
 import { useCheckSaved, useToggleSave, useRecentViews } from '@/hooks/use-interactions';
 import { useAuth } from '@/hooks/use-auth';
 import { recordView } from '@/lib/interactions';
-import { MobileBar } from '@/components/landing/mobile-bar';
 import Link from 'next/link';
 
 export default function PropertyDetailClient({ initialListing }: { initialListing?: unknown }) {
@@ -194,10 +199,11 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
         )}
       </section>
 
-      {/* ─── §4.3 Zone 2 — Mobile Sticky Action Bar ─── */}
+      {/* ─── §4.3 Zone 2 — Mobile Sticky Action Bar (sits above MobileBar) ─── */}
       <div
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 px-4 py-3"
+        className="lg:hidden fixed left-0 right-0 z-40 flex items-center gap-3 px-4 py-3"
         style={{
+          bottom: '80px',
           background: 'var(--color-bg-glass)',
           backdropFilter: 'var(--glass-blur-heavy)',
           borderTop: '1px solid var(--color-border-glass)',
@@ -212,10 +218,10 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
           <button onClick={handleToggleSave} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: saved ? 'var(--color-error)' : 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: saved ? 'white' : 'var(--color-text-primary)' }}>
             <Heart className="w-5 h-5" fill={saved ? 'currentColor' : 'none'} />
           </button>
-          <button className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>
+          <button className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }} aria-label="Share">
             <Share2 className="w-5 h-5" />
           </button>
-          <button className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
+          <button onClick={() => emitToast('Chat coming soon')} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
             Chat Agent
           </button>
         </div>
@@ -226,9 +232,10 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
         id="detail-main"
         style={{
           padding: 'var(--space-4)',
-          paddingBottom: 'calc(var(--space-4) + 80px)',
+          paddingBottom: 'calc(var(--space-4) + 160px)',
           maxWidth: '1280px',
           margin: '0 auto',
+          overflowX: 'hidden',
         }}
       >
         <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-10">
@@ -439,8 +446,8 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
 
           {/* ─── Right / Sidebar Column (desktop) ─── */}
           <div
-            className="hidden lg:flex flex-col gap-6 sticky top-24 self-start"
-            style={{ maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}
+            className="hidden lg:flex flex-col gap-6 lg:sticky lg:top-24 self-start w-full"
+            style={{ maxHeight: 'none', overflowY: 'visible' }}
           >
             {/* ─── §4.3 Zone 8 — Agent Card ─── */}
             <div
@@ -556,7 +563,6 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
         </div>
       </main>
 
-      <MobileBar />
     </div>
   );
 }

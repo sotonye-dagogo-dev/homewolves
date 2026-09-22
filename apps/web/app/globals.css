@@ -304,6 +304,15 @@
   }
   .scrollbar-none::-webkit-scrollbar { display: none; }
 
+  /* Prevent horizontal overflow from map/absolute elements */
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  main, section {
+    min-width: 0;
+  }
+
   /* Scrollbar styling */
   ::-webkit-scrollbar {
     width: 6px;

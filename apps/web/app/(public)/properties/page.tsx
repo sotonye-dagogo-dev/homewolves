@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useListings } from '@/hooks/use-listings';
 import { useFilterPills } from '@/hooks/use-platform-config';
 import { incrementView } from '@/lib/listings';
-import { MobileBar } from '@/components/landing/mobile-bar';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Search, LayoutGrid, List, Map, Heart, Share2, X, ChevronDown, Check } from 'lucide-react';
@@ -455,7 +454,6 @@ export default function PropertiesPage() {
           </div>
         )}
       </main>
-      <MobileBar />
     </div>
   );
 }

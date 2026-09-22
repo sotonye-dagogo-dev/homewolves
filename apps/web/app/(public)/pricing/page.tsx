@@ -58,23 +58,30 @@ const FALLBACK_PLANS = [
 ];
 
 export default function PricingPage() {
-  const { data: plans, isLoading } = usePlans();
+  const { data: plans, isLoading, isError, error } = usePlans();
   const { data: mySub } = useMySubscription();
   const checkout = useInitiateCheckout();
   const { user } = useAuth();
   const router = useRouter();
   const [annual, setAnnual] = useState(false);
 
-  const displayPlans = plans ?? FALLBACK_PLANS;
+  // Normalize: usePlans may return array or {plans: array} depending on proxy; handle both
+  const rawPlans: any[] = Array.isArray(plans) ? plans : (plans as any)?.plans ?? (plans as any)?.value ?? [];
+  const displayPlans = (rawPlans.length > 0 ? rawPlans : FALLBACK_PLANS) as any[];
 
   const handleCheckout = async (planId: string) => {
     if (!user) {
       router.push('/auth?redirect=/pricing');
       return;
     }
-    const result = await checkout.mutateAsync(planId);
-    if (result.authorizationUrl) {
-      window.open(result.authorizationUrl, '_blank');
+    try {
+      const result = await checkout.mutateAsync(planId) as any;
+      if (result?.authorizationUrl) {
+        window.open(result.authorizationUrl, '_blank');
+      }
+    } catch (e: any) {
+      // error toast handled via mutation onError; fallback alert
+      console.error(e);
     }
   };
 
@@ -116,6 +123,11 @@ export default function PricingPage() {
 
       {/* Plans Grid */}
       <div className="max-w-6xl mx-auto px-4 pb-16">
+        {isError && (
+          <div className="rounded-xl p-4 mb-4 text-sm text-center" style={{ background: 'var(--color-warning-bg)', color: 'var(--color-warning)', border: '1px solid var(--color-warning)' }}>
+            Plans failed to load, showing default options. {(error as Error)?.message ?? ''}
+          </div>
+        )}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -132,7 +144,7 @@ export default function PricingPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {displayPlans.map((plan: any) => {
+            {Array.isArray(displayPlans) && displayPlans.map((plan: any) => {
               const isCurrent = mySub?.plan?.id === plan.id;
               const price = annual ? Math.round(plan.price * 0.8) : plan.price;
 
@@ -195,12 +207,14 @@ export default function PricingPage() {
                   </button>
 
                   <div className="space-y-3">
-                    {(plan.features ?? []).map((feat: string, i: number) => (
+                    {(Array.isArray(plan.features) ? plan.features : []).map((feat: any, i: number) => {
+                      const label = typeof feat === 'string' ? feat : feat?.label ?? String(feat);
+                      return (
                       <div key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                         <Check className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                        {feat}
+                        {label}
                       </div>
-                    ))}
+                    );})}
                   </div>
                 </div>
               );
