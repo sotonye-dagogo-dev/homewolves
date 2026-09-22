@@ -3,7 +3,7 @@
 > **Metadata**
 > - last-updated-by: execute-feature
 > - last-verified-against-code: 2026-09-22
-> - last-synced: 2026-09-22 (Session 14 — env audit + Cloudinary migration + Google OAuth fixes)
+> - last-synced: 2026-09-22 (Session 15 — error boundary bug reporting + auth toast CTA + functional buttons)
 > - staleness-policy: re-verify before each session
 
 > **Overview:** Sprint-level task queue with complexity tagging. Agents execute tasks top to bottom within the current sprint. Each task is sized so it can be completed in a single session. Sprint 1–3 are complete; the current focus is hardening, Backlog items, and the next scheduled phase.

@@ -12,7 +12,7 @@
 
 ## Current Status
 
-**Status:** COMPLETE — Session 14 completed. No in-progress work.
+**Status:** COMPLETE — Session 15 completed. No in-progress work.
 
 ---
 

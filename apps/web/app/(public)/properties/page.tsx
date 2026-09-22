@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useListings } from '@/hooks/use-listings';
 import { useFilterPills } from '@/hooks/use-platform-config';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { incrementView } from '@/lib/listings';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -462,6 +463,8 @@ export default function PropertiesPage() {
 
 function PropertyCard({ listing, onClick }: { listing: any; onClick: () => void }) {
   const [saved, setSaved] = useState(false);
+  const router = useRouter();
+  const { requireAuth } = useRequireAuth('/messages');
   const primaryMedia = listing.media?.find((m: any) => m.isPrimary) ?? listing.media?.[0];
   const location = listing.locationJson as any;
 
@@ -618,6 +621,7 @@ function PropertyCard({ listing, onClick }: { listing: any; onClick: () => void 
           <button
             onClick={(e) => {
               e.stopPropagation();
+              if (requireAuth('Messaging')) router.push('/messages');
             }}
             className="text-xs font-semibold px-3 py-1 rounded-full transition-colors"
             style={{

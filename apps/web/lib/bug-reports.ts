@@ -26,6 +26,10 @@ export async function createBugReport(data: {
   type: string;
   description: string;
   screenshots?: string[];
+  errorMessage?: string;
+  stackTrace?: string;
+  componentName?: string;
+  url?: string;
 }) {
   const r = await fetch(getApi(), {
     method: 'POST',

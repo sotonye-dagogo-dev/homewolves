@@ -22,6 +22,10 @@ export class BugReportsService {
         type: dto.type,
         description: dto.description,
         screenshots: dto.screenshots ?? [],
+        errorMessage: dto.errorMessage ?? null,
+        stackTrace: dto.stackTrace ?? null,
+        componentName: dto.componentName ?? null,
+        url: dto.url ?? null,
       })
       .returning();
     if (!report) throw new Error('Failed to create bug report');

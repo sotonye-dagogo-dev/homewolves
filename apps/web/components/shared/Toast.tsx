@@ -1,16 +1,18 @@
 'use client';
 
-import { createContext, useContext, useCallback, useState } from 'react';
+import { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import Link from 'next/link';
 
 type ToastType = 'success' | 'error' | 'info';
-type Toast = { id: string; type: ToastType; message: string };
+type ToastAction = { label: string; href: string };
+type Toast = { id: string; type: ToastType; message: string; action?: ToastAction };
 
 const ToastContext = createContext<{
-  toast: (msg: string, type?: ToastType) => void;
+  toast: (msg: string, type?: ToastType, action?: ToastAction) => void;
   success: (msg: string) => void;
   error: (msg: string) => void;
-  info: (msg: string) => void;
+  info: (msg: string, action?: ToastAction) => void;
 } | null>(null);
 
 export function useToast() {
@@ -22,18 +24,29 @@ export function useToast() {
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const toast = useCallback((message: string, type: ToastType = 'info') => {
+  const toast = useCallback((message: string, type: ToastType = 'info', action?: ToastAction) => {
     const id = Math.random().toString(36).slice(2);
-    setToasts((t) => [...t, { id, type, message }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
+    setToasts((t) => [...t, { id, type, message, action }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 5000);
   }, []);
 
   const api = {
     toast,
     success: (m: string) => toast(m, 'success'),
     error: (m: string) => toast(m, 'error'),
-    info: (m: string) => toast(m, 'info'),
+    info: (m: string, action?: ToastAction) => toast(m, 'info', action),
   };
+
+  useEffect(() => {
+    function handleToastEvent(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.message) {
+        toast(detail.message, detail.type ?? 'info', detail.action);
+      }
+    }
+    window.addEventListener('hw-toast', handleToastEvent);
+    return () => window.removeEventListener('hw-toast', handleToastEvent);
+  }, [toast]);
 
   return (
     <ToastContext.Provider value={api}>
@@ -55,7 +68,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <span className="mt-0.5">
               {t.type === 'success' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : t.type === 'error' ? <AlertCircle className="w-5 h-5 text-red-600" /> : <Info className="w-5 h-5 text-blue-600" />}
             </span>
-            <p className="flex-1 text-sm font-medium leading-snug">{t.message}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium leading-snug">{t.message}</p>
+              {t.action && (
+                <Link
+                  href={t.action.href}
+                  className="inline-block mt-1.5 text-xs font-semibold underline"
+                  style={{ color: 'var(--color-brand-accent)' }}
+                  onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
+                >
+                  {t.action.label}
+                </Link>
+              )}
+            </div>
             <button
               onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
               className="p-1 rounded-full hover:bg-black/5"

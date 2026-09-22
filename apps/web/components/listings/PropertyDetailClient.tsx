@@ -2,17 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-function emitToast(msg: string) {
-  if (typeof window !== 'undefined') {
-    const ev = new CustomEvent('hw-toast', { detail: { message: msg, type: 'info' } });
-    window.dispatchEvent(ev);
-  }
-}
 import Image from 'next/image';
 import { Search, Moon, Share2, Heart, Home, BedDouble, Bath, Maximize2, Calendar, Map, Check, Zap, ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useListing, useListings } from '@/hooks/use-listings';
 import { useCheckSaved, useToggleSave, useRecentViews } from '@/hooks/use-interactions';
 import { useAuth } from '@/hooks/use-auth';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { recordView } from '@/lib/interactions';
 import Link from 'next/link';
 
@@ -23,6 +18,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
   const { data: similarData } = useListings({ take: '6' });
 
   const { user, accessToken } = useAuth();
+  const { requireAuth } = useRequireAuth('/messages');
   const { data: savedCheck } = useCheckSaved(id);
   const isSaved = savedCheck?.saved ?? false;
   const toggleSaveMutation = useToggleSave();
@@ -221,7 +217,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
           <button className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }} aria-label="Share">
             <Share2 className="w-5 h-5" />
           </button>
-          <button onClick={() => emitToast('Chat coming soon')} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
+          <button onClick={() => { if (requireAuth('Messaging')) router.push('/messages'); }} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
             Chat Agent
           </button>
         </div>
@@ -264,10 +260,10 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
                 <button className="w-11 h-11 rounded-full flex items-center justify-center" style={{ color: 'var(--color-text-secondary)' }}>
                   <Share2 className="w-5 h-5" />
                 </button>
-                <button className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>
+                <button onClick={() => { if (requireAuth('Scheduling inspections')) { /* TODO: open inspection scheduling modal */ } }} className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>
                   Schedule Inspection
                 </button>
-                <button className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
+                <button onClick={() => { if (requireAuth('Messaging')) router.push('/messages'); }} className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
                   Chat Agent
                 </button>
               </div>
@@ -489,7 +485,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
                 </span>
               </div>
               <div className="flex gap-3">
-                <button className="flex-1 px-4 py-2 rounded-full text-sm font-semibold transition-all" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
+                <button onClick={() => { if (requireAuth('Messaging')) router.push('/messages'); }} className="flex-1 px-4 py-2 rounded-full text-sm font-semibold transition-all" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
                   Chat
                 </button>
                 <button className="flex-1 px-4 py-2 rounded-full text-sm font-semibold transition-all" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>

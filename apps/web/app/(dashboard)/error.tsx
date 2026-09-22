@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { TriangleAlert } from 'lucide-react';
+import { TriangleAlert, Bug } from 'lucide-react';
+import { ErrorReportModal } from '@/components/shared/ErrorReportModal';
 
 export default function DashboardError({
   error,
@@ -11,9 +12,12 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [showReport, setShowReport] = useState(false);
+
   useEffect(() => {
     console.error('[dashboard] error boundary:', error);
   }, [error]);
+
   return (
     <div className="flex items-center justify-center p-6" style={{ minHeight: '60vh' }}>
       <div className="max-w-md w-full text-center rounded-xl p-6" style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-default)' }}>
@@ -23,8 +27,26 @@ export default function DashboardError({
         <div className="flex justify-center gap-3">
           <button onClick={reset} className="px-5 py-2 rounded-full text-sm font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>Retry</button>
           <Link href="/" className="px-5 py-2 rounded-full text-sm font-semibold" style={{ background: 'var(--color-bg-canvas)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-primary)' }}>Go home</Link>
+          <button
+            onClick={() => setShowReport(true)}
+            className="px-5 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5"
+            style={{ background: 'var(--color-bg-canvas)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-secondary)' }}
+          >
+            <Bug className="w-3.5 h-3.5" />
+            Report
+          </button>
         </div>
       </div>
+
+      <ErrorReportModal
+        open={showReport}
+        onClose={() => setShowReport(false)}
+        errorMessage={error.message}
+        stackTrace={error.stack}
+        componentName="DashboardErrorBoundary"
+        url={typeof window !== 'undefined' ? window.location.href : undefined}
+        digest={error.digest}
+      />
     </div>
   );
 }

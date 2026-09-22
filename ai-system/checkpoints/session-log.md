@@ -409,3 +409,44 @@ Pick next Backlog item from `planning/task-queue.md` Up Next (WhatsApp integrati
 - 1 pre-existing lint error in `auth.service.ts:290`.
 
 ---
+
+## Session 15 — 2026-09-22 (Error boundary bug reporting + auth toast CTA + functional buttons)
+
+Executed `execute-feature` pipeline for error boundary → bug report integration, auth-required action feedback, and functional button wiring.
+
+**Completed:**
+- **Error boundary → bug report integration:** Added 4 nullable columns to `bugReports` table: `errorMessage`, `stackTrace`, `componentName`, `url`. Migration `0003_wooden_solo.sql` generated. Extended `createBugReportSchema` DTO and `BugReportsService.create()` to persist error metadata. Extended web API client `createBugReport()` to accept error fields.
+- **ErrorReportModal:** New shared component at `components/shared/ErrorReportModal.tsx` — modal that pre-fills bug report type=BUG with error details (message, collapsible stack trace, component name, URL, user notes). Uses `useCreateBugReport()` mutation.
+- **Error boundaries updated:** All 3 error boundaries (`app/error.tsx`, `(dashboard)/error.tsx`, `(public)/error.tsx`) now show a "Report" button with Bug icon. Clicking opens ErrorReportModal with error details pre-filled.
+- **Toast CTA system:** Extended `Toast` type to support optional `action?: { label: string; href: string }`. Toast now renders a clickable CTA link. Fixed `hw-toast` CustomEvent bridge — `ToastProvider` now listens for `window` events. Toast duration increased to 5000ms for CTA readability.
+- **useRequireAuth hook:** New hook at `hooks/use-require-auth.ts` — returns `{ requireAuth, isAuthenticated }`. If authenticated, returns true. If not, shows info toast with "Sign in" CTA linking to `/auth` (with optional redirect). Replaces dead `emitToast` function.
+- **Auth-gated buttons wired:** PropertyDetailClient: mobile Chat Agent, desktop Chat Agent, desktop Schedule Inspection, agent card Chat — all now use `useRequireAuth()`. Properties feed: PropertyCard Chat button now uses `useRequireAuth()`. Unauthenticated users see a toast CTA instead of silent failure.
+- **Dashboard layout:** Already had proper "Sign in to continue" CTA for guests (no changes needed). Loading state shows "Loading dashboard..." text (acceptable for now).
+- **QA gate:** typecheck 4/4 ✅, lint 1 pre-existing, 156 API + 99 web tests passing (2 pre-existing flaky tests: rate-limit timeout, blog post form act warning).
+
+**Files Modified:**
+- `packages/api/src/drizzle/schema.ts` — bugReports: +4 columns (errorMessage, stackTrace, componentName, url)
+- `packages/api/src/drizzle/migrations/0003_wooden_solo.sql` — generated
+- `packages/api/src/modules/bug-reports/dto/create-bug-report.dto.ts` — extended schema
+- `packages/api/src/modules/bug-reports/bug-reports.service.ts` — persist error metadata
+- `apps/web/lib/bug-reports.ts` — extended createBugReport
+- `apps/web/components/shared/Toast.tsx` — CTA action support + hw-toast bridge
+- `apps/web/components/shared/ErrorReportModal.tsx` — new
+- `apps/web/hooks/use-require-auth.ts` — new
+- `apps/web/app/error.tsx` — Report button + ErrorReportModal
+- `apps/web/app/(dashboard)/error.tsx` — Report button + ErrorReportModal
+- `apps/web/app/(public)/error.tsx` — Report button + ErrorReportModal
+- `apps/web/components/listings/PropertyDetailClient.tsx` — useRequireAuth for Chat/Inspect
+- `apps/web/app/(public)/properties/page.tsx` — useRequireAuth for Chat
+
+**Next Task:**
+Pick next Backlog item from `planning/task-queue.md` Up Next or restore live DB connectivity.
+
+**Assumptions Made:**
+- Error reports without authentication will fail at the API (401). This is acceptable — the error boundary is always accessible, but submission requires login. The modal could be enhanced later to support anonymous reports.
+- `hw-toast` CustomEvent bridge was dead code before; now it works and other components can dispatch toasts via DOM events.
+- Schedule Inspection has no backend yet — shows a TODO comment. Toast CTA for auth is the immediate UX fix.
+
+**Notes / Blockers:**
+- 2 pre-existing flaky tests: rate-limit e2e (timeout) and blog post form (act warning). Not introduced by this session.
+- Supabase DB still unreachable — migration `0003` not applied live.
