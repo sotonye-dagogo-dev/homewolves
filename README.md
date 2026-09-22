@@ -16,6 +16,7 @@ African real estate operating system — multi-sided marketplace, agent CRM, and
 | Email | Resend (DB-backed templates) |
 | SMS | Termii |
 | Payments | Paystack |
+| Storage | Cloudinary |
 
 ## Getting Started
 
@@ -70,11 +71,15 @@ See [`.env.example`](.env.example) for the full reference. Key variables:
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `JWT_SECRET` | Yes (prod) | JWT signing secret |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | No | Google OAuth client ID (preferred) |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | No | Google OAuth client ID (web client) |
+| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID (API audience check) |
+| `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
 | `RESEND_API_KEY` | No | Email provider key (simulated when unset) |
 | `PAYSTACK_SECRET_KEY` | No | Payment processing (dev mode when unset) |
 | `TERMII_API_KEY` | No | SMS provider (simulated when unset) |
-| `S3_ENDPOINT` / `R2_ENDPOINT` | No | File storage (simulated when unset) |
+| `CLOUDINARY_CLOUD_NAME` | No | Cloudinary cloud name (simulated when unset) |
+| `CLOUDINARY_API_KEY` | No | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
 
 All optional variables degrade gracefully — the platform runs with simulated fallbacks when external services are not configured.
 
@@ -97,10 +102,11 @@ packages/types/    → Global TypeScript types (zero-import)
 4. Add authorized redirect URIs:
    - `http://localhost:3000/auth/callback` (dev)
    - `https://www.homewolves.com/auth/callback` (production)
-5. Copy the Client ID to `.env`:
+5. Copy the Client ID and Client Secret to `.env`:
    ```
    NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
    GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your-client-secret
    ```
 
 ## License
