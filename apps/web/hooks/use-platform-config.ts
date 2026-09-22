@@ -12,6 +12,10 @@ export function usePlatformConfig<T = unknown>(key: string) {
   });
 }
 
+export function useBrand() {
+  return usePlatformConfig<BrandConfig>('brand');
+}
+
 export function useAmenities() {
   return usePlatformConfig<AmenityConfig[]>('amenities');
 }

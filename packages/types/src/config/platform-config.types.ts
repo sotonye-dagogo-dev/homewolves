@@ -33,9 +33,18 @@ interface TransactionStepTemplate {
   active: boolean;
 }
 
+interface BrandConfig {
+  logoUrl: string;
+  faviconUrl: string;
+  ogImageUrl: string;
+  companyName: string;
+  tagline: string;
+}
+
 // ─── PLATFORM CONFIG CLASS ──────────────────────────────────
 
 class PlatformConfig {
+  brand: BrandConfig;
   amenities: AmenityConfig[];
   filterPills: FilterPillConfig[];
   navItems: NavItemConfig[];

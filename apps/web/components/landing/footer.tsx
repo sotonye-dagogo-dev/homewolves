@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import { Instagram, Twitter, Linkedin, Youtube } from 'lucide-react';
+import { useBrand } from '@/hooks/use-platform-config';
 
 const footerNav = [
   {
@@ -28,6 +31,7 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const { data: brand } = useBrand();
   return (
     <footer
       className="w-full py-16 lg:py-20 px-4 lg:px-10 bg-[var(--color-bg-elevated)] border-t border-border"
@@ -36,7 +40,19 @@ export function Footer() {
       <div className="max-w-[1120px] mx-auto">
         <div className="flex flex-col lg:flex-row justify-between gap-8 lg:gap-16 mb-12">
           <div className="max-w-[260px]">
-            <div className="font-display text-2xl font-bold text-primary mb-4">Homewolves</div>
+            <div className="flex items-center gap-2 font-display text-2xl font-bold text-primary mb-4">
+              {brand?.logoUrl ? (
+                <img
+                  src={brand.logoUrl}
+                  alt={brand.companyName || 'Homewolves'}
+                  className="h-8 w-auto"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : null}
+              <span>{brand?.companyName || 'Homewolves'}</span>
+            </div>
             <p className="font-body text-sm text-muted-foreground leading-relaxed">
               Africa&apos;s real estate operating system — connecting agents, buyers, developers,
               and homeowners with verified listings and seamless transactions.

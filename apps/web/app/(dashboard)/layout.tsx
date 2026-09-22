@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useNotificationBell } from '@/hooks/use-notifications';
-import { LayoutDashboard, Home, Users, ShieldCheck, FileText, MessageCircle, Bell, User, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Home, Users, ShieldCheck, FileText, MessageCircle, Bell, User, Menu, X, Bug } from 'lucide-react';
 import Link from 'next/link';
 
 function buildNavItems(user: any) {
@@ -26,6 +26,7 @@ function buildNavItems(user: any) {
   if (isAdmin) {
     items.push(
       { label: 'Moderation', href: '/dashboard/admin/moderation', Icon: ShieldCheck },
+      { label: 'Bug Reports', href: '/dashboard/admin/bug-reports', Icon: Bug },
     );
   }
 

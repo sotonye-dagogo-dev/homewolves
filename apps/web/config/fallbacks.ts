@@ -1,6 +1,14 @@
 // ─── ALL FALLBACK CONFIGURATIONS ────────────────────────────
 // These activate only when PlatformConfig API is unreachable.
 
+export const FALLBACK_BRAND: BrandConfig = {
+  logoUrl: '/logo.png',
+  faviconUrl: '/favicon.ico',
+  ogImageUrl: '/og-image.png',
+  companyName: 'Homewolves',
+  tagline: 'African Real Estate Operating System',
+};
+
 export const FALLBACK_AMENITIES: AmenityConfig[] = [
   { id: 'pool', label: 'Swimming Pool', icon: 'Pool', active: true, displayOrder: 1 },
   { id: 'parking', label: 'Parking Space', icon: 'Car', active: true, displayOrder: 2 },
@@ -341,6 +349,32 @@ export const FALLBACK_EMAIL_TEMPLATES: EmailTemplate[] = [
     variables: [
       { name: 'firstName', label: 'Recipient first name', example: 'Ada' },
       { name: 'siteUrl', label: 'Platform URL', example: 'https://homewolves.com' },
+    ],
+  },
+  {
+    key: 'bug_report_submitted',
+    name: 'Bug Report Submitted',
+    subject: 'Bug report received — {{bugType}}',
+    htmlBody: 'Hi {{firstName}},<br/><br/>We received your bug report ({{bugType}}). Report ID: {{bugId}}.',
+    active: true,
+    description: 'Confirmation sent to user after submitting a bug report.',
+    variables: [
+      { name: 'firstName', label: 'Recipient first name', example: 'Ada' },
+      { name: 'bugType', label: 'Bug report type', example: 'BUG' },
+      { name: 'bugId', label: 'Bug report ID', example: 'abc123' },
+    ],
+  },
+  {
+    key: 'bug_report_status_changed',
+    name: 'Bug Report Status Update',
+    subject: 'Bug report update — {{newStatus}}',
+    htmlBody: 'Hi {{firstName}},<br/><br/>Your bug report ({{bugId}}) has been updated to {{newStatus}}.',
+    active: true,
+    description: 'Sent to user when a bug report status changes.',
+    variables: [
+      { name: 'firstName', label: 'Recipient first name', example: 'Ada' },
+      { name: 'bugId', label: 'Bug report ID', example: 'abc123' },
+      { name: 'newStatus', label: 'New status', example: 'UNDER_REVIEW' },
     ],
   },
 ];

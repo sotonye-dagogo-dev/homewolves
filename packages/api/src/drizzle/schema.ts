@@ -53,6 +53,20 @@ export const transactionStatusEnum = pgEnum('TransactionStatus', [
   'CANCELLED',
 ]);
 
+export const bugReportStatusEnum = pgEnum('BugReportStatus', [
+  'OPEN',
+  'UNDER_REVIEW',
+  'CLOSED',
+]);
+
+export const bugReportTypeEnum = pgEnum('BugReportType', [
+  'BUG',
+  'FEATURE_REQUEST',
+  'UI_ISSUE',
+  'PERFORMANCE',
+  'OTHER',
+]);
+
 // Zod-friendly string enum constants (replaces `@prisma/client` enum imports).
 export const UserRole = {
   GUEST: 'GUEST',
@@ -92,6 +106,20 @@ export const TransactionStatus = {
   COMPLETED: 'COMPLETED',
   REJECTED: 'REJECTED',
   CANCELLED: 'CANCELLED',
+} as const;
+
+export const BugReportStatus = {
+  OPEN: 'OPEN',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  CLOSED: 'CLOSED',
+} as const;
+
+export const BugReportType = {
+  BUG: 'BUG',
+  FEATURE_REQUEST: 'FEATURE_REQUEST',
+  UI_ISSUE: 'UI_ISSUE',
+  PERFORMANCE: 'PERFORMANCE',
+  OTHER: 'OTHER',
 } as const;
 
 const cuid = (column: string) =>
@@ -570,6 +598,23 @@ export const analyticsEvents = pgTable('AnalyticsEvent', {
   index('AnalyticsEvent_createdAt_idx').on(t.createdAt),
 ]);
 
+export const bugReports = pgTable('BugReport', {
+  id: cuid('id'),
+  userId: text('userId').notNull().references(() => users.id),
+  type: bugReportTypeEnum('type').notNull(),
+  description: text('description').notNull(),
+  screenshots: jsonb('screenshots').notNull().default(sql`'[]'::jsonb`),
+  status: bugReportStatusEnum('status').notNull().default('OPEN'),
+  adminNote: text('adminNote'),
+  createdAt: createdAt('createdAt'),
+  updatedAt: updatedAt('updatedAt'),
+}, (t) => [
+  index('BugReport_userId_idx').on(t.userId),
+  index('BugReport_status_idx').on(t.status),
+  index('BugReport_type_idx').on(t.type),
+  index('BugReport_createdAt_idx').on(t.createdAt),
+]);
+
 // ─── RELATIONS ─────────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -591,6 +636,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   referralsMade: many(referrals, { relationName: 'referralsMade' }),
   referredVia: one(referrals, { relationName: 'referredVia', fields: [users.referredById], references: [referrals.referredId] }),
   commissions: many(commissions, { relationName: 'commissionEarners' }),
+  bugReports: many(bugReports),
 }));
 
 export const listingsRelations = relations(listings, ({ many, one }) => ({
@@ -708,4 +754,8 @@ export const commissionsRelations = relations(commissions, ({ one }) => ({
 
 export const featuredPlacementsRelations = relations(featuredPlacements, ({ one }) => ({
   listing: one(listings, { fields: [featuredPlacements.listingId], references: [listings.id] }),
+}));
+
+export const bugReportsRelations = relations(bugReports, ({ one }) => ({
+  user: one(users, { fields: [bugReports.userId], references: [users.id] }),
 }));

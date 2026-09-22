@@ -15,6 +15,13 @@
       "when": 1787045916817,
       "tag": "0001_grey_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790072757079,
+      "tag": "0002_lush_unus",
+      "breakpoints": true
     }
   ]
 }

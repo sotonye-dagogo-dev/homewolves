@@ -1,4 +1,4 @@
-import { FALLBACK_AMENITIES, FALLBACK_FILTER_PILLS, FALLBACK_NAV_ITEMS, FALLBACK_PROPERTY_TYPES, FALLBACK_FEATURE_FLAGS } from '@/config/fallbacks';
+import { FALLBACK_AMENITIES, FALLBACK_FILTER_PILLS, FALLBACK_NAV_ITEMS, FALLBACK_PROPERTY_TYPES, FALLBACK_FEATURE_FLAGS, FALLBACK_BRAND } from '@/config/fallbacks';
 import { getApiBase } from '@/lib/api-base';
 
 
@@ -31,6 +31,8 @@ async function fetchAllConfigs(): Promise<Record<string, unknown>> {
 
 export function getFallbackFor(key: string): unknown {
   switch (key) {
+    case 'brand':
+      return FALLBACK_BRAND;
     case 'amenities':
       return FALLBACK_AMENITIES;
     case 'filter_pills':

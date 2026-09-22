@@ -24,8 +24,8 @@ export const DEFAULT_EMAIL_TEMPLATES: EmailTemplateDefault[] = [
     htmlBody:
       '<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#0F1117">' +
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px">' +
-      '<span style="background:#C8813A;color:#fff;font-weight:700;padding:6px 10px;border-radius:6px">HW</span>' +
-      '<strong style="font-size:18px">Homewolves</strong></div>' +
+      '<img src="{{logoUrl}}" alt="Homewolves" style="height:32px;width:auto" />' +
+      '</div>' +
       '<h2 style="margin:0 0 8px">Hi {{firstName}},</h2>' +
       '<p>Use the code below to sign in to your Homewolves account:</p>' +
       '<div style="background:#F7F6F3;border:1px solid #E3E0D8;border-radius:12px;padding:24px;text-align:center;font-size:32px;font-weight:700;letter-spacing:8px;color:#1A3A5C;margin:16px 0">{{otp}}</div>' +
@@ -38,6 +38,7 @@ export const DEFAULT_EMAIL_TEMPLATES: EmailTemplateDefault[] = [
       { name: 'firstName', label: 'Recipient first name', example: 'Ada' },
       { name: 'otp', label: 'Verification code', example: '482913' },
       { name: 'expiresInMinutes', label: 'Code expiry (minutes)', example: '10' },
+      { name: 'logoUrl', label: 'Brand logo URL', example: 'https://homewolves.com/logo.png' },
     ],
   },
   {
@@ -47,8 +48,8 @@ export const DEFAULT_EMAIL_TEMPLATES: EmailTemplateDefault[] = [
     htmlBody:
       '<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#0F1117">' +
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px">' +
-      '<span style="background:#C8813A;color:#fff;font-weight:700;padding:6px 10px;border-radius:6px">HW</span>' +
-      '<strong style="font-size:18px">Homewolves</strong></div>' +
+      '<img src="{{logoUrl}}" alt="Homewolves" style="height:32px;width:auto" />' +
+      '</div>' +
       '<h2 style="margin:0 0 8px">Welcome aboard, {{firstName}}!</h2>' +
       '<p>Your account is ready. Explore verified properties, connect with agents, and manage every step of your real estate journey in one place.</p>' +
       '<p style="margin:24px 0"><a href="{{siteUrl}}" style="display:inline-block;background:#C8813A;color:#fff;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:600">Start exploring</a></p>' +
@@ -60,6 +61,7 @@ export const DEFAULT_EMAIL_TEMPLATES: EmailTemplateDefault[] = [
     variables: [
       { name: 'firstName', label: 'Recipient first name', example: 'Ada' },
       { name: 'siteUrl', label: 'Platform URL', example: 'https://homewolves.com' },
+      { name: 'logoUrl', label: 'Brand logo URL', example: 'https://homewolves.com/logo.png' },
     ],
   },
   {
@@ -255,6 +257,54 @@ export const DEFAULT_EMAIL_TEMPLATES: EmailTemplateDefault[] = [
       { name: 'oldPrice', label: 'Old price', example: '₦90,000,000' },
       { name: 'newPrice', label: 'New price', example: '₦85,000,000' },
       { name: 'listingUrl', label: 'Listing URL', example: 'https://homewolves.com/properties/abc' },
+    ],
+  },
+  {
+    key: 'bug_report_submitted',
+    name: 'Bug Report Submitted',
+    subject: 'Bug report received — {{bugType}}',
+    htmlBody:
+      '<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#0F1117">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px">' +
+      '<img src="{{logoUrl}}" alt="Homewolves" style="height:32px;width:auto" />' +
+      '</div>' +
+      '<h2 style="margin:0 0 8px">Hi {{firstName}},</h2>' +
+      '<p>We received your bug report (<strong>{{bugType}}</strong>). Our team will review it shortly.</p>' +
+      '<p style="color:#8A9BB0;font-size:14px">Report ID: {{bugId}}</p>' +
+      '<p style="color:#8A9BB0;font-size:14px">You will receive an email when the status changes.</p>' +
+      '</div>',
+    textBody: 'Hi {{firstName}},\n\nWe received your bug report ({{bugType}}). Report ID: {{bugId}}.\nYou will receive an email when the status changes.\n',
+    active: true,
+    description: 'Confirmation sent to user after submitting a bug report.',
+    variables: [
+      { name: 'firstName', label: 'Recipient first name', example: 'Ada' },
+      { name: 'bugType', label: 'Bug report type', example: 'BUG' },
+      { name: 'bugId', label: 'Bug report ID', example: 'abc123' },
+      { name: 'logoUrl', label: 'Brand logo URL', example: 'https://homewolves.com/logo.png' },
+    ],
+  },
+  {
+    key: 'bug_report_status_changed',
+    name: 'Bug Report Status Update',
+    subject: 'Bug report update — {{newStatus}}',
+    htmlBody:
+      '<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#0F1117">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:24px">' +
+      '<img src="{{logoUrl}}" alt="Homewolves" style="height:32px;width:auto" />' +
+      '</div>' +
+      '<h2 style="margin:0 0 8px">Hi {{firstName}},</h2>' +
+      '<p>Your bug report (<strong>{{bugId}}</strong>) has been updated to <strong>{{newStatus}}</strong>.</p>' +
+      '{{#if adminNote}}<p style="background:#F7F6F3;border:1px solid #E3E0D8;border-radius:8px;padding:12px;margin:16px 0"><strong>Note from team:</strong> {{adminNote}}</p>{{/if}}' +
+      '</div>',
+    textBody: 'Hi {{firstName}},\n\nYour bug report ({{bugId}}) has been updated to {{newStatus}}.\n{{#if adminNote}}Note from team: {{adminNote}}{{/if}}\n',
+    active: true,
+    description: 'Sent to user when a bug report status changes.',
+    variables: [
+      { name: 'firstName', label: 'Recipient first name', example: 'Ada' },
+      { name: 'bugId', label: 'Bug report ID', example: 'abc123' },
+      { name: 'newStatus', label: 'New status', example: 'UNDER_REVIEW' },
+      { name: 'adminNote', label: 'Admin note (optional)', example: 'We are looking into this.' },
+      { name: 'logoUrl', label: 'Brand logo URL', example: 'https://homewolves.com/logo.png' },
     ],
   },
 ];

@@ -1,6 +1,14 @@
 // ─── ALL FALLBACK CONFIGURATIONS ────────────────────────────
 // These activate only when PlatformConfig API is unreachable.
 
+export const FALLBACK_BRAND: BrandConfig = {
+  logoUrl: '/logo.png',
+  faviconUrl: '/favicon.ico',
+  ogImageUrl: '/og-image.png',
+  companyName: 'Homewolves',
+  tagline: 'African Real Estate Operating System',
+};
+
 export const FALLBACK_AMENITIES: AmenityConfig[] = [
   { id: 'pool', label: 'Swimming Pool', icon: 'Pool', active: true, displayOrder: 1 },
   { id: 'parking', label: 'Parking Space', icon: 'Car', active: true, displayOrder: 2 },

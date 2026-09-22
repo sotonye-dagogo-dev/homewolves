@@ -587,3 +587,50 @@ The directive requires error boundaries on all pages — root alone is insuffici
 - New route groups that need isolated recovery should add their own `error.tsx`.
 
 ---
+
+## Config-driven logo via BrandConfig (Session 13)
+
+**Decision:** Logo/favicon/companyName/tagline are config-driven via `BrandConfig` type in `packages/types/src/config/platform-config.types.ts`. `useBrand()` hook in `apps/web/hooks/use-platform-config.ts` reads from PlatformConfig with `FALLBACK_BRAND` fallback (both API config package and web config package). Top-nav, footer, layout metadata, and email templates all derive branding from this single source. Email templates receive `{{logoUrl}}` and `{{siteUrl}}` as automatic variables injected by `EmailService.send()`.
+**Date:** 2026-09-22
+**Made by:** Implementer (execute-feature config-driven pass)
+**Supersedes:** Hardcoded logo URLs and company names in components
+**Superseded by:** None
+
+**Reason:**
+Engineering principle §1 mandates config-driven over hardcoded. Logo/branding was hardcoded in top-nav, footer, layout metadata, and email templates. Centralising in PlatformConfig means admins can rebrand without code deploys.
+
+**Alternatives Considered:**
+- Keep hardcoded logos — rejected: violates §1, requires code changes for rebranding.
+- Env-only config — rejected: cannot be changed without redeploy, no admin UI.
+- Separate brand config service — rejected: PlatformConfig already handles this pattern.
+
+**Implications:**
+- New UI components should use `useBrand()` for logo/company name, not hardcoded values.
+- `FALLBACK_BRAND` must be updated when branding changes (checked in both `packages/config/src/fallbacks.ts` and `apps/web/config/fallbacks.ts`).
+- Email template `{{logoUrl}}` is auto-injected; templates should use `<img src="{{logoUrl}}"/>` not `<img src="/logo.png"/>`.
+
+---
+
+## Bug report system with batch management (Session 13)
+
+**Decision:** Bug reports use a dedicated `bugReports` table with `BugReportStatus` (OPEN, UNDER_REVIEW, CLOSED) and `BugReportType` (BUG, FEATURE_REQUEST, UI_ISSUE, PERFORMANCE, OTHER) enums. User submission at `/bug-report` (type + description + optional screenshots via client-side FileReader), admin management at `/dashboard/admin/bug-reports` with paginated table, inline status editing, and batch operations (status change + delete) powered by a universal `useBatchSelection` hook + `HwBatchBar` floating component. Email notifications fire on submission and status changes.
+**Date:** 2026-09-22
+**Made by:** Implementer (execute-feature bug report pass)
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+Users need a structured way to report bugs/features without leaving the platform. Admins need to triage, assign status, and batch-process reports. The batch selection system is reusable for any future batch-action UI (e.g., bulk listing moderation).
+
+**Alternatives Considered:**
+- Third-party bug tracker (Jira/Linear) — rejected: adds external dependency, user leaves platform.
+- Simple contact form — rejected: no status tracking, no batch ops, no audit trail.
+- Generic moderation queue — rejected: bug reports have distinct fields (type, screenshots) vs. content moderation.
+
+**Implications:**
+- `useBatchSelection` hook is universal — reuse for any list with batch actions.
+- `HwBatchBar` accepts custom `BatchAction[]` for flexible batch operations.
+- Bug report screenshots stored as data URLs (client-side FileReader) — max 3 per report. Consider S3 storage for production scale.
+- `emailService.send()` auto-injects `{{logoUrl}}` and `{{siteUrl}}` — all templates can use these variables.
+
+---
