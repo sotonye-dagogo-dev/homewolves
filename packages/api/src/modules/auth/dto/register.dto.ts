@@ -54,3 +54,12 @@ export const supabaseLoginSchema = z
   })
   .strict();
 export type SupabaseLoginDto = z.infer<typeof supabaseLoginSchema>;
+
+export const googleLoginSchema = z
+  .object({
+    credential: z.string().trim().min(10),
+    referralCode: z.string().trim().max(20).optional(),
+    role: z.enum(['BUYER', 'AGENT', 'DEVELOPER', 'HOMEOWNER']).optional(),
+  })
+  .strict();
+export type GoogleLoginDto = z.infer<typeof googleLoginSchema>;

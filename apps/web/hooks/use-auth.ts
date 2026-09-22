@@ -33,6 +33,7 @@ interface AuthState {
   }) => Promise<void>;
   login: (email: string) => Promise<{ otp: string }>;
   exchangeSupabase: (accessToken: string, opts?: { referralCode?: string; role?: string }) => Promise<void>;
+  exchangeGoogle: (credential: string, opts?: { referralCode?: string; role?: string }) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -157,6 +158,28 @@ export const useAuth = create<AuthState>()(
             accessToken: data.accessToken,
             user: data.user,
           });
+        } catch (e: any) {
+          set({ error: e.message, isLoading: false });
+          throw e;
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      exchangeGoogle: async (credential, opts) => {
+        set({ isLoading: true, error: null });
+        try {
+          const res = await fetch(`${getApiBase()}/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential, ...opts }),
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message ?? 'Google sign-in failed');
+          }
+          const data = await res.json();
+          set({ accessToken: data.accessToken, user: data.user });
         } catch (e: any) {
           set({ error: e.message, isLoading: false });
           throw e;

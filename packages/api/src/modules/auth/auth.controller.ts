@@ -11,12 +11,14 @@ import {
   CompleteProfileDto,
   RefreshTokenDto,
   SupabaseLoginDto,
+  GoogleLoginDto,
   registerSchema,
   verifyOtpSchema,
   loginSchema,
   completeProfileSchema,
   refreshTokenSchema,
   supabaseLoginSchema,
+  googleLoginSchema,
 } from './dto/register.dto';
 
 @Controller('auth')
@@ -57,6 +59,12 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE)
   supabase(@Body(new ZodValidationPipe(supabaseLoginSchema)) dto: SupabaseLoginDto) {
     return this.authService.exchangeSupabaseToken(dto);
+  }
+
+  @Post('google')
+  @Throttle(AUTH_THROTTLE)
+  google(@Body(new ZodValidationPipe(googleLoginSchema)) dto: GoogleLoginDto) {
+    return this.authService.exchangeGoogleToken(dto);
   }
 
   @Post('logout')

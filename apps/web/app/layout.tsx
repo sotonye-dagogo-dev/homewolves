@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/shared/ThemeProvider';
 import { QueryProvider } from '@/components/shared/QueryProvider';
+import { ToastProvider } from '@/components/shared/Toast';
 import './globals.css';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
@@ -47,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem>
           <QueryProvider>
-            {children}
+            <ToastProvider>{children}</ToastProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

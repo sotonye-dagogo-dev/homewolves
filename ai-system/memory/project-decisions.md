@@ -2,7 +2,7 @@
 
 > **Metadata**
 > - last-updated-by: update-ai-system
-> - last-verified-against-code: 2026-08-19
+> - last-verified-against-code: 2026-09-22
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Log of significant architectural, technical, and product decisions. Agents consult this before proposing changes to avoid contradicting prior reasoning. Uses supersedes/superseded-by links so contradictory entries are explicitly resolved rather than both appearing equally valid.
@@ -545,6 +545,30 @@ The directive requires seeded data that can be reverted without affecting post-s
 - New seed tables must use `seed-` IDs and be registered in `SEED_MANIFEST`.
 - Revert by default keeps platformConfig/subscriptionPlans (may have been customized) — pass `--with-config` to remove them; keeps users unless `--with-users` (FK-safe after clearing dependents).
 - Seed is idempotent (`onConflictDoUpdate`).
+
+---
+
+## Thorough responsiveness & mobile-bar sweep + global public navbar + toast + direct Google OAuth (Session 12)
+
+**Decision:** Adopt: (1) `apps/web/app/(public)/layout.tsx` global public layout with `TopNav` + `MobileBar` + `Footer` and `pb-[84px]` mobile bottom padding; remove per-page MobileBar duplicates; (2) `ToastProvider` (`components/shared/Toast.tsx`) mounted in root layout with `useToast()` + `hw-toast` CustomEvent bridge and `aria-live` region, to give global feedback on mutations/loading states; (3) dashboard layout unauthenticated CTA (`Sign in to continue`) instead of infinite `Loading dashboard...` (hydrated+!token path); (4) direct Google OAuth via `POST /api/v1/auth/google` (`googleLoginSchema`) verified at `https://oauth2.googleapis.com/tokeninfo` (`GOOGLE_CLIENT_ID` audience check), `lib/google-auth.ts` GSI loader + `use-auth.exchangeGoogle` — Supabase `POST /auth/supabase` retained as legacy fallback; (5) pricing `.map is not a function` fix — normalize `fetchPlans` / `PricingPage` to handle both `Array` and `{plans: Array}` shapes + `Array.isArray` guards on `features`; (6) `FALLBACK_LISTINGS` now carry 2-4 `media` entries per seed listing so gallery is demonstrably multi-image; (7) API proxy resilience: 8s timeout, `502/503/504` fallback injection, `QueryProvider` retry for gateway errors; (8) responsive hardening: `overflow-x:hidden` on html/body, detail page sticky action bar offset to `bottom:80px` (above MobileBar), sidebar no longer `overflowY:auto` with constrained height, map placeholder not pushing actions, no emoji SVGs (lucide only).
+
+**Date:** 2026-09-22
+**Made by:** Implementer (execute-feature thorough sweep)
+**Supersedes:** Google OAuth via Supabase Auth decision (now legacy fallback); dashboard hydrated-redirect decision (now CTA)
+**Superseded by:** None
+
+**Reason:**
+The issue directive reported non-responsive overflow, mobile bar obscuring content, missing navbar on public pages, dashboard infinite loading, missing global feedback, single-image listings, pricing `.map` crash, Supabase-coupled OAuth, and Bad Gateway. All are user-visible production blockers, so they were bundled.
+
+**Alternatives Considered:**
+- Keep Supabase as primary OAuth — rejected per directive (vendor-coupled, extra hop).
+- Keep per-page MobileBar imports — rejected: duplicates global layout, causes double bars on detail page.
+
+**Implications:**
+- New public pages automatically get TopNav/MobileBar — no per-page imports needed.
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID` required for Google button; unset → disabled button with helper text.
+- `ToastProvider` is the single feedback surface — feature mutations should call `useToast().success/error` rather than `alert()`.
+- `FALLBACK_LISTINGS` media shape is now multi-image; API proxy still returns paginated demo data when DB is absent.
 
 ---
 

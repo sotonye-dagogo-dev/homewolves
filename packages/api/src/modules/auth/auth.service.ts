@@ -280,6 +280,84 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
+  /**
+   * Direct Google OAuth — verifies a Google ID token (credential from
+   * Google Identity Services) via tokeninfo endpoint, then creates or links
+   * the Homewolves user. This is the preferred OAuth path; Supabase is kept
+   * only as legacy fallback.
+   */
+  async exchangeGoogleToken(dto: { credential: string; referralCode?: string; role?: string }) {
+    let info: any;
+    try {
+      const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(dto.credential)}`);
+      if (!res.ok) throw new Error(`tokeninfo ${res.status}`);
+      info = await res.json();
+    } catch {
+      throw new UnauthorizedException('Invalid Google credential');
+    }
+    const email = info.email as string | undefined;
+    const sub = info.sub as string | undefined;
+    if (!email || !sub || info.email_verified !== 'true') {
+      throw new UnauthorizedException('Google token missing verified email');
+    }
+    // Optional: verify audience matches configured client id
+    const expectedAud = process.env.GOOGLE_CLIENT_ID ?? process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (expectedAud && info.aud !== expectedAud) {
+      throw new UnauthorizedException('Google token audience mismatch');
+    }
+
+    const providerId = `google:${sub}`;
+    let user: UserRow | null | undefined = (
+      await this.db.select().from(users).where(eq(users.providerId, providerId))
+    )[0];
+    if (!user) {
+      [user] = await this.db.select().from(users).where(eq(users.email, email));
+      if (user) {
+        [user] = await this.db
+          .update(users)
+          .set({ provider: 'google', providerId, verified: true, avatar: user.avatar ?? (info.picture as string | undefined) ?? null })
+          .where(eq(users.id, user.id))
+          .returning();
+      } else {
+        const fullName = (info.name as string) ?? email;
+        const [firstName, ...rest] = fullName.trim().split(/\s+/);
+        const lastName = rest.join(' ') || '—';
+        const role = (dto.role ?? 'BUYER') as (typeof users.$inferInsert)['role'];
+        const referralCode = await this.referralsService.ensureCodeForNewUser();
+        const insertValues: typeof users.$inferInsert = {
+          email,
+          firstName: firstName ?? 'User',
+          lastName,
+          role,
+          verified: true,
+          provider: 'google',
+          providerId,
+          avatar: info.picture as string | undefined,
+          referralCode,
+        };
+        [user] = await this.db.insert(users).values(insertValues).returning();
+        if (dto.referralCode) {
+          await this.applyReferralOnSignup(user!, dto.referralCode);
+        }
+      }
+    }
+    if (!user) throw new Error('Failed to resolve Google user');
+
+    await this.audit.log({
+      entityType: 'User',
+      entityId: user.id,
+      action: 'OAUTH_LOGIN',
+      actor: { id: user.id, role: user.role, name: `${user.firstName} ${user.lastName}` },
+      metadata: { provider: 'google', subject: sub },
+    });
+
+    this.activityService
+      .awardForUser(user.id, user.role, 'daily_login', { id: user.id, role: user.role, name: `${user.firstName} ${user.lastName}` })
+      .catch(() => {});
+
+    return this.generateTokens(user);
+  }
+
   private generateTokens(user: UserRow) {
     const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
