@@ -2,7 +2,7 @@
 
 > **Metadata**
 > - last-updated-by: execute-feature
-> - last-verified-against-code: 2026-09-16
+> - last-verified-against-code: 2026-09-22
 > - staleness-policy: re-verify before trusting if any architecture-affecting commits have been made since last-verified-against-code
 
 > **Overview:** Homewolves is a multi-sided PropTech marketplace + Agent CRM + Transaction Management Platform targeting the Nigerian/African market. It uses a modular monolith architecture (Next.js 14 frontend + NestJS backend + PostgreSQL) designed to decompose into microservices as the platform scales. The system is metadata-driven — all configurable UI elements and business rules are stored in the database via `PlatformConfig`, with hardcoded fallbacks in `packages/config/src/fallbacks.ts`.
@@ -97,7 +97,12 @@ Native flow:
         → JWT access token + refresh token
         → Session stored in Redis
 
-Google OAuth flow (Supabase):
+Direct Google OAuth flow (preferred):
+  Web Google GSI button (lib/google-auth.ts) → credential (ID token) → POST /api/v1/auth/google { credential }
+    → AuthService.exchangeGoogleToken() verifies via https://oauth2.googleapis.com/tokeninfo
+      → find-or-create user (provider=google, providerId=google:sub) → HW JWT + refresh token
+
+Legacy Supabase OAuth flow (still supported):
   Web Google button → supabase.auth.signInWithOAuth() → /auth/callback#access_token=…
     → POST /api/v1/auth/supabase { accessToken }
       → AuthService.exchangeSupabaseToken() verifies Supabase JWT via SUPABASE_JWT_SECRET
@@ -141,9 +146,10 @@ Business event (e.g. transaction created)
 | `transaction_step_templates` | Workflow step definitions | PlatformConfig table | FALLBACK_STEPS |
 | `property_types` | Property type categories and icons | PlatformConfig table | FALLBACK_TYPES |
 | `DATABASE_URL` | PostgreSQL connection string | .env | — |
-| `SUPABASE_URL` | Supabase project URL | .env | — |
-| `SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key (web) | .env | — |
-| `SUPABASE_JWT_SECRET` | Supabase JWT secret — verifies OAuth access tokens at `/auth/supabase` | .env | — |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID` | Direct Google OAuth client id (preferred) | .env | — |
+| `SUPABASE_URL` | Supabase project URL (legacy fallback) | .env | — |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key (web, legacy) | .env | — |
+| `SUPABASE_JWT_SECRET` | Supabase JWT secret — verifies OAuth access tokens at `/auth/supabase` (legacy) | .env | — |
 | `REDIS_URL` | Redis connection string | .env | — |
 | `JWT_SECRET` | Token signing secret | .env | — |
 | `TERMII_API_KEY` / `TERMII_SENDER_ID` / `TERMII_API_URL` | SMS (Termii) — unset → simulated (log-only) via `SmsClient` | .env | — |
@@ -191,7 +197,7 @@ This is the "undo" instinct applied one layer up from data (§22 covers user-fac
 | Styling | Tailwind CSS + CSS Variables | Latest |
 | Real-time | Socket.io | Latest |
 | State | TanStack Query (server) + Zustand (client) | Latest |
-| Auth | JWT + Supabase Auth (Google OAuth) | Latest |
+| Auth | JWT + Direct Google OAuth (ID token via google tokeninfo) + Supabase legacy fallback | Latest |
 | Email | Resend (DB-backed templates) | Latest |
 | SMS | Termii + Twilio fallback | Latest |
 

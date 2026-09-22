@@ -23,6 +23,7 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
 import { FeaturedListingsModule } from './modules/featured-listings/featured-listings.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { HealthModule } from './modules/health/health.module';
+import { BugReportsModule } from './modules/bug-reports/bug-reports.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { HealthModule } from './modules/health/health.module';
     ReferralsModule,
     FeaturedListingsModule,
     AnalyticsModule,
+    BugReportsModule,
   ],
 })
 export class AppModule {}

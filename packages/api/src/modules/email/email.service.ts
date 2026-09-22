@@ -229,9 +229,14 @@ export class EmailService implements OnModuleInit {
       return result;
     }
 
-    const subject = this.render(template.subject, variables);
-    const html = this.render(template.htmlBody, variables);
-    const text = template.textBody ? this.render(template.textBody, variables) : undefined;
+    const enrichedVariables = {
+      ...variables,
+      siteUrl: variables.siteUrl ?? process.env.WEB_URL ?? 'https://homewolves.africa',
+      logoUrl: variables.logoUrl ?? `${process.env.WEB_URL ?? 'https://homewolves.africa'}/logo.png`,
+    };
+    const subject = this.render(template.subject, enrichedVariables);
+    const html = this.render(template.htmlBody, enrichedVariables);
+    const text = template.textBody ? this.render(template.textBody, enrichedVariables) : undefined;
     const from = template.fromEmail ?? this.defaultFrom();
 
     if (!this.client) {

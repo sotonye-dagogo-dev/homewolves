@@ -172,7 +172,7 @@ async function proxyOrFallback(req: NextRequest, params: { path?: string[] }) {
       }
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
+      const timeout = setTimeout(() => controller.abort(), 8000);
       const upstream = await fetch(targetUrl, { ...fetchOpts, signal: controller.signal });
       clearTimeout(timeout);
 
@@ -194,6 +194,11 @@ async function proxyOrFallback(req: NextRequest, params: { path?: string[] }) {
         }
       }
 
+      // Surface 502/503/504 as fallback where possible to avoid Bad Gateway UX
+      if ([502, 503, 504].includes(upstream.status) && method === 'GET') {
+        const fb = fallbackForPath(path, req.nextUrl.searchParams);
+        if (fb !== null) return NextResponse.json(fb, { status: 200, headers: { 'x-fallback': '1' } });
+      }
       // Otherwise return upstream error as-is (preserve status/body)
       const text = await upstream.text().catch(() => '');
       return new NextResponse(text || upstream.statusText, {

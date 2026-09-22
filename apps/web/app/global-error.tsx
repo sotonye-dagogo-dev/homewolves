@@ -18,7 +18,7 @@ export default function GlobalError({
       <body>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'var(--color-bg-canvas)' }}>
           <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+            <div style={{ marginBottom: 16, color: 'var(--color-warning)', display: 'flex', justifyContent: 'center' }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
             <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8, color: 'var(--color-text-primary)' }}>
               Fatal error
             </h1>

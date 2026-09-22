@@ -311,3 +311,62 @@ Restore live DB connectivity then re-run:
 - Cleaned transient probe files. `NEXT_IGNORE_INCORRECT_LOCKFILE=1` still required for `next build` (Next 14.2.35 SWC quirk).
 
 ---
+
+## Session 13 — 2026-09-22 (Bug reports + batch selection + config-driven logo + admin nav)
+
+Executed `execute-feature` pipeline for bug report engine, batch selection system, config-driven logo, Google OAuth env setup, README, DB migrations, and tightening pass.
+
+**Completed:**
+- **Bug report DB:** Added `bugReports` table (9 columns: id, userId, type, description, screenshots, status, adminNote, createdAt, updatedAt) + `BugReportStatus`/`BugReportType` pgEnums + 4 indexes (userId, status, type, createdAt) + FK to users. Migration `0002_lush_unus.sql` generated (31 tables total, pending live DB).
+- **Bug report API:** Full `BugReportsModule` — `bug-reports.service.ts` (create/findAll/findMine/findById/updateStatus/batchUpdate/delete), `bug-reports.controller.ts` (7 endpoints with JwtGuard, admin routes with RolesGuard), `dto/create-bug-report.dto.ts` (3 Zod schemas). Registered in `app.module.ts`. Email notifications on create + status change.
+- **Bug report user UI:** `/bug-report` page with type select, description textarea, screenshot upload (max 3 via FileReader), React Query hooks (`use-bug-reports.ts`), API client (`lib/bug-reports.ts`).
+- **Bug report admin UI:** `/dashboard/admin/bug-reports` with paginated table, status/type filters, inline status editing, batch selection via `useBatchSelection` hook + `HwBatchBar` component (toggle/selectAll/invertSelect/undo/clear + batch Open/Under Review/Closed/Delete actions).
+- **Batch selection system:** `useBatchSelection` hook (universal, state + history-based undo, selectAll/invertSelect), `HwBatchBar` floating UI component (count, All/Invert/Undo/Clear buttons + custom batch actions).
+- **Config-driven logo:** `BrandConfig` type in `packages/types`, `FALLBACK_BRAND` in both config packages, `useBrand()` hook in `use-platform-config.ts`, top-nav and footer render `<img src={logo.logoUrl}>` with fallback text, root `layout.tsx` `generateMetadata()` fetches brand config server-side for OG/favicon/SEO, email templates updated to use `{{logoUrl}}` and `{{siteUrl}}` auto-injected variables.
+- **Email templates:** `bug_report_submitted` and `bug_report_status_changed` templates added to `email-templates.defaults.ts` and web fallbacks.
+- **Admin nav:** Bug Reports link added to admin sidebar in dashboard `layout.tsx`.
+- **Docs:** Root `README.md` created (tech stack, setup, scripts, env vars, Google OAuth setup). `.env.example` updated with Google OAuth (`NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID`), Termii SMS, S3/R2 storage, `RATE_LIMIT_STORE`, `ENABLE_DESIGN_VIEWER`, and all other missing env vars.
+- **QA gate fixes:** Removed unused imports (ForbiddenException, sql, Filter, BatchSelectionReturn, logoUrl), fixed `actor.email` → DB lookup for user email, fixed `any` casts in bug-reports service, removed unused HwBatchBar props (totalCount, isPartial), fixed `danger` → `ghost` variant, fixed `undo` function calling setSelectedIds inside setHistory callback. Added `'use client'` to `footer.tsx` (was using `useBrand()` hook without client boundary — caused `TypeError: S is not a function` during SSG).
+- **QA results:** typecheck 4/4 ✅, lint 1 pre-existing error (`auth.service.ts:290`), build 33 pages ✅, 153 API tests ✅.
+
+**Files Modified:**
+- `packages/api/src/drizzle/schema.ts` — bugReports table + 3 enums + relations
+- `packages/api/src/drizzle/migrations/0002_lush_unus.sql` — generated migration
+- `packages/api/src/modules/bug-reports/` — module, service, controller, DTOs (new)
+- `packages/api/src/app.module.ts` — BugReportsModule registered
+- `packages/api/src/modules/email/email.service.ts` — enrichedVariables injection
+- `packages/api/src/modules/email/email-templates.defaults.ts` — updated + 2 new templates
+- `packages/types/src/config/platform-config.types.ts` — BrandConfig type
+- `packages/config/src/fallbacks.ts` — FALLBACK_BRAND
+- `apps/web/config/fallbacks.ts` — FALLBACK_BRAND + bug report templates
+- `apps/web/lib/platform-config.ts` — brand fallback case
+- `apps/web/lib/bug-reports.ts` — API client (new)
+- `apps/web/hooks/use-platform-config.ts` — useBrand() hook
+- `apps/web/hooks/use-bug-reports.ts` — React Query hooks (new)
+- `apps/web/hooks/use-batch-selection.ts` — universal batch selection hook (new)
+- `apps/web/hooks/index.ts` — exports updated
+- `apps/web/components/ui/hw-batch-bar.tsx` — batch action bar (new)
+- `apps/web/components/ui/index.ts` — HwBatchBar + BatchAction exports
+- `apps/web/components/landing/top-nav.tsx` — config-driven logo
+- `apps/web/components/landing/footer.tsx` — config-driven logo + `'use client'`
+- `apps/web/app/layout.tsx` — generateMetadata() with brand config
+- `apps/web/app/(public)/bug-report/page.tsx` — user bug report form (new)
+- `apps/web/app/(dashboard)/dashboard/admin/bug-reports/page.tsx` — admin management (new)
+- `apps/web/app/(dashboard)/layout.tsx` — Bug Reports nav link
+- `.env.example` — complete env var reference
+- `README.md` — root README (new)
+
+**Next Task:**
+Pick next Backlog item from `planning/task-queue.md` Up Next (WhatsApp integration, Analytics engine, Expo parity, PWA, Push notifications) or restore live DB connectivity for migration `0002` + seed.
+
+**Assumptions Made:**
+- Bug report email notifications use DB user lookup (ActorRef lacks email field).
+- HwBatchBar `danger` variant replaced with `ghost` + className for red styling (HwButton lacks danger variant).
+- `footer.tsx` needed `'use client'` directive added when `useBrand()` hook was introduced — Server Components cannot call React hooks.
+
+**Notes / Blockers:**
+- Supabase DB `ltxseuwzxbothxevcmwd` still unreachable (DNS ENOTFOUND) — migration `0002` not applied live. Same blocker as Session 12.
+- `NEXT_IGNORE_INCORRECT_LOCKFILE=1` still required for `next build`.
+- 1 pre-existing lint error in `auth.service.ts:290` (`@typescript-eslint/no-explicit-any`) — not introduced by this session.
+
+---

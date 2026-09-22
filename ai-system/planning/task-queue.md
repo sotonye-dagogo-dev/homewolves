@@ -2,8 +2,8 @@
 
 > **Metadata**
 > - last-updated-by: execute-feature
-> - last-verified-against-code: 2026-09-16
-> - last-synced: 2026-09-16 (Session 11 — tightening: wrappers/seed/testing/audit)
+> - last-verified-against-code: 2026-09-22
+> - last-synced: 2026-09-22 (Session 13 — bug reports + batch selection + config-driven logo + admin nav)
 > - staleness-policy: re-verify before each session
 
 > **Overview:** Sprint-level task queue with complexity tagging. Agents execute tasks top to bottom within the current sprint. Each task is sized so it can be completed in a single session. Sprint 1–3 are complete; the current focus is hardening, Backlog items, and the next scheduled phase.
@@ -44,6 +44,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 | [XL] | Prisma→Drizzle ORM migration (`packages/api`) — schema, services, mock-based specs, initial migration | [x] |
 | [M] | Web audit rectification — clickable bento/cards, URL search+category params, Link nav, loading.tsx, next/image | [x] |
 | [XL] | Supabase/Drizzle compliance + Google OAuth + Resend email infrastructure + admin GUIs (email templates + blog CRUD) | [x] |
+| [L] | Bug report engine (user + admin) + batch selection + config-driven logo + .env.example audit + README | [x] |
 
 ---
 
@@ -92,6 +93,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 | Sprint close-out + security hardening (SEO verify, activity-point hooks, supertest integration tests, E2E admin journey, DocuSeal webhook HMAC, JWT secret fail-hard, Redis rate limiter w/ fallback, web auth hydration fix, DB migration applied) | [x] |
 | Hardening (routing/icons/SEO/env parity) — layout metadataBase/openGraph/twitter/canonical/viewport, sitemap take clamped to 50, .env.example aligned to real .env (homewolves.com), dashboard nav/icons + property detail + properties feed + blog/not-found/error migrated to lucide-react + next/image | [x] |
 | Tightening (wrappers/seed/testing/audit — Session 11) — SmsClient+StorageClient+HealthModule (wrappers per §17, `isConfigured`, simulated fallback, `/health` + `/health/ready`), reversible seed (`seed-` IDs + manifest, `db:seed:revert`), error boundaries `(dashboard)/(public)/error.tsx`, RbacGuard deprecated, 153 API + 100 web + 22 E2E green | [x] |
+| Bug reports + batch selection + config-driven logo + .env.example + README + admin nav (Session 13) — `bugReports` table (3 enums, 9 columns, 4 indexes), BugReportsModule (CRUD + status + batch + email), user bug report form at `/bug-report`, admin management at `/dashboard/admin/bug-reports`, `useBatchSelection` hook + `HwBatchBar` component, config-driven logo (top-nav/footer/SEO/email templates), Google OAuth env vars in `.env.example`, root README, DB migration `0002_lush_unus.sql` generated, QA gate: typecheck 4/4, build 33 pages, 153 tests green | [x] |
 
 ---
 
@@ -113,6 +115,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 - **Residual security risks addressed (2026-08-19):** webhooks now HMAC-verified (Paystack `x-paystack-signature`; DocuSeal `X-Docuseal-Signature` via `DOCUSEAL_WEBHOOK_SECRET`, 5-min replay window, dev bypass when unset); `JWT_SECRET` fails hard in production via shared `resolveJwtSecret()` (dev fallback only outside production); rate limiter is now pluggable with a Redis-backed store (`RATE_LIMIT_STORE`, sorted-set sliding window) that falls back to the in-memory store when `REDIS_URL` is unset/unreachable.
 - **Sprint close-out (2026-08-19):** SEO verified already present (`generateMetadata` + JSON-LD on listing detail; `app/sitemap.ts` + `robots.ts` live); activity `listing_approved` rule (20 pts) wired into `moderateListing`; supertest integration suite `packages/api/src/test/app.e2e.spec.ts` (12 tests: 401/403/400/404/200/429, role guards, strict zod) — 135 API tests total; E2E admin journey `apps/web/e2e/admin-journey.spec.ts` (6 tests: moderate nav, approve/reject listing, payment confirm/reject, non-admin nav hidden) — 22 E2E total.
 - **Tightening (2026-09-16):** API now 153 tests (added `sms.client`, `storage.client`, `health.service`, `health` e2e ×2); web 100 tests; `npm run typecheck` 4/4, `lint` 4/4, `build` 31 pages, `test` green. No `href="#"`, `TODO`/`FIXME` deadends; vendor SDKs isolated to wrappers.
+- **Bug reports + config-driven logo (2026-09-22):** `bugReports` table + 3 pgEnums + `BugReportsModule` (CRUD/status/batch/email), user form at `/bug-report`, admin panel at `/dashboard/admin/bug-reports` with batch selection (toggle/selectAll/invertSelect/undo/clear + batch status/delete), config-driven logo (top-nav/footer/SEO/email templates), `BrandConfig` type + `useBrand()` hook, Google OAuth env vars in `.env.example`, root README, migration `0002_lush_unus.sql` generated. QA: typecheck 4/4, lint 1 pre-existing error (`auth.service.ts:290`), build 33 pages, 153 API tests green. Supabase DB still unreachable — migration not applied live.
 - **Web auth hydration fix (2026-08-19):** zustand `persist` hydrates asynchronously (promise chain); the dashboard layout's `router.replace('/auth')` could fire before rehydration on slow loads, bouncing logged-in users to the login screen. Added a `hydrated` flag to the auth store (`onFinishHydration`) and gated the redirect + loading state on it.
 - **DB migration applied (2026-08-19):** `npm run db:migrate` ran against the live Supabase Postgres (migrations `0000` + `0001`). Note: `drizzle-kit migrate` does NOT auto-load the root `.env` (it reads `process.env.DATABASE_URL`; the config falls back to localhost). Export `DATABASE_URL` (from root `.env`) or add a `packages/api/.env` before running it.
 - **Next.js build env quirk (2026-08-19):** `next build` warns "Found lockfile missing swc dependencies, patching…" then fails patching because Next 14.2.35's `optionalDependencies` pin `@next/swc-*@14.2.33`, but the patcher looks up version 14.2.35 (missing) — a registry lookup crash, not a code error. Workaround: `NEXT_IGNORE_INCORRECT_LOCKFILE=1` (build compiles + static-generates fine without the patch).

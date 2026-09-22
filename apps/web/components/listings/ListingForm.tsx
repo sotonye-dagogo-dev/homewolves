@@ -375,7 +375,7 @@ export function ListingForm({ onComplete }: { onComplete?: () => void }) {
                   className="hidden"
                 />
                 <div className="space-y-2">
-                  <div className="text-2xl" style={{ color: 'var(--color-text-tertiary)' }}>📷</div>
+                  <div className="flex justify-center" style={{ color: 'var(--color-text-tertiary)' }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
                   <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                     Drop images here or click to browse
                   </p>

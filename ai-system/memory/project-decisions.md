@@ -2,7 +2,7 @@
 
 > **Metadata**
 > - last-updated-by: update-ai-system
-> - last-verified-against-code: 2026-08-19
+> - last-verified-against-code: 2026-09-22
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Log of significant architectural, technical, and product decisions. Agents consult this before proposing changes to avoid contradicting prior reasoning. Uses supersedes/superseded-by links so contradictory entries are explicitly resolved rather than both appearing equally valid.
@@ -548,6 +548,30 @@ The directive requires seeded data that can be reverted without affecting post-s
 
 ---
 
+## Thorough responsiveness & mobile-bar sweep + global public navbar + toast + direct Google OAuth (Session 12)
+
+**Decision:** Adopt: (1) `apps/web/app/(public)/layout.tsx` global public layout with `TopNav` + `MobileBar` + `Footer` and `pb-[84px]` mobile bottom padding; remove per-page MobileBar duplicates; (2) `ToastProvider` (`components/shared/Toast.tsx`) mounted in root layout with `useToast()` + `hw-toast` CustomEvent bridge and `aria-live` region, to give global feedback on mutations/loading states; (3) dashboard layout unauthenticated CTA (`Sign in to continue`) instead of infinite `Loading dashboard...` (hydrated+!token path); (4) direct Google OAuth via `POST /api/v1/auth/google` (`googleLoginSchema`) verified at `https://oauth2.googleapis.com/tokeninfo` (`GOOGLE_CLIENT_ID` audience check), `lib/google-auth.ts` GSI loader + `use-auth.exchangeGoogle` — Supabase `POST /auth/supabase` retained as legacy fallback; (5) pricing `.map is not a function` fix — normalize `fetchPlans` / `PricingPage` to handle both `Array` and `{plans: Array}` shapes + `Array.isArray` guards on `features`; (6) `FALLBACK_LISTINGS` now carry 2-4 `media` entries per seed listing so gallery is demonstrably multi-image; (7) API proxy resilience: 8s timeout, `502/503/504` fallback injection, `QueryProvider` retry for gateway errors; (8) responsive hardening: `overflow-x:hidden` on html/body, detail page sticky action bar offset to `bottom:80px` (above MobileBar), sidebar no longer `overflowY:auto` with constrained height, map placeholder not pushing actions, no emoji SVGs (lucide only).
+
+**Date:** 2026-09-22
+**Made by:** Implementer (execute-feature thorough sweep)
+**Supersedes:** Google OAuth via Supabase Auth decision (now legacy fallback); dashboard hydrated-redirect decision (now CTA)
+**Superseded by:** None
+
+**Reason:**
+The issue directive reported non-responsive overflow, mobile bar obscuring content, missing navbar on public pages, dashboard infinite loading, missing global feedback, single-image listings, pricing `.map` crash, Supabase-coupled OAuth, and Bad Gateway. All are user-visible production blockers, so they were bundled.
+
+**Alternatives Considered:**
+- Keep Supabase as primary OAuth — rejected per directive (vendor-coupled, extra hop).
+- Keep per-page MobileBar imports — rejected: duplicates global layout, causes double bars on detail page.
+
+**Implications:**
+- New public pages automatically get TopNav/MobileBar — no per-page imports needed.
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID` required for Google button; unset → disabled button with helper text.
+- `ToastProvider` is the single feedback surface — feature mutations should call `useToast().success/error` rather than `alert()`.
+- `FALLBACK_LISTINGS` media shape is now multi-image; API proxy still returns paginated demo data when DB is absent.
+
+---
+
 ## Dashboard/public error boundaries complement root (Session 11)
 
 **Decision:** Added `apps/web/app/(dashboard)/error.tsx` and `apps/web/app/(public)/error.tsx` as segment-level error boundaries (in addition to existing `app/error.tsx` + `app/global-error.tsx`). Dashboard variant logs `[dashboard]`, public variant is standalone.
@@ -561,5 +585,52 @@ The directive requires error boundaries on all pages — root alone is insuffici
 
 **Implications:**
 - New route groups that need isolated recovery should add their own `error.tsx`.
+
+---
+
+## Config-driven logo via BrandConfig (Session 13)
+
+**Decision:** Logo/favicon/companyName/tagline are config-driven via `BrandConfig` type in `packages/types/src/config/platform-config.types.ts`. `useBrand()` hook in `apps/web/hooks/use-platform-config.ts` reads from PlatformConfig with `FALLBACK_BRAND` fallback (both API config package and web config package). Top-nav, footer, layout metadata, and email templates all derive branding from this single source. Email templates receive `{{logoUrl}}` and `{{siteUrl}}` as automatic variables injected by `EmailService.send()`.
+**Date:** 2026-09-22
+**Made by:** Implementer (execute-feature config-driven pass)
+**Supersedes:** Hardcoded logo URLs and company names in components
+**Superseded by:** None
+
+**Reason:**
+Engineering principle §1 mandates config-driven over hardcoded. Logo/branding was hardcoded in top-nav, footer, layout metadata, and email templates. Centralising in PlatformConfig means admins can rebrand without code deploys.
+
+**Alternatives Considered:**
+- Keep hardcoded logos — rejected: violates §1, requires code changes for rebranding.
+- Env-only config — rejected: cannot be changed without redeploy, no admin UI.
+- Separate brand config service — rejected: PlatformConfig already handles this pattern.
+
+**Implications:**
+- New UI components should use `useBrand()` for logo/company name, not hardcoded values.
+- `FALLBACK_BRAND` must be updated when branding changes (checked in both `packages/config/src/fallbacks.ts` and `apps/web/config/fallbacks.ts`).
+- Email template `{{logoUrl}}` is auto-injected; templates should use `<img src="{{logoUrl}}"/>` not `<img src="/logo.png"/>`.
+
+---
+
+## Bug report system with batch management (Session 13)
+
+**Decision:** Bug reports use a dedicated `bugReports` table with `BugReportStatus` (OPEN, UNDER_REVIEW, CLOSED) and `BugReportType` (BUG, FEATURE_REQUEST, UI_ISSUE, PERFORMANCE, OTHER) enums. User submission at `/bug-report` (type + description + optional screenshots via client-side FileReader), admin management at `/dashboard/admin/bug-reports` with paginated table, inline status editing, and batch operations (status change + delete) powered by a universal `useBatchSelection` hook + `HwBatchBar` floating component. Email notifications fire on submission and status changes.
+**Date:** 2026-09-22
+**Made by:** Implementer (execute-feature bug report pass)
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+Users need a structured way to report bugs/features without leaving the platform. Admins need to triage, assign status, and batch-process reports. The batch selection system is reusable for any future batch-action UI (e.g., bulk listing moderation).
+
+**Alternatives Considered:**
+- Third-party bug tracker (Jira/Linear) — rejected: adds external dependency, user leaves platform.
+- Simple contact form — rejected: no status tracking, no batch ops, no audit trail.
+- Generic moderation queue — rejected: bug reports have distinct fields (type, screenshots) vs. content moderation.
+
+**Implications:**
+- `useBatchSelection` hook is universal — reuse for any list with batch actions.
+- `HwBatchBar` accepts custom `BatchAction[]` for flexible batch operations.
+- Bug report screenshots stored as data URLs (client-side FileReader) — max 3 per report. Consider S3 storage for production scale.
+- `emailService.send()` auto-injects `{{logoUrl}}` and `{{siteUrl}}` — all templates can use these variables.
 
 ---

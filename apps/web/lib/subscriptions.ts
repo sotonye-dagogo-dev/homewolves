@@ -24,7 +24,12 @@ async function handleRes(r: Response) {
 
 export async function fetchPlans() {
   const r = await fetch(`${getApi()}/plans`);
-  return handleRes(r);
+  const data = await handleRes(r);
+  // API returns array directly; proxy fallback returns {plans: [...]}
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray((data as any).plans)) return (data as any).plans;
+  if (data && Array.isArray((data as any).value)) return (data as any).value;
+  return data;
 }
 
 export async function fetchPlan(slug: string) {

@@ -1,6 +1,14 @@
 // ─── ALL FALLBACK CONFIGURATIONS ────────────────────────────
 // These activate only when PlatformConfig API is unreachable.
 
+export const FALLBACK_BRAND: BrandConfig = {
+  logoUrl: '/logo.png',
+  faviconUrl: '/favicon.ico',
+  ogImageUrl: '/og-image.png',
+  companyName: 'Homewolves',
+  tagline: 'African Real Estate Operating System',
+};
+
 export const FALLBACK_AMENITIES: AmenityConfig[] = [
   { id: 'pool', label: 'Swimming Pool', icon: 'Pool', active: true, displayOrder: 1 },
   { id: 'parking', label: 'Parking Space', icon: 'Car', active: true, displayOrder: 2 },
@@ -142,7 +150,12 @@ export const FALLBACK_LISTINGS: Array<{
     metadata: { beds: 4, baths: 4, size: 420 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
     owner: { id: 'seed-user-agent-0001', firstName: 'Emeka', lastName: 'Okonkwo', email: 'agent1@homewolves.com', role: 'AGENT' },
-    media: [{ id: 'seed-media-0001', listingId: 'seed-listing-0001', url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80&seed=seed-listing-0001', type: 'image', isPrimary: true, displayOrder: 0, altText: '4-Bedroom Duplex in Lekki Phase 1' }],
+    media: [
+      { id: 'seed-media-0001a', listingId: 'seed-listing-0001', url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80&seed=seed-listing-0001a', type: 'image', isPrimary: true, displayOrder: 0, altText: '4-Bedroom Duplex in Lekki Phase 1 - exterior' },
+      { id: 'seed-media-0001b', listingId: 'seed-listing-0001', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80&seed=seed-listing-0001b', type: 'image', isPrimary: false, displayOrder: 1, altText: 'Living room' },
+      { id: 'seed-media-0001c', listingId: 'seed-listing-0001', url: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800&q=80&seed=seed-listing-0001c', type: 'image', isPrimary: false, displayOrder: 2, altText: 'Kitchen' },
+      { id: 'seed-media-0001d', listingId: 'seed-listing-0001', url: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800&q=80&seed=seed-listing-0001d', type: 'image', isPrimary: false, displayOrder: 3, altText: 'Bedroom' },
+    ],
   },
   {
     id: 'seed-listing-0002',
@@ -161,7 +174,11 @@ export const FALLBACK_LISTINGS: Array<{
     metadata: { beds: 2, baths: 2, size: 85 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
     owner: { id: 'seed-user-agent-0001', firstName: 'Emeka', lastName: 'Okonkwo', email: 'agent1@homewolves.com', role: 'AGENT' },
-    media: [{ id: 'seed-media-0002', listingId: 'seed-listing-0002', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80&seed=seed-listing-0002', type: 'image', isPrimary: true, displayOrder: 0, altText: '2-Bedroom Apartment in Yaba' }],
+    media: [
+      { id: 'seed-media-0002a', listingId: 'seed-listing-0002', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80&seed=seed-listing-0002a', type: 'image', isPrimary: true, displayOrder: 0, altText: '2-Bedroom Apartment in Yaba' },
+      { id: 'seed-media-0002b', listingId: 'seed-listing-0002', url: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800&q=80&seed=seed-listing-0002b', type: 'image', isPrimary: false, displayOrder: 1, altText: 'Interior' },
+      { id: 'seed-media-0002c', listingId: 'seed-listing-0002', url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80&seed=seed-listing-0002c', type: 'image', isPrimary: false, displayOrder: 2, altText: 'Bedroom' },
+    ],
   },
   {
     id: 'seed-listing-0003',
@@ -180,7 +197,11 @@ export const FALLBACK_LISTINGS: Array<{
     metadata: { beds: 3, baths: 3, size: 180 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
     owner: { id: 'seed-user-agent-0002', firstName: 'Aisha', lastName: 'Bello', email: 'agent2@homewolves.com', role: 'AGENT' },
-    media: [{ id: 'seed-media-0003', listingId: 'seed-listing-0003', url: 'https://images.unsplash.com/photo-1600607688961-a5bf58b5b2fc?w=800&q=80&seed=seed-listing-0003', type: 'image', isPrimary: true, displayOrder: 0, altText: 'Luxury Shortlet in Victoria Island' }],
+    media: [
+      { id: 'seed-media-0003a', listingId: 'seed-listing-0003', url: 'https://images.unsplash.com/photo-1600607688961-a5bf58b5b2fc?w=800&q=80&seed=seed-listing-0003a', type: 'image', isPrimary: true, displayOrder: 0, altText: 'Luxury Shortlet in Victoria Island' },
+      { id: 'seed-media-0003b', listingId: 'seed-listing-0003', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80&seed=seed-listing-0003b', type: 'image', isPrimary: false, displayOrder: 1, altText: 'Living area' },
+      { id: 'seed-media-0003c', listingId: 'seed-listing-0003', url: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800&q=80&seed=seed-listing-0003c', type: 'image', isPrimary: false, displayOrder: 2, altText: 'Pool' },
+    ],
   },
   {
     id: 'seed-listing-0004',
@@ -237,7 +258,10 @@ export const FALLBACK_LISTINGS: Array<{
     metadata: { beds: 1, baths: 1, size: 45 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
     owner: { id: 'seed-user-agent-0002', firstName: 'Aisha', lastName: 'Bello', email: 'agent2@homewolves.com', role: 'AGENT' },
-    media: [{ id: 'seed-media-0006', listingId: 'seed-listing-0006', url: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800&q=80&seed=seed-listing-0006', type: 'image', isPrimary: true, displayOrder: 0, altText: 'Studio Apartment in Ikeja GRA' }],
+    media: [
+      { id: 'seed-media-0006a', listingId: 'seed-listing-0006', url: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800&q=80&seed=seed-listing-0006a', type: 'image', isPrimary: true, displayOrder: 0, altText: 'Studio Apartment in Ikeja GRA' },
+      { id: 'seed-media-0006b', listingId: 'seed-listing-0006', url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80&seed=seed-listing-0006b', type: 'image', isPrimary: false, displayOrder: 1, altText: 'Interior 2' },
+    ],
   },
 ];
 
@@ -325,6 +349,32 @@ export const FALLBACK_EMAIL_TEMPLATES: EmailTemplate[] = [
     variables: [
       { name: 'firstName', label: 'Recipient first name', example: 'Ada' },
       { name: 'siteUrl', label: 'Platform URL', example: 'https://homewolves.com' },
+    ],
+  },
+  {
+    key: 'bug_report_submitted',
+    name: 'Bug Report Submitted',
+    subject: 'Bug report received — {{bugType}}',
+    htmlBody: 'Hi {{firstName}},<br/><br/>We received your bug report ({{bugType}}). Report ID: {{bugId}}.',
+    active: true,
+    description: 'Confirmation sent to user after submitting a bug report.',
+    variables: [
+      { name: 'firstName', label: 'Recipient first name', example: 'Ada' },
+      { name: 'bugType', label: 'Bug report type', example: 'BUG' },
+      { name: 'bugId', label: 'Bug report ID', example: 'abc123' },
+    ],
+  },
+  {
+    key: 'bug_report_status_changed',
+    name: 'Bug Report Status Update',
+    subject: 'Bug report update — {{newStatus}}',
+    htmlBody: 'Hi {{firstName}},<br/><br/>Your bug report ({{bugId}}) has been updated to {{newStatus}}.',
+    active: true,
+    description: 'Sent to user when a bug report status changes.',
+    variables: [
+      { name: 'firstName', label: 'Recipient first name', example: 'Ada' },
+      { name: 'bugId', label: 'Bug report ID', example: 'abc123' },
+      { name: 'newStatus', label: 'New status', example: 'UNDER_REVIEW' },
     ],
   },
 ];

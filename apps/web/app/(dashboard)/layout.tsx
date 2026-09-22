@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useNotificationBell } from '@/hooks/use-notifications';
-import { LayoutDashboard, Home, Users, ShieldCheck, FileText, MessageCircle, Bell, User, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Home, Users, ShieldCheck, FileText, MessageCircle, Bell, User, Menu, X, Bug } from 'lucide-react';
 import Link from 'next/link';
 
 function buildNavItems(user: any) {
@@ -26,6 +26,7 @@ function buildNavItems(user: any) {
   if (isAdmin) {
     items.push(
       { label: 'Moderation', href: '/dashboard/admin/moderation', Icon: ShieldCheck },
+      { label: 'Bug Reports', href: '/dashboard/admin/bug-reports', Icon: Bug },
     );
   }
 
@@ -49,15 +50,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (hydrated && !accessToken) {
-      router.replace('/auth');
-    }
+    // do not auto-redirect; unauthenticated state renders CTA instead
   }, [hydrated, accessToken, router]);
 
-  if (!hydrated || !user || !accessToken) {
+  if (!hydrated) {
     return (
       <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--color-bg-canvas)' }}>
         <div className="animate-pulse" style={{ color: 'var(--color-text-tertiary)' }}>Loading dashboard...</div>
+      </div>
+    );
+  }
+
+  if (!user || !accessToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--color-bg-canvas)' }}>
+        <div className="max-w-md w-full text-center p-8 rounded-xl" style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-default)' }}>
+          <h1 className="text-xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>Sign in to continue</h1>
+          <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>You need to be authenticated to access the dashboard. Create an account or sign in to continue.</p>
+          <div className="flex justify-center gap-3">
+            <Link href="/auth" className="px-5 py-2.5 rounded-full text-sm font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>Sign in</Link>
+            <Link href="/" className="px-5 py-2.5 rounded-full text-sm font-semibold" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-primary)' }}>Back to home</Link>
+          </div>
+        </div>
       </div>
     );
   }

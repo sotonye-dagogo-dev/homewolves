@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, Bell, Menu, X } from 'lucide-react';
 import { HwButton } from '@/components/ui';
+import { useBrand } from '@/hooks/use-platform-config';
 
 export function TopNav() {
   const [scrolled, setScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
+  const { data: brand } = useBrand();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 100);
@@ -49,11 +51,21 @@ export function TopNav() {
           </button>
           <Link
             href="/"
-            className={`font-display text-xl lg:text-2xl font-bold tracking-tight transition-colors duration-normal ${
+            className={`flex items-center gap-2 font-display text-xl lg:text-2xl font-bold tracking-tight transition-colors duration-normal ${
               scrolled || mobileOpen ? 'text-[var(--color-brand-primary)]' : 'text-[var(--color-text-inverse)]'
             }`}
           >
-            Homewolves
+            {brand?.logoUrl ? (
+              <img
+                src={brand.logoUrl}
+                alt={brand.companyName || 'Homewolves'}
+                className="h-7 lg:h-8 w-auto"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : null}
+            <span>{brand?.companyName || 'Homewolves'}</span>
           </Link>
 
           <div
