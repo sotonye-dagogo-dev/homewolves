@@ -675,3 +675,47 @@ The web client (`google-auth.ts`) reads `NEXT_PUBLIC_GOOGLE_CLIENT_ID` but it wa
 - `GOOGLE_CLIENT_SECRET` is available for future server-side token exchange if needed.
 
 ---
+
+## Error boundary → bug report integration with error metadata (Session 15)
+
+**Decision:** All error boundaries include a "Report" button that opens an `ErrorReportModal`. The modal pre-fills a bug report (type=BUG) with error details captured from the boundary: `errorMessage`, `stackTrace` (collapsible), `componentName`, `url`, `digest`. The bug report DB schema was extended with 4 nullable columns to persist this metadata. This gives developers Sentry-like context when users report errors.
+**Date:** 2026-09-22
+**Made by:** Implementer (execute-feature error boundary pass)
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+Error boundaries previously only logged to console. Users had no way to report errors, and developers had no context when they did. The modal approach keeps the error boundary UI clean while providing a clear CTA for reporting.
+
+**Alternatives Considered:**
+- Auto-submit on error — rejected: requires authentication, may send duplicate/noisy reports.
+- External Sentry integration — rejected: user wants in-house bug reporting system.
+- Link to `/bug-report` page — rejected: loses error context (stack trace, component name) during navigation.
+
+**Implications:**
+- Error reports require authentication (API returns 401 without token). Unauthenticated users see the modal but submission will fail — can be enhanced later with anonymous reports.
+- `bugReports` table now has 13 columns (was 9). Migration `0003` adds the 4 new nullable columns.
+
+---
+
+## useRequireAuth hook for auth-gated actions (Session 15)
+
+**Decision:** All user-facing actions that require authentication (Chat, Schedule Inspection, Post Property) use a `useRequireAuth()` hook that shows a toast with "Sign in" CTA instead of silently failing or redirecting. The hook returns `{ requireAuth, isAuthenticated }` — callers gate their action on `requireAuth('Action description')`. Toast duration extended to 5000ms for CTA readability.
+**Date:** 2026-09-22
+**Made by:** Implementer (execute-feature auth UX pass)
+**Supersedes:** The dead `emitToast` function and inert buttons in PropertyDetailClient
+**Superseded by:** None
+
+**Reason:**
+Guest users clicking Chat Agent, Schedule Inspection, or other buttons got no feedback — the buttons either did nothing (no onClick) or dispatched a DOM event that the Toast system never listened for. The `useRequireAuth` pattern provides consistent, non-disruptive auth gating across the app.
+
+**Alternatives Considered:**
+- `router.push('/auth')` on every unauthenticated click — rejected: disruptive, loses page context.
+- Modal login prompt — rejected: more complex, toast is lighter and less intrusive.
+- Disable buttons for guests — rejected: less discoverable, users don't know why buttons are disabled.
+
+**Implications:**
+- New interactive components should use `useRequireAuth()` for auth gating instead of manual `if (!accessToken) router.push('/auth')`.
+- The `hw-toast` CustomEvent bridge now works — components can dispatch toasts via `window.dispatchEvent(new CustomEvent('hw-toast', { detail: { message, type, action } }))`.
+
+---

@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { TriangleAlert } from 'lucide-react';
+import { TriangleAlert, Bug } from 'lucide-react';
+import { ErrorReportModal } from '@/components/shared/ErrorReportModal';
 
 export default function ErrorBoundary({
   error,
@@ -11,6 +12,8 @@ export default function ErrorBoundary({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [showReport, setShowReport] = useState(false);
+
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -40,8 +43,26 @@ export default function ErrorBoundary({
           >
             Go home
           </Link>
+          <button
+            onClick={() => setShowReport(true)}
+            className="px-5 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5"
+            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-secondary)' }}
+          >
+            <Bug className="w-3.5 h-3.5" />
+            Report
+          </button>
         </div>
       </div>
+
+      <ErrorReportModal
+        open={showReport}
+        onClose={() => setShowReport(false)}
+        errorMessage={error.message}
+        stackTrace={error.stack}
+        componentName="RootErrorBoundary"
+        url={typeof window !== 'undefined' ? window.location.href : undefined}
+        digest={error.digest}
+      />
     </div>
   );
 }

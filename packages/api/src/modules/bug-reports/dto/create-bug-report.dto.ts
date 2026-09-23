@@ -8,6 +8,10 @@ export const createBugReportSchema = z
     type: bugReportTypeEnum,
     description: z.string().trim().min(10).max(5000),
     screenshots: z.array(z.string().trim().max(2000)).max(3).optional(),
+    errorMessage: z.string().trim().max(2000).optional(),
+    stackTrace: z.string().trim().max(10000).optional(),
+    componentName: z.string().trim().max(200).optional(),
+    url: z.string().trim().max(2000).optional(),
   })
   .strict();
 export type CreateBugReportDto = z.infer<typeof createBugReportSchema>;

@@ -606,6 +606,10 @@ export const bugReports = pgTable('BugReport', {
   screenshots: jsonb('screenshots').notNull().default(sql`'[]'::jsonb`),
   status: bugReportStatusEnum('status').notNull().default('OPEN'),
   adminNote: text('adminNote'),
+  errorMessage: text('errorMessage'),
+  stackTrace: text('stackTrace'),
+  componentName: text('componentName'),
+  url: text('url'),
   createdAt: createdAt('createdAt'),
   updatedAt: updatedAt('updatedAt'),
 }, (t) => [

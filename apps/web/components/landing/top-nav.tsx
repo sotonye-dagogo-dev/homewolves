@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Search, Bell, Menu, X } from 'lucide-react';
 import { HwButton } from '@/components/ui';
 import { useBrand } from '@/hooks/use-platform-config';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 
 export function TopNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -13,6 +14,7 @@ export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const { data: brand } = useBrand();
+  const { requireAuth } = useRequireAuth('/dashboard/agent/listings/new');
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 100);
@@ -106,7 +108,7 @@ export function TopNav() {
           >
             Pricing
           </Link>
-          <HwButton variant="primary" size="sm" className="hidden lg:inline-flex" onClick={() => router.push('/dashboard/agent/listings/new')}>
+          <HwButton variant="primary" size="sm" className="hidden lg:inline-flex" onClick={() => { if (requireAuth('Posting a property')) router.push('/dashboard/agent/listings/new'); }}>
             Post Property
           </HwButton>
 
@@ -164,9 +166,9 @@ export function TopNav() {
                 Messages
               </Link>
             </div>
-            <Link href="/dashboard/agent/listings/new" onClick={() => setMobileOpen(false)} className="w-full text-center rounded-full py-3 text-sm font-semibold bg-accent text-accent-foreground">
+            <button onClick={() => { setMobileOpen(false); if (requireAuth('Posting a property')) router.push('/dashboard/agent/listings/new'); }} className="w-full text-center rounded-full py-3 text-sm font-semibold bg-accent text-accent-foreground">
               Post Property
-            </Link>
+            </button>
             <div className="flex gap-2 pt-2 border-t border-[var(--color-border-subtle)]">
               <Link href="/about" onClick={() => setMobileOpen(false)} className="flex-1 text-center text-sm py-2 text-secondary">
                 About
