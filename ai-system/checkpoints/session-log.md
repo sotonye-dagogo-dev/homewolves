@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: bootstrap-project
-> - last-verified-against-code: 2026-08-13
+> - last-updated-by: fix-build
+> - last-verified-against-code: 2026-09-23
 > - staleness-policy: append-only — never modify past entries
 
 > **Overview:** Append-only running log of development sessions. Each entry records what was completed, what comes next, and which files were modified. Agents write here at the end of every session so work can be resumed without re-reading the entire codebase. This file is the **append-only historical record** — use `checkpoints/in-progress.md` for current in-progress work.
@@ -471,3 +471,46 @@ Pick next Backlog item from `planning/task-queue.md` Up Next or restore live DB 
 
 **Next Task:**
 Pick next Backlog item from `planning/task-queue.md`.
+
+---
+
+## Session 17 — 2026-09-23 (fix-build: production multi-issue repair)
+
+Executed `fix-build.md` against a batch of production issues reported for https://homewolves.com.
+
+**Completed:**
+- **Issue 1 — navbar search duplication:** Removed search UI from `top-nav.tsx` and `mobile-bar.tsx`; only hero search remains. Smoke test asserts nav textbox count is 0.
+- **Issue 2 — runtime errors:** Added `toArray` normalizer in `lib/messaging.ts`; `Array.isArray` guards on dashboard/messages/notification consumers; `use-auth.ts` always sets `hydrated:true`.
+- **Issue 3 — unauth dashboard hang:** Redirect unauthenticated users from `(dashboard)/layout.tsx` to `/auth?redirect=<pathname>` with 3s safety timeout; hydration always resolves.
+- **Issue 4 — Google OAuth env:** Server-only `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`; removed `NEXT_PUBLIC_GOOGLE_CLIENT_ID` from `.env.example`/README/turbo; GSI container split fixed `removeChild` crash on auth page.
+- **Issue 5 — email auth 502:** New server-side local auth route `app/api/v1/auth/[action]` + `lib/server/auth-local.ts` (HS256 JWT, HMAC OTP cookie, Resend when configured); API `verifyOtp` auto-creates missing users; fixed `jwtSecret()` empty-string bypass.
+- **Issues 6/7/8 — config-driven filters + URL params:** New `lib/property-filters.ts`; properties page URL↔pill sync with `appliedKeyRef` + `Array.isArray`-safe parse; `FALLBACK_FILTER_PILLS` extended; `verified` param plumbed through listing service/controller.
+- **Issue 9 — tests:** Added unit tests (property-filters, auth-local, messaging, use-auth, top-nav, mobile-bar) and fixed E2E specs (smoke hero form, admin Moderation selector, guest `domcontentloaded` waits).
+- **Hero search progressive enhancement:** Converted to native `<form method="GET" action="/properties">` so Enter works pre-hydration (fixes last E2E failure).
+- **QA gate:** lint green (3 pre-existing warnings), typecheck 4/4, unit 159 API + 153 web, E2E 22/22 from `apps/web`.
+
+**Files Modified:**
+- `apps/web/components/landing/top-nav.tsx`, `mobile-bar.tsx` — search removed
+- `apps/web/components/landing/hero-section.tsx` — native form conversion
+- `apps/web/lib/messaging.ts`, `apps/web/app/(public)/messages/page.tsx` — array guards
+- `apps/web/hooks/use-auth.ts`, `apps/web/hooks/use-notifications.ts` — hydration + guards
+- `apps/web/app/(dashboard)/layout.tsx` — unauth redirect
+- `apps/web/app/(public)/auth/page.tsx` — GSI container split
+- `apps/web/app/api/v1/auth/[action]/route.ts`, `apps/web/lib/server/auth-local.ts` — local auth
+- `apps/web/lib/property-filters.ts`, `apps/web/app/(public)/properties/page.tsx` — filters/URL
+- `packages/api/src/modules/auth/auth.service.ts`, `packages/api/src/modules/listings/listing.service.ts`, `listing.controller.ts` — OTP auto-create, verified param
+- `apps/web/e2e/*.spec.ts` — selector/wait fixes
+- New unit test files under `apps/web/lib/` and `components/landing/`
+
+**Next Task:**
+Deploy to production to verify live fixes (requires user credentials for Vercel/Supabase); confirm `RESEND_API_KEY`/`GOOGLE_CLIENT_ID`/`DATABASE_URL`/`JWT_SECRET` are set in prod env.
+
+**Assumptions Made:**
+- Local auth mode is correct when no NestJS API is reachable (`backendOrigin()` null).
+- `verified` boolean listing column maps to client "verified" pill; no `furnished` column exists so furnished/new_dev use client-side matching + harmless API params.
+- Decision #553 (dashboard CTA) superseded by redirect-to-`/auth` behavior.
+
+**Notes / Blockers:**
+- No deploy credentials — live verification blocked on user deploy.
+- React #310 / `null.get` sources not fully identified — defensive guards only.
+- Next lockfile patch warning (`ENOWORKSPACES`) is environmental/non-blocking.

@@ -39,7 +39,8 @@ export class AuthService {
       expiresInMinutes: 10,
     });
 
-    return { message: 'OTP sent', otp };
+    // Never expose the OTP in production responses (email-only delivery).
+    return process.env.NODE_ENV === 'production' ? { message: 'OTP sent' } : { message: 'OTP sent', otp };
   }
 
   async verifyOtp(dto: VerifyOtpDto) {
@@ -53,8 +54,29 @@ export class AuthService {
     this.otpStore.delete(dto.email);
 
     const [user] = await this.db.select().from(users).where(eq(users.email, dto.email));
-    if (!user) throw new UnauthorizedException('User not found. Please register first.');
+    if (!user) {
+      // Register() intentionally does not create a user row (email uniqueness
+      // is checked there). Auto-create a minimal verified-email shell so the
+      // OTP-verified flow can complete; completeProfile fills in the rest.
+      const role = UserRole.BUYER;
+      const referralCode = await this.referralsService.ensureCodeForNewUser();
+      const [created] = await this.db
+        .insert(users)
+        .values({
+          email: dto.email,
+          firstName: 'New',
+          lastName: 'User',
+          role,
+          referralCode,
+        })
+        .returning();
+      if (!created) throw new UnauthorizedException('User not found. Please register first.');
+      return this.finishOtpVerification(created);
+    }
+    return this.finishOtpVerification(user);
+  }
 
+  private async finishOtpVerification(user: UserRow) {
     await this.audit.log({
       entityType: 'User',
       entityId: user.id,
@@ -82,7 +104,7 @@ export class AuthService {
       expiresInMinutes: 10,
     });
 
-    return { message: 'OTP sent', otp };
+    return process.env.NODE_ENV === 'production' ? { message: 'OTP sent' } : { message: 'OTP sent', otp };
   }
 
   async completeProfile(dto: CompleteProfileDto) {
@@ -287,21 +309,30 @@ export class AuthService {
    * only as legacy fallback.
    */
   async exchangeGoogleToken(dto: { credential: string; referralCode?: string; role?: string }) {
-    let info: any;
+    let info: {
+      email?: string;
+      sub?: string;
+      email_verified?: string;
+      aud?: string;
+      name?: string;
+      picture?: string;
+      given_name?: string;
+      family_name?: string;
+    };
     try {
       const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(dto.credential)}`);
       if (!res.ok) throw new Error(`tokeninfo ${res.status}`);
-      info = await res.json();
+      info = (await res.json()) as typeof info;
     } catch {
       throw new UnauthorizedException('Invalid Google credential');
     }
-    const email = info.email as string | undefined;
-    const sub = info.sub as string | undefined;
+    const email = info.email;
+    const sub = info.sub;
     if (!email || !sub || info.email_verified !== 'true') {
       throw new UnauthorizedException('Google token missing verified email');
     }
-    // Optional: verify audience matches configured client id
-    const expectedAud = process.env.GOOGLE_CLIENT_ID ?? process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    // Optional: verify audience matches configured client id (server-only var)
+    const expectedAud = process.env.GOOGLE_CLIENT_ID;
     if (expectedAud && info.aud !== expectedAud) {
       throw new UnauthorizedException('Google token audience mismatch');
     }
@@ -315,11 +346,11 @@ export class AuthService {
       if (user) {
         [user] = await this.db
           .update(users)
-          .set({ provider: 'google', providerId, verified: true, avatar: user.avatar ?? (info.picture as string | undefined) ?? null })
+          .set({ provider: 'google', providerId, verified: true, avatar: user.avatar ?? info.picture ?? null })
           .where(eq(users.id, user.id))
           .returning();
       } else {
-        const fullName = (info.name as string) ?? email;
+        const fullName = info.name ?? email;
         const [firstName, ...rest] = fullName.trim().split(/\s+/);
         const lastName = rest.join(' ') || '—';
         const role = (dto.role ?? 'BUYER') as (typeof users.$inferInsert)['role'];
@@ -332,7 +363,7 @@ export class AuthService {
           verified: true,
           provider: 'google',
           providerId,
-          avatar: info.picture as string | undefined,
+          avatar: info.picture,
           referralCode,
         };
         [user] = await this.db.insert(users).values(insertValues).returning();

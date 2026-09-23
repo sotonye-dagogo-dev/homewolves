@@ -120,7 +120,7 @@ export default function AgentDashboardPage() {
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>{stats?.todayInspections ?? 0} today</span>
           </div>
           <div className="space-y-3">
-            {inspections && inspections.length > 0 ? inspections.slice(0, 3).map((insp: any) => (
+            {Array.isArray(inspections) && inspections.length > 0 ? inspections.slice(0, 3).map((insp: any) => (
               <div key={insp.id} className="flex items-center gap-3 pb-2 border-b" style={{ borderColor: 'var(--color-border-subtle)' }}>
                 <span className="text-xs font-semibold px-1.5 py-0.5 rounded shrink-0 min-w-[48px] text-center" style={{ background: 'var(--color-warning-bg)', color: 'var(--color-brand-accent)' }}>
                   {new Date(insp.scheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}

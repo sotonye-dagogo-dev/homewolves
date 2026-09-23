@@ -80,11 +80,14 @@ test.describe('guest journey', () => {
   });
 
   test('guest can reach pricing, about, and faq pages', async ({ page }) => {
-    await page.goto('/pricing');
+    // Use domcontentloaded: third-party assets (images/fonts) may never
+    // settle and would otherwise hang the default "load" wait.
+    await page.goto('/pricing', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/pricing/);
-    await page.goto('/about');
+    await page.goto('/about', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/about/);
-    await page.goto('/faq');
+    await expect(page.getByRole('heading', { name: 'About Homewolves' })).toBeVisible();
+    await page.goto('/faq', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/faq/);
   });
 });

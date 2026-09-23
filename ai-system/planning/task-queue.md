@@ -1,9 +1,9 @@
 # Development Task Queue
 
 > **Metadata**
-> - last-updated-by: execute-feature
-> - last-verified-against-code: 2026-09-22
-> - last-synced: 2026-09-22 (Session 15 — error boundary bug reporting + auth toast CTA + functional buttons)
+> - last-updated-by: fix-build
+> - last-verified-against-code: 2026-09-23
+> - last-synced: 2026-09-23 (Session 17 — fix-build production multi-issue repair)
 > - staleness-policy: re-verify before each session
 
 > **Overview:** Sprint-level task queue with complexity tagging. Agents execute tasks top to bottom within the current sprint. Each task is sized so it can be completed in a single session. Sprint 1–3 are complete; the current focus is hardening, Backlog items, and the next scheduled phase.
@@ -45,6 +45,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 | [M] | Web audit rectification — clickable bento/cards, URL search+category params, Link nav, loading.tsx, next/image | [x] |
 | [XL] | Supabase/Drizzle compliance + Google OAuth + Resend email infrastructure + admin GUIs (email templates + blog CRUD) | [x] |
 | [L] | Bug report engine (user + admin) + batch selection + config-driven logo + .env.example audit + README | [x] |
+| [BUG] | fix-build production multi-issue repair (Session 17: navbar search dup, runtime guards, unauth dashboard redirect, Google env server-only, local email auth 502, URL/filter pills, All-filter zero results, test coverage + E2E green) | [x] |
 
 ---
 

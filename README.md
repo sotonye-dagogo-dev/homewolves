@@ -71,8 +71,7 @@ See [`.env.example`](.env.example) for the full reference. Key variables:
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `JWT_SECRET` | Yes (prod) | JWT signing secret |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | No | Google OAuth client ID (web client) |
-| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID (API audience check) |
+| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID (web via `google_oauth` config + API audience check) |
 | `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
 | `RESEND_API_KEY` | No | Email provider key (simulated when unset) |
 | `PAYSTACK_SECRET_KEY` | No | Payment processing (dev mode when unset) |

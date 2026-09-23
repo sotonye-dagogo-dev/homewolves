@@ -210,9 +210,10 @@ export const useAuth = create<AuthState>()(
       name: 'hw-auth',
       partialize: (state) => ({ user: state.user, accessToken: state.accessToken }),
       onRehydrateStorage: () => (_state, error) => {
-        if (!error) {
-          useAuth.setState({ hydrated: true });
-        }
+        // Always mark hydration complete — an error (corrupted storage, disabled
+        // localStorage, etc.) must never leave consumers stuck on a loading gate.
+        void error;
+        useAuth.setState({ hydrated: true });
       },
       // Skip hydration on server — prevents SSR mismatch and avoids localStorage access
       skipHydration: false,

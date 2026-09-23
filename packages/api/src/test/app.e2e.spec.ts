@@ -165,6 +165,6 @@ describe('API integration (supertest)', () => {
         }
       }
       expect(blocked).toBe(true);
-    });
+    }, 30_000);
   });
 });

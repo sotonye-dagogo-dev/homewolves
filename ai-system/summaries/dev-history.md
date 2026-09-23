@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: dev-cycle
-> - last-verified-against-code: 2026-08-10
+> - last-updated-by: fix-build
+> - last-verified-against-code: 2026-09-23
 > - staleness-policy: historical entries do not go stale
 
 > **Overview:** Chronological log of completed development work. Each sprint ends with a summary entry. Agents add entries after completing tasks. Useful for understanding what has been built, when decisions were made, and what patterns have emerged.
@@ -315,4 +315,27 @@ Hardened the platform end-to-end (XL directive): made all external services oper
 
 **Next Sprint Focus:**
 Pick next Backlog item from `planning/task-queue.md` Up Next (WhatsApp integration, Analytics engine, Expo parity, PWA, Push notifications).
+
+---
+
+## 2026-09-23 — fix-build: Production Multi-Issue Repair (Session 17)
+
+**Summary:**
+Executed `fix-build.md` against nine production issues on homewolves.com: navbar search duplication, runtime array/null errors, unauth dashboard hang, Google OAuth env surface, email auth 502, config-driven filters/URL params, "All" filter zero results, and test coverage gaps. All fixes verified green: lint, typecheck 4/4, 159 API + 153 web unit tests, 22/22 E2E.
+
+**Completed:**
+- Removed navbar/mobile search duplication; array/hydration guards for messaging/dashboard/auth; unauth dashboard → `/auth?redirect=`
+- Server-only Google OAuth (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`); GSI container split fixed auth page `removeChild` crash
+- Local server-side email/OTP auth (`app/api/v1/auth/[action]` + `lib/server/auth-local.ts`) when NestJS API unreachable; API `verifyOtp` auto-create + `jwtSecret()` empty-string fix
+- `lib/property-filters.ts` URL↔pill sync, `appliedKeyRef`, `Array.isArray`-safe parse, extended fallback pills, `verified` listing param
+- Hero search converted to native form (progressive enhancement) fixing last E2E failure
+- New unit tests (property-filters, auth-local, messaging, use-auth, top-nav, mobile-bar) + E2E selector/wait fixes
+
+**Key Changes:**
+- Email auth no longer depends solely on a deployed NestJS API (proxy when `backendOrigin()` set)
+- Dashboard unauth behavior is redirect-to-auth (supersedes Session 12 CTA for path (3))
+- Google client ID is no longer a `NEXT_PUBLIC_*` env var
+
+**Next Sprint Focus:**
+User deploy to verify live; set prod env (`JWT_SECRET`, `GOOGLE_CLIENT_ID`/`SECRET`, `RESEND_API_KEY`, `DATABASE_URL`/`API_ORIGIN`); then pick next Backlog item from `planning/task-queue.md` Up Next.
 

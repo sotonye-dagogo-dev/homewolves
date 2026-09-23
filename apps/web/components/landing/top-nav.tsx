@@ -3,14 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, Menu, X } from 'lucide-react';
+import { Bell, Menu, X } from 'lucide-react';
 import { HwButton } from '@/components/ui';
 import { useBrand } from '@/hooks/use-platform-config';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 
 export function TopNav() {
   const [scrolled, setScrolled] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const { data: brand } = useBrand();
@@ -22,11 +21,6 @@ export function TopNav() {
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  const doSearch = () => {
-    router.push(searchQuery.trim() ? `/properties?search=${encodeURIComponent(searchQuery.trim())}` : '/properties');
-    setMobileOpen(false);
-  };
 
   return (
     <>
@@ -70,25 +64,6 @@ export function TopNav() {
             <span>{brand?.companyName || 'Homewolves'}</span>
           </Link>
 
-          <div
-            className="hidden lg:flex items-center gap-2 bg-[var(--color-bg-glass)] backdrop-blur-[var(--glass-blur-subtle)] border border-[var(--color-border-glass)] rounded-full px-4 py-1 w-[280px] xl:w-[320px] focus-within:w-[360px] xl:focus-within:w-[400px] transition-[width] duration-normal ease-default"
-            role="search"
-          >
-            <Search className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-            <input
-              type="text"
-              placeholder="Search properties..."
-              aria-label="Search properties"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') doSearch();
-              }}
-              className={`flex-1 bg-transparent border-none outline-none font-body text-sm py-1 placeholder:transition-colors ${
-                scrolled ? 'text-foreground placeholder:text-muted-foreground' : 'text-[var(--color-text-inverse)] placeholder:text-white/50'
-              }`}
-            />
-          </div>
         </div>
 
         <div className="flex items-center gap-2 lg:gap-3">
@@ -137,21 +112,6 @@ export function TopNav() {
         <div className="fixed inset-0 z-[99] lg:hidden" role="dialog" aria-modal="true" aria-label="Mobile navigation">
           <button aria-label="Close menu backdrop" className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <div className="absolute top-14 left-0 right-0 bg-[var(--color-bg-elevated)] border-b border-[var(--color-border-default)] shadow-xl p-4 flex flex-col gap-3 max-h-[calc(100dvh-56px)] overflow-y-auto">
-            <div className="flex items-center gap-2 rounded-full px-4 py-2.5 bg-[var(--color-bg-base)] border border-[var(--color-border-default)]" role="search">
-              <Search className="w-4 h-4 text-muted-foreground shrink-0" />
-              <input
-                type="text"
-                placeholder="Search properties..."
-                aria-label="Search properties"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && doSearch()}
-                className="flex-1 bg-transparent border-none outline-none text-sm"
-              />
-              <button onClick={doSearch} className="text-sm font-semibold text-accent shrink-0">
-                Search
-              </button>
-            </div>
             <div className="grid grid-cols-2 gap-2">
               <Link href="/properties" onClick={() => setMobileOpen(false)} className="rounded-xl px-4 py-3 text-sm font-semibold bg-[var(--color-bg-glass)] border border-[var(--color-border-subtle)] text-center">
                 Properties

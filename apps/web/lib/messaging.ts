@@ -38,11 +38,22 @@ async function handleResponse(res: Response) {
   return res.json();
 }
 
+function toArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    for (const key of ['conversations', 'messages', 'items', 'data']) {
+      if (Array.isArray(record[key])) return record[key] as T[];
+    }
+  }
+  return [];
+}
+
 // ─── REST API ────────────────────────────────────────────
 
 export async function fetchConversations() {
   const res = await fetch(`${getApiBase()}/messaging/conversations`, { headers: authHeaders() });
-  return handleResponse(res);
+  return toArray(await handleResponse(res));
 }
 
 export async function fetchConversation(id: string) {
@@ -61,7 +72,7 @@ export async function createConversation(participantIds: string[], propertyId?: 
 
 export async function fetchMessages(conversationId: string) {
   const res = await fetch(`${getApiBase()}/messaging/conversations/${conversationId}/messages`, { headers: authHeaders() });
-  return handleResponse(res);
+  return toArray(await handleResponse(res));
 }
 
 export async function markConversationRead(conversationId: string) {

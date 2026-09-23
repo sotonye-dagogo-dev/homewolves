@@ -48,6 +48,7 @@ export class ListingController {
     @Query('search') search?: string,
     @Query('ownerId') ownerId?: string,
     @Query('featured') featured?: string,
+    @Query('verified') verified?: string,
   ) {
     const parsedTake = take ? Math.min(parseInt(take) || 12, 50) : undefined;
     const parsedSkip = skip ? Math.max(parseInt(skip) || 0, 0) : undefined;
@@ -62,6 +63,7 @@ export class ListingController {
       search,
       ownerId,
       featured: featured != null ? featured === 'true' : undefined,
+      verified: verified != null ? verified === 'true' : undefined,
     });
   }
 

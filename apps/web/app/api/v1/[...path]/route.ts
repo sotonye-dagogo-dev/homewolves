@@ -63,6 +63,10 @@ function fallbackForPath(path: string, searchParams: URLSearchParams): unknown |
       nav_items: FALLBACK_NAV_ITEMS,
       property_types: FALLBACK_PROPERTY_TYPES,
       feature_flags: FALLBACK_FEATURE_FLAGS,
+      google_oauth: {
+        clientId: process.env.GOOGLE_CLIENT_ID || undefined,
+        enabled: Boolean(process.env.GOOGLE_CLIENT_ID),
+      },
     };
   }
   if (p.startsWith('config/')) {
@@ -73,6 +77,10 @@ function fallbackForPath(path: string, searchParams: URLSearchParams): unknown |
       nav_items: FALLBACK_NAV_ITEMS,
       property_types: FALLBACK_PROPERTY_TYPES,
       feature_flags: FALLBACK_FEATURE_FLAGS,
+      google_oauth: {
+        clientId: process.env.GOOGLE_CLIENT_ID || undefined,
+        enabled: Boolean(process.env.GOOGLE_CLIENT_ID),
+      },
     };
     if (key in map) return { key, value: map[key] };
     return { key, value: null };
@@ -233,7 +241,14 @@ async function proxyOrFallback(req: NextRequest, params: { path?: string[] }) {
     // Generic safe empty shape to prevent console 404 noise
     return NextResponse.json({ fallback: true, path }, { status: 200 });
   }
-  return NextResponse.json({ message: 'API not configured', path }, { status: 502 });
+  return NextResponse.json(
+    {
+      message: 'API not configured',
+      hint: 'Set API_PROXY_URL (or API_URL) to your backend origin, or deploy the NestJS API.',
+      path,
+    },
+    { status: 502 },
+  );
 }
 
 export async function GET(req: NextRequest, ctx: { params: { path?: string[] } }) {
