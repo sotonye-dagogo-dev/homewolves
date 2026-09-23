@@ -514,3 +514,33 @@ Deploy to production to verify live fixes (requires user credentials for Vercel/
 - No deploy credentials — live verification blocked on user deploy.
 - React #310 / `null.get` sources not fully identified — defensive guards only.
 - Next lockfile patch warning (`ENOWORKSPACES`) is environmental/non-blocking.
+
+---
+
+## Session 18 — 2026-09-23 (fix-build: Vercel Module not found postgres)
+
+Executed `fix-build.md` against Vercel production build failure from Session 17's local auth route.
+
+**Completed:**
+- **Root cause:** `app/api/v1/auth/[action]/route.ts` does `await import('postgres')` but `postgres` was only a root/`@hw/api` dependency — webpack on Vercel could not resolve it from `@hw/web`.
+- **Fix:** Added `postgres@^3.4.9` to `apps/web/package.json` dependencies (+ `package-lock.json`); set `experimental.serverComponentsExternalPackages: ['postgres']` in `apps/web/next.config.js`.
+- **Verification:** `npm run build:web` → 33 pages green including `ƒ /api/v1/auth/[action]`; typecheck 4/4; lint 4/4; `lib/server/auth-local` 15/15.
+- **Also logged:** typecheck-vs-build `.next/types` race (TS6053) as non-defect — re-run typecheck after build.
+
+**Files Modified:**
+- `apps/web/package.json` — `postgres` dependency
+- `apps/web/next.config.js` — `serverComponentsExternalPackages: ['postgres']`
+- `package-lock.json` — lockfile sync for web dep
+- `ai-system/repair-system.md`, `ai-system/testing/test-results.md`, `ai-system/checkpoints/session-log.md`, `ai-system/checkpoints/in-progress.md`
+- sync: `ai-system/index/repo-map.md`, `ai-system/index/dependency-graph.md`, `ai-system/system-architecture.md`, `ai-system/memory/project-decisions.md`, `ai-system/planning/task-queue.md`, `ai-system/summaries/dev-history.md`
+
+**Next Task:**
+Push/deploy to Vercel and confirm production build passes on CI; ensure prod env has `DATABASE_URL` (or `API_PROXY_URL`), `JWT_SECRET`, Google + Resend keys.
+
+**Assumptions Made:**
+- Declaring `postgres` on `@hw/web` is sufficient for Vercel workspace install (lockfile updated).
+- Leaving `postgres` external is correct for a Node route handler runtime on Vercel.
+
+**Notes / Blockers:**
+- Deploy still owned by the user — re-run Vercel after this commit is pushed.
+- Pre-existing lint warnings unchanged (3).

@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['@hw/types'],
+  // Local auth route uses the `postgres` driver at request time — do not bundle
+  // it into the server graph (Vercel webpack fails with Module not found when
+  // it is only a root/transitive dependency).
+  experimental: {
+    serverComponentsExternalPackages: ['postgres'],
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.cloudflarestorage.com' },

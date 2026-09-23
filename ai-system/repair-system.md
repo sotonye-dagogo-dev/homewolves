@@ -117,6 +117,26 @@
 **Date:** 2026-09-23
 **Status:** Active
 
+### Vercel build: Module not found Can't resolve 'postgres'
+
+**Symptom:** Vercel `next build` fails compiling `./app/api/v1/auth/[action]/route.ts` with `Module not found: Can't resolve 'postgres'`.
+**Root Cause:** Auth route dynamically imports `postgres` for local DB access, but `postgres` was only a root/`@hw/api` dependency — not declared on `@hw/web`. Webpack (Vercel) could not resolve it from the app package graph; local resolve succeeded only via root hoisting.
+**Fix Applied:** Added `postgres` to `apps/web/package.json` dependencies (+ lockfile); set `experimental.serverComponentsExternalPackages: ['postgres']` in `next.config.js` so the driver stays a runtime external rather than a bundled client module.
+**Prevention:** Any package imported by `apps/web` must be listed in that package's `dependencies` (not only root/api). Prefer `serverComponentsExternalPackages` for native/DB drivers.
+**Files Affected:** `apps/web/package.json`, `apps/web/next.config.js`, `package-lock.json`, `apps/web/app/api/v1/auth/[action]/route.ts` (importer)
+**Date:** 2026-09-23
+**Status:** Active
+
+### Typecheck race with fresh Next build (.next/types missing)
+
+**Symptom:** `tsc --noEmit` reports TS6053 for many `apps/web/.next/types/**/*.ts` files immediately after/during `next build`.
+**Root Cause:** Typecheck ran against a `.next/types` tree that was mid-regeneration or incomplete when the build had not finished writing route types.
+**Fix Applied:** Re-run typecheck after `next build` completes — not a product defect. Sequential: build → typecheck → lint.
+**Prevention:** Do not parallelize `typecheck` with `next build` on the same workspace; always finish build first when `.next/types` is included by tsconfig.
+**Files Affected:** `apps/web/tsconfig.json` (include), `.next/types` (generated)
+**Date:** 2026-09-23
+**Status:** Active
+
 ### Turborepo v2 Pipeline Key Renamed
 
 **Symptom:** `turbo run` errors because `pipeline` is not a valid top-level key.
