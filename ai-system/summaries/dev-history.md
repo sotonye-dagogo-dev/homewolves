@@ -339,3 +339,22 @@ Executed `fix-build.md` against nine production issues on homewolves.com: navbar
 **Next Sprint Focus:**
 User deploy to verify live; set prod env (`JWT_SECRET`, `GOOGLE_CLIENT_ID`/`SECRET`, `RESEND_API_KEY`, `DATABASE_URL`/`API_ORIGIN`); then pick next Backlog item from `planning/task-queue.md` Up Next.
 
+---
+
+## 2026-09-23 — fix-build: Vercel `postgres` Module Not Found (Session 18)
+
+**Summary:**
+Vercel failed compiling Session 17's local auth route: webpack could not resolve `postgres` because it was not a direct `@hw/web` dependency. Declared `postgres` on the web package, marked it `serverComponentsExternalPackages`, and verified a full production build (33 pages) including `ƒ /api/v1/auth/[action]`.
+
+**Completed:**
+- Added `postgres@^3.4.9` to `apps/web/package.json` + lockfile
+- `experimental.serverComponentsExternalPackages: ['postgres']` in `next.config.js`
+- Verified `next build` green, typecheck 4/4, lint 4/4, auth-local tests 15/15
+- Logged Module-not-found and `.next/types` typecheck race in `repair-system.md`
+
+**Key Changes:**
+- Web package now owns the Postgres driver used by server-side auth (no more root-only hoisting assumption).
+
+**Next Sprint Focus:**
+Push and redeploy on Vercel; confirm CI build passes.
+

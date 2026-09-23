@@ -780,5 +780,6 @@ No NestJS API is deployed; `backendOrigin()` is null in production, so register/
 **Implications:**
 - Prod env must set `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DATABASE_URL` (if proxying), and optionally `RESEND_API_KEY`.
 - When an API is later deployed, set `API_ORIGIN`/`backendOrigin` so the route proxies instead of using local mode.
+- `postgres` is a direct `@hw/web` dependency (not only root/api) so Vercel webpack resolves the auth route import; listed in `experimental.serverComponentsExternalPackages`.
 
 ---

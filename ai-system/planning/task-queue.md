@@ -3,7 +3,7 @@
 > **Metadata**
 > - last-updated-by: fix-build
 > - last-verified-against-code: 2026-09-23
-> - last-synced: 2026-09-23 (Session 17 — fix-build production multi-issue repair)
+> - last-synced: 2026-09-23 (Session 18 — Vercel postgres Module not found fix)
 > - staleness-policy: re-verify before each session
 
 > **Overview:** Sprint-level task queue with complexity tagging. Agents execute tasks top to bottom within the current sprint. Each task is sized so it can be completed in a single session. Sprint 1–3 are complete; the current focus is hardening, Backlog items, and the next scheduled phase.
@@ -46,6 +46,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 | [XL] | Supabase/Drizzle compliance + Google OAuth + Resend email infrastructure + admin GUIs (email templates + blog CRUD) | [x] |
 | [L] | Bug report engine (user + admin) + batch selection + config-driven logo + .env.example audit + README | [x] |
 | [BUG] | fix-build production multi-issue repair (Session 17: navbar search dup, runtime guards, unauth dashboard redirect, Google env server-only, local email auth 502, URL/filter pills, All-filter zero results, test coverage + E2E green) | [x] |
+| [BUG] | Vercel build fix (Session 18: `postgres` Module not found on auth route — declare dep on @hw/web + serverExternal) | [x] |
 
 ---
 

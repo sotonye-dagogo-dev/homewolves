@@ -149,6 +149,7 @@ Business event (e.g. transaction created)
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Direct Google OAuth (server-only; web GSI reads server-serialized FALLBACK_GOOGLE_OAUTH / API config — no `NEXT_PUBLIC_GOOGLE_CLIENT_ID`) | .env | — |
 | `JWT_SECRET` | Local auth HS256 signing when NestJS API is unreachable (dev fallback `homewolves-dev-secret`) | .env | apps/web `lib/server/auth-local.ts` |
 | `RESEND_API_KEY` | OTP email delivery from local auth route when set | .env | apps/web `app/api/v1/auth/[action]` |
+| `postgres` npm package | Direct `@hw/web` dependency + `experimental.serverComponentsExternalPackages` so webpack resolves/does not bundle the local-auth DB driver (fixes Vercel Module not found) | package.json | apps/web auth route |
 | `SUPABASE_URL` | Supabase project URL (legacy fallback) | .env | — |
 | `SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key (web, legacy) | .env | — |
 | `SUPABASE_JWT_SECRET` | Supabase JWT secret — verifies OAuth access tokens at `/auth/supabase` (legacy) | .env | — |

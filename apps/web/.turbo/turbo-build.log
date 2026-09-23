@@ -8,7 +8,7 @@
  ⚠ Found lockfile missing swc dependencies, patching...
 npm error code ENOWORKSPACES
 npm error This command does not support workspaces.
-npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-23T14_22_31_017Z-debug-0.log
+npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-23T15_58_22_133Z-debug-0.log
  ⨯ Failed to patch lockfile, please try uninstalling and reinstalling next in this workspace
 TypeError: Cannot read properties of undefined (reading 'os')
     at fetchPkgInfo (C:\Users\Harvesters WebDev\Downloads\web-dev\homewolves\node_modules\next\dist\lib\patch-incorrect-lockfile.js:73:25)
@@ -18,11 +18,11 @@ TypeError: Cannot read properties of undefined (reading 'os')
  ⚠ Found lockfile missing swc dependencies, patching...
 npm error code ENOWORKSPACES
 npm error This command does not support workspaces.
-npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-23T14_23_15_797Z-debug-0.log
+npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-23T15_59_10_768Z-debug-0.log
  ⚠ Found lockfile missing swc dependencies, patching...
 npm error code ENOWORKSPACES
 npm error This command does not support workspaces.
-npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-23T14_23_22_552Z-debug-0.log
+npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-23T15_59_17_190Z-debug-0.log
  ⨯ Failed to patch lockfile, please try uninstalling and reinstalling next in this workspace
 TypeError: Cannot read properties of undefined (reading 'os')
     at fetchPkgInfo (C:\Users\Harvesters WebDev\Downloads\web-dev\homewolves\node_modules\next\dist\lib\patch-incorrect-lockfile.js:73:25)
@@ -43,22 +43,24 @@ info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/d
  ⚠ Found lockfile missing swc dependencies, patching...
 npm error code ENOWORKSPACES
 npm error This command does not support workspaces.
-npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-23T14_24_55_262Z-debug-0.log
+npm error A complete log of this run can be found in: C:\Users\Harvesters WebDev\npm-cache\_logs\2026-09-23T16_00_59_820Z-debug-0.log
    Generating static pages (0/33) ...
-(node:29040) Warning: `--localstorage-file` was provided without a valid path
+(node:10796) Warning: `--localstorage-file` was provided without a valid path
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:29240) Warning: `--localstorage-file` was provided without a valid path
+(node:13148) Warning: `--localstorage-file` was provided without a valid path
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:15644) Warning: `--localstorage-file` was provided without a valid path
+(node:12384) Warning: `--localstorage-file` was provided without a valid path
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:4608) Warning: `--localstorage-file` was provided without a valid path
+(node:27484) Warning: `--localstorage-file` was provided without a valid path
 (Use `node --trace-warnings ...` to show where the warning was created)
    Generating static pages (8/33) 
-(node:9008) Warning: `--localstorage-file` was provided without a valid path
+(node:29276) Warning: `--localstorage-file` was provided without a valid path
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:10072) Warning: `--localstorage-file` was provided without a valid path
+(node:21588) Warning: `--localstorage-file` was provided without a valid path
 (Use `node --trace-warnings ...` to show where the warning was created)
    Generating static pages (16/33) 
+(node:19476) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
    Generating static pages (24/33) 
  ✓ Generating static pages (33/33)
    Finalizing page optimization ...
@@ -71,12 +73,12 @@ TypeError: Cannot read properties of undefined (reading 'os')
     at async patchIncorrectLockfile (C:\Users\Harvesters WebDev\Downloads\web-dev\homewolves\node_modules\next\dist\lib\patch-incorrect-lockfile.js:162:26)
 
 Route (app)                              Size     First Load JS
-┌ ○ /                                    7.97 kB         138 kB
+┌ ○ /                                    8 kB            138 kB
 ├ ○ /_not-found                          174 B          87.5 kB
 ├ ○ /about                               174 B          87.5 kB
 ├ ƒ /api/v1/[...path]                    0 B                0 B
 ├ ƒ /api/v1/auth/[action]                0 B                0 B
-├ ○ /auth                                5.99 kB         108 kB
+├ ○ /auth                                6.02 kB         108 kB
 ├ ○ /auth/callback                       2.64 kB        92.4 kB
 ├ ○ /blog                                3.25 kB         109 kB
 ├ ƒ /blog/[slug]                         14.6 kB         133 kB

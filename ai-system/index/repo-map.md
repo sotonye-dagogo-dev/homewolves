@@ -49,8 +49,9 @@ homewolves/
 │   │   ├── hooks/               ← Custom React hooks (use-crm, use-messaging, use-notifications, etc.)
 │   │   ├── lib/                 ← API clients (crm, messaging, notifications, transactions, blog) + server helpers (`lib/server/auth-local.ts`, `lib/property-filters.ts`) + colocated `*.test.ts`
 │   │   ├── e2e/                 ← Playwright E2E journeys (smoke, guest, auth, agent-dashboard, admin-journey, transaction-stepper)
-│   │   ├── app/api/v1/auth/     ← Local email/OTP auth route (proxies NestJS when backendOrigin set)
+│   │   ├── app/api/v1/auth/     ← Local email/OTP auth route (proxies NestJS when backendOrigin set; imports `postgres` — declared on this package)
 │   │   ├── config/              ← fallbacks.ts (web re-export)
+│   │   ├── next.config.js       ← images/rewrites + experimental.serverComponentsExternalPackages: ['postgres']
 │   │   └── public/              ← Static assets
 │   │
 │   └── mobile/                  ← React Native (Expo SDK 51+) mobile app — NOT YET CREATED (planned, Backlog)

@@ -20,8 +20,9 @@
 | API unit (vitest, @hw/api) | 159 | 0 | 0 |
 | Web unit/component (vitest, @hw/web) | 153 | 0 | 0 |
 | E2E (Playwright, @hw/web) | 22 | 0 | 0 |
+| Web production build (`next build`) | 33 pages | 0 | — |
 
-**Overall Status:** Green — `npm test` (312 tests), `npm run lint` (3 pre-existing warnings: no-console in api/main.ts, empty blocks in sitemap.ts + messaging.ts), `npm run typecheck` 4/4, full E2E 22/22 from `apps/web` (`npx playwright test`).
+**Overall Status:** Green — `npm test` (312 tests), `npm run lint` (3 pre-existing warnings: no-console in api/main.ts, empty blocks in sitemap.ts + messaging.ts), `npm run typecheck` 4/4, full E2E 22/22 from `apps/web` (`npx playwright test`), `npm run build:web` compiles `/api/v1/auth/[action]` successfully after adding `postgres` to `@hw/web`.
 
 **API unit test files (17):** including auth, listing, rate-limit, sms, storage, docuseal, health + app.e2e.spec.
 **Web unit test files (21):** including property-filters (21 tests), auth-local (15), messaging, use-auth, top-nav, mobile-bar, hero-section, hw-button, post-form.
@@ -31,6 +32,8 @@
 - E2E must be run from `apps/web` (`npx playwright test`) — root-level `npx playwright test` does not pick up the config correctly.
 - Hero search converted to native form (progressive enhancement) so Enter works pre-hydration.
 - Auth page GSI container split fixed PublicErrorBoundary crash.
+- Vercel `Module not found: postgres` fixed by declaring `postgres` on `@hw/web` + `serverComponentsExternalPackages`.
+- Run typecheck only after `next build` finishes (`.next/types` race).
 
 ---
 
@@ -53,3 +56,4 @@
 | 2026-08-11 | 35 | 0 | Baseline before this session: 16 API + 19 web unit tests, 3 E2E smoke tests |
 | 2026-08-13 | 187 | 0 | Testing setup complete: 93 API + 94 web unit, 16 E2E journeys (1 flaky) |
 | 2026-09-23 | 334 | 0 | fix-build multi-issue repair: 159 API + 153 web unit, 22 E2E all green |
+| 2026-09-23 | 334 | 0 | Vercel `postgres` Module not found fixed; `next build` 33 pages green; typecheck/lint 4/4 |
