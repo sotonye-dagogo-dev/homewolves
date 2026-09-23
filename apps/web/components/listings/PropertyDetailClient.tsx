@@ -9,6 +9,7 @@ import { useCheckSaved, useToggleSave, useRecentViews } from '@/hooks/use-intera
 import { useAuth } from '@/hooks/use-auth';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { recordView } from '@/lib/interactions';
+import { ScheduleInspectionModal } from '@/components/shared/ScheduleInspectionModal';
 import Link from 'next/link';
 
 export default function PropertyDetailClient({ initialListing }: { initialListing?: unknown }) {
@@ -27,6 +28,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [descExpanded, setDescExpanded] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
 
   useEffect(() => { if (isSaved != null) setSaved(isSaved); }, [isSaved]);
 
@@ -260,7 +262,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
                 <button className="w-11 h-11 rounded-full flex items-center justify-center" style={{ color: 'var(--color-text-secondary)' }}>
                   <Share2 className="w-5 h-5" />
                 </button>
-                <button onClick={() => { if (requireAuth('Scheduling inspections')) { /* TODO: open inspection scheduling modal */ } }} className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>
+                <button onClick={() => { if (requireAuth('Scheduling inspections')) setInspectionModalOpen(true); }} className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>
                   Schedule Inspection
                 </button>
                 <button onClick={() => { if (requireAuth('Messaging')) router.push('/messages'); }} className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
@@ -559,6 +561,12 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
         </div>
       </main>
 
+      <ScheduleInspectionModal
+        listingId={id}
+        listingTitle={listing?.title ?? ''}
+        open={inspectionModalOpen}
+        onClose={() => setInspectionModalOpen(false)}
+      />
     </div>
   );
 }

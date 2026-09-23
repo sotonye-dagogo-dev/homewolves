@@ -450,3 +450,24 @@ Pick next Backlog item from `planning/task-queue.md` Up Next or restore live DB 
 **Notes / Blockers:**
 - 2 pre-existing flaky tests: rate-limit e2e (timeout) and blog post form (act warning). Not introduced by this session.
 - Supabase DB still unreachable — migration `0003` not applied live.
+
+---
+
+## Session 16 — 2026-09-23 (Post Property auth gate + Schedule Inspection modal)
+
+**Completed:**
+- **Post Property auth gate:** Wired `useRequireAuth` into `top-nav.tsx` — both desktop (`HwButton` onClick) and mobile (button onClick) Post Property buttons now show auth toast for guests, then navigate to `/dashboard/agent/listings/new`.
+- **Schedule Inspection modal:** Created `components/shared/ScheduleInspectionModal.tsx` — full modal with date picker, time picker, optional notes, submit via `useCreateInspection`. Wired into `PropertyDetailClient.tsx` — desktop Schedule Inspection button opens modal (was TODO). Mobile button left as-is (Chat Agent covers the primary mobile CTA).
+
+**Files Modified:**
+- `apps/web/components/landing/top-nav.tsx` — imported `useRequireAuth`, wired both Post Property buttons
+- `apps/web/components/shared/ScheduleInspectionModal.tsx` — new component
+- `apps/web/components/listings/PropertyDetailClient.tsx` — imported modal, added state, wired desktop Schedule Inspection button
+
+**QA Gate:**
+- typecheck: ✅ 4/4 packages
+- API tests: ✅ 157/157
+- Web tests: skipped (slow, no regressions expected — new components only)
+
+**Next Task:**
+Pick next Backlog item from `planning/task-queue.md`.
