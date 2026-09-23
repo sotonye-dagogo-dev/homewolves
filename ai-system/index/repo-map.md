@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: update-ai-system
-> - last-verified-against-code: 2026-08-13
+> - last-updated-by: sync-context
+> - last-verified-against-code: 2026-09-23
 > - staleness-policy: auto-regenerable — can be derived from `Get-ChildItem -Recurse` or `tree` command. Manual content only where intent cannot be derived from structure.
 
 > **Overview:** Visual map of the Homewolves monorepo folder structure with purpose descriptions. Updated when the folder structure changes. This file is **auto-regenerable** — use tool-based discovery (filesystem MCP, git ls-tree) for ground truth, and treat manual entries here as supplementary context, not primary navigation.
@@ -47,8 +47,9 @@ homewolves/
 │   │   │   ├── transactions/    ← Stepper, document upload, audit trail
 │   │   │   └── shared/          ← Layouts, ThemeProvider, loaders
 │   │   ├── hooks/               ← Custom React hooks (use-crm, use-messaging, use-notifications, etc.)
-│   │   ├── lib/                 ← API clients (crm, messaging, notifications, transactions, blog) + colocated `*.test.ts`
-│   │   ├── e2e/                 ← Playwright E2E journeys (smoke, guest, auth, agent-dashboard, transaction-stepper)
+│   │   ├── lib/                 ← API clients (crm, messaging, notifications, transactions, blog) + server helpers (`lib/server/auth-local.ts`, `lib/property-filters.ts`) + colocated `*.test.ts`
+│   │   ├── e2e/                 ← Playwright E2E journeys (smoke, guest, auth, agent-dashboard, admin-journey, transaction-stepper)
+│   │   ├── app/api/v1/auth/     ← Local email/OTP auth route (proxies NestJS when backendOrigin set)
 │   │   ├── config/              ← fallbacks.ts (web re-export)
 │   │   └── public/              ← Static assets
 │   │

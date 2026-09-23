@@ -27,43 +27,38 @@ export function HeroSection() {
         <p className="font-body text-lg text-white/85 leading-snug text-center max-w-[560px] mb-8">
           Verified properties, trusted agents, and seamless transactions across the continent.
         </p>
-        <div
-          className="flex items-center gap-3 bg-[var(--color-bg-glass)] backdrop-blur-[var(--glass-blur)] border border-[var(--color-border-glass)] rounded-full px-6 py-3 shadow-glass w-full max-w-[560px]"
+        <form
+          action="/properties"
+          method="GET"
           role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            router.push(
+              query.trim()
+                ? `/properties?search=${encodeURIComponent(query.trim())}`
+                : '/properties',
+            );
+          }}
+          className="flex items-center gap-3 bg-[var(--color-bg-glass)] backdrop-blur-[var(--glass-blur)] border border-[var(--color-border-glass)] rounded-full px-6 py-3 shadow-glass w-full max-w-[560px]"
         >
-          <Search className="w-5 h-5 text-white/70 shrink-0" />
+          <Search className="w-5 h-5 text-white/70 shrink-0" aria-hidden="true" />
           <input
             type="text"
+            name="search"
             placeholder="Search by city, property type, or agent..."
             aria-label="Search properties"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                router.push(
-                  query.trim()
-                    ? `/properties?search=${encodeURIComponent(query.trim())}`
-                    : '/properties',
-                );
-              }
-            }}
             className="flex-1 bg-transparent border-none outline-none font-body text-base text-[var(--color-text-inverse)] placeholder:text-white/55 py-2"
           />
           <button
-            type="button"
-            onClick={() =>
-              router.push(
-                query.trim()
-                  ? `/properties?search=${encodeURIComponent(query.trim())}`
-                  : '/properties',
-              )
-            }
+            type="submit"
             className="flex items-center gap-2 px-6 py-2 border-none rounded-full bg-accent text-accent-foreground font-body text-base font-semibold shrink-0 hover:bg-[var(--color-brand-accent-alt)] transition-colors duration-fast"
           >
             Search
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </button>
-        </div>
+        </form>
       </div>
     </section>
   );

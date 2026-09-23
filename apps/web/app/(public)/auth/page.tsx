@@ -3,7 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Upload } from 'lucide-react';
-import { loadGoogleScript, exchangeGoogleCredential, getGoogleClientId } from '@/lib/google-auth';
+import { loadGoogleScript, exchangeGoogleCredential } from '@/lib/google-auth';
+import { useGoogleOauth } from '@/hooks/use-platform-config';
 import { useRouter } from 'next/navigation';
 
 type AuthStep = 'email' | 'otp' | 'profile' | 'agent-id';
@@ -28,9 +29,11 @@ export default function AuthPage() {
   const [googleReady, setGoogleReady] = useState(false);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const googleBtnRef = useRef<HTMLDivElement>(null);
+  const googleRenderedRef = useRef(false);
   const router = useRouter();
 
   const { register, verifyOtp, completeProfile, isLoading, error, clearError } = useAuth();
+  const { clientId: googleClientId, enabled: googleEnabled } = useGoogleOauth();
 
   const handleGoogleCredential = useCallback(async (credential: string) => {
     clearError();
@@ -47,20 +50,20 @@ export default function AuthPage() {
   }, [clearError, referralCode, router]);
 
   useEffect(() => {
-    const cid = getGoogleClientId();
-    if (!cid || !googleBtnRef.current) return;
+    const cid = googleClientId;
+    if (!cid || !googleEnabled || !googleBtnRef.current) return;
+    if (googleRenderedRef.current) return;
     loadGoogleScript(cid).then(() => {
-      if (!window.google) return;
+      if (!window.google || googleRenderedRef.current || !googleBtnRef.current) return;
       window.google.accounts.id.initialize({
         client_id: cid,
         callback: (resp: any) => handleGoogleCredential(resp.credential),
       });
-      if (googleBtnRef.current) {
-        window.google.accounts.id.renderButton(googleBtnRef.current, { theme: 'outline', size: 'large', width: 360 });
-      }
+      window.google.accounts.id.renderButton(googleBtnRef.current, { theme: 'outline', size: 'large', width: 360 });
+      googleRenderedRef.current = true;
       setGoogleReady(true);
     }).catch(() => setGoogleReady(false));
-  }, [handleGoogleCredential]);
+  }, [handleGoogleCredential, googleClientId, googleEnabled]);
 
   useEffect(() => {
     if (step === 'otp' && otpTimer > 0) {
@@ -250,8 +253,10 @@ export default function AuthPage() {
 
               {oauthError && <p className="text-sm text-error mb-3 text-center">{oauthError}</p>}
 
-              {/* Direct Google OAuth (preferred) — Supabase soft fallback if no client id */}
-              <div ref={googleBtnRef} className="w-full flex justify-center min-h-[44px]">
+              {/* Direct Google OAuth — placeholder and GSI mount live in separate
+                  containers: GSI mutates its own node, so React never unmounts
+                  children from a DOM tree the Google script also owns. */}
+              <div className="w-full flex justify-center min-h-[44px]">
                 {!googleReady && (
                   <button
                     disabled
@@ -263,12 +268,13 @@ export default function AuthPage() {
                       <path fill="#FBBC05" d="M10.54 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 0 0 0 24c0 3.77.87 7.35 2.56 10.56l7.98-5.97z" />
                       <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.97C6.51 42.62 14.62 48 24 48z" />
                     </svg>
-                    {getGoogleClientId() ? 'Loading Google...' : 'Configure Google OAuth'}
+                    {googleEnabled ? 'Loading Google...' : 'Configure Google OAuth'}
                   </button>
                 )}
+                <div ref={googleBtnRef} className={googleReady ? 'w-full' : 'hidden'} />
               </div>
-              {!getGoogleClientId() && (
-                <p className="text-xs text-center mt-2" style={{ color: 'var(--color-text-muted)' }}>Set NEXT_PUBLIC_GOOGLE_CLIENT_ID to enable Google sign-in.</p>
+              {!googleEnabled && (
+                <p className="text-xs text-center mt-2" style={{ color: 'var(--color-text-muted)' }}>Set GOOGLE_CLIENT_ID to enable Google sign-in.</p>
               )}
 
               <p className="text-center text-sm text-muted-foreground mt-4">

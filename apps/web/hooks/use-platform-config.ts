@@ -37,3 +37,11 @@ export function useFeatureFlag(flagId: string) {
   const flag = flags?.find((f) => f.id === flagId);
   return { enabled: flag?.enabled ?? false, flag };
 }
+
+export function useGoogleOauth() {
+  const { data } = usePlatformConfig<{ clientId?: string; enabled?: boolean }>('google_oauth');
+  return {
+    clientId: data?.clientId ?? null,
+    enabled: Boolean(data?.enabled && data.clientId),
+  };
+}

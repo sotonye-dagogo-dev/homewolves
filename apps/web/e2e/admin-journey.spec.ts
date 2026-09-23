@@ -88,7 +88,7 @@ test.describe('admin moderation journey', () => {
 
   test('admin sees the Moderation nav item and can open the queue', async ({ page }) => {
     await page.goto('/dashboard');
-    const moderationLink = page.getByRole('link', { name: '🛡️ Moderation' });
+    const moderationLink = page.getByRole('link', { name: 'Moderation', exact: true });
     await expect(moderationLink).toBeVisible();
     await moderationLink.click();
     await expect(page.getByRole('heading', { name: 'Moderation Queue' })).toBeVisible();

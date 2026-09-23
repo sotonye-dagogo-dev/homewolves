@@ -1,8 +1,8 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: update-ai-system
-> - last-verified-against-code: 2026-09-22
+> - last-updated-by: fix-build
+> - last-verified-against-code: 2026-09-23
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Log of significant architectural, technical, and product decisions. Agents consult this before proposing changes to avoid contradicting prior reasoning. Uses supersedes/superseded-by links so contradictory entries are explicitly resolved rather than both appearing equally valid.
@@ -555,7 +555,7 @@ The directive requires seeded data that can be reverted without affecting post-s
 **Date:** 2026-09-22
 **Made by:** Implementer (execute-feature thorough sweep)
 **Supersedes:** Google OAuth via Supabase Auth decision (now legacy fallback); dashboard hydrated-redirect decision (now CTA)
-**Superseded by:** None
+**Superseded by:** (3) only — Session 17 redirects unauth dashboard to `/auth?redirect=` instead of CTA; (4) env surface superseded by Session 17 server-only Google env (no `NEXT_PUBLIC_GOOGLE_CLIENT_ID`). Other points remain active.
 
 **Reason:**
 The issue directive reported non-responsive overflow, mobile bar obscuring content, missing navbar on public pages, dashboard infinite loading, missing global feedback, single-image listings, pricing `.map` crash, Supabase-coupled OAuth, and Bad Gateway. All are user-visible production blockers, so they were bundled.
@@ -661,17 +661,17 @@ User prefers Cloudinary for easier setup, management, and familiarity. Cloudinar
 
 ## Google OAuth env vars corrected (Session 14)
 
-**Decision:** `.env.example` now documents all three Google OAuth vars: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (web client), `GOOGLE_CLIENT_ID` (API audience check), `GOOGLE_CLIENT_SECRET` (server-side exchange). Both `GOOGLE_CLIENT_ID` and `NEXT_PUBLIC_GOOGLE_CLIENT_ID` should be set to the same value. `GOOGLE_CLIENT_SECRET` was in `.env` but undocumented; now added to `.env.example`, `turbo.json`, and `README.md`.
+**Decision:** `.env.example` documents Google OAuth as server-only `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (web GSI receives the client ID via server-serialized `FALLBACK_GOOGLE_OAUTH` / platform config — **`NEXT_PUBLIC_GOOGLE_CLIENT_ID` removed** per Session 17 directive). `GOOGLE_CLIENT_SECRET` added to `.env.example`, `turbo.json`, and `README.md`.
 **Date:** 2026-09-22
-**Made by:** Implementer (execute-feature env audit)
-**Supersedes:** None
-**Superseded by:** None
+**Made by:** Implementer (Session 14 env audit)
+**Supersedes:** None (partially superseded by Session 17: public client ID var dropped)
+**Superseded by:** Session 17 local-auth/server-only Google env decision for the `NEXT_PUBLIC_*` half; server secret + audience-check vars remain valid.
 
 **Reason:**
-The web client (`google-auth.ts`) reads `NEXT_PUBLIC_GOOGLE_CLIENT_ID` but it was missing from `.env` — the Google sign-in button would show "Configure Google OAuth" instead of rendering. The API reads `GOOGLE_CLIENT_ID` with fallback. Both should be set to the same client ID value. `GOOGLE_CLIENT_SECRET` was defined in `.env` but never documented anywhere.
+The web client (`google-auth.ts`) reads `NEXT_PUBLIC_GOOGLE_CLIENT_ID` but it was missing from `.env` — the Google sign-in button would show "Configure Google OAuth" instead of rendering. The API reads `GOOGLE_CLIENT_ID` with fallback. Both should be set to the same client ID value. `GOOGLE_CLIENT_SECRET` was defined in `.env` but never documented anywhere. Session 17 later removed the public var entirely so the client ID is not exposed as a separate NEXT_PUBLIC surface.
 
 **Implications:**
-- Users must set both `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_ID` to the same value.
+- Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in server env; do not reintroduce `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 - `GOOGLE_CLIENT_SECRET` is available for future server-side token exchange if needed.
 
 ---
@@ -717,5 +717,68 @@ Guest users clicking Chat Agent, Schedule Inspection, or other buttons got no fe
 **Implications:**
 - New interactive components should use `useRequireAuth()` for auth gating instead of manual `if (!accessToken) router.push('/auth')`.
 - The `hw-toast` CustomEvent bridge now works — components can dispatch toasts via `window.dispatchEvent(new CustomEvent('hw-toast', { detail: { message, type, action } }))`.
+
+---
+
+## Unauthenticated dashboard routes redirect to /auth (Session 17)
+
+**Decision:** Unauthenticated visits to any `(dashboard)` route redirect to `/auth?redirect=<pathname>` (with a 3s safety timeout) instead of showing a "Sign in to continue" CTA or hanging on loading. `use-auth.ts` always sets `hydrated:true` after rehydration so the redirect fires immediately when no token exists.
+**Date:** 2026-09-23
+**Made by:** Implementer (fix-build multi-issue repair)
+**Supersedes:** Session 12 decision (3) — dashboard layout unauthenticated CTA (`Sign in to continue`) instead of infinite loading; Session 12 note that hydrated-redirect was replaced by CTA.
+**Superseded by:** None
+
+**Reason:**
+Directive required that unauthenticated `/profile` → `/dashboard/client` not stick on infinite loading. A direct redirect preserves the intended destination (`?redirect=`) and matches E2E expectations (`agent-dashboard` unauth test expects `/auth`). The CTA approach left users on a dead-end dashboard shell.
+
+**Alternatives Considered:**
+- Keep Session 12 CTA (`Sign in to continue`) — rejected: less seamless, loses the original destination unless also wired with `?redirect=`.
+- Client-side only guard without layout redirect — rejected: slower, depends on each page's own auth check.
+
+**Implications:**
+- New dashboard pages inherit the redirect automatically via layout; do not re-implement per-page auth redirects for guests.
+- Preserve `?redirect=` when building auth CTAs elsewhere (toasts, `useRequireAuth`).
+
+---
+
+## Hero search is a native form with client enhancement (Session 17)
+
+**Decision:** Hero search box uses `<form action="/properties" method="GET">` with `name="search"` input and `type="submit"` button; `onSubmit` preventDefault + `router.push` when hydrated. Works without JS via full-page GET navigation.
+**Date:** 2026-09-23
+**Made by:** Implementer (fix-build E2E repair)
+**Supersedes:** Prior hero search as non-form `div` with only `onKeyDown`/`onClick` handlers.
+**Superseded by:** None
+
+**Reason:**
+E2E showed Enter did not navigate when React handlers were not yet hydrated. A real form gives progressive enhancement and better a11y (implicit Enter-to-submit).
+
+**Alternatives Considered:**
+- Wait for hydration in the E2E test — rejected as masking a real UX gap for slow connections.
+- Keep `type="button"` + onClick only — rejected: no native submit, same hydration dependency.
+
+**Implications:**
+- Search UIs should be real forms first; enhance with SPA navigation second.
+- Input needs `name` to serialize into the GET query string.
+
+---
+
+## Local server-side auth when API is unreachable (Session 17)
+
+**Decision:** Web app implements email/OTP auth in `app/api/v1/auth/[action]/route.ts` + `lib/server/auth-local.ts` when `backendOrigin()` is null; proxies to NestJS when available. JWT is HS256 from `JWT_SECRET` (dev fallback); OTP stored in HMAC-signed HttpOnly cookie; email via Resend fetch when `RESEND_API_KEY` set. OTP returned in response body only when `NODE_ENV !== 'production'`.
+**Date:** 2026-09-23
+**Made by:** Implementer (fix-build issue 5)
+**Supersedes:** Reliance on a deployed NestJS API alone for email auth (502 "API not configured" in production).
+**Superseded by:** None
+
+**Reason:**
+No NestJS API is deployed; `backendOrigin()` is null in production, so register/login returned 502. Local auth keeps email/OTP flow working while the API remains undeployed, with transparent proxy when an API origin is configured.
+
+**Alternatives Considered:**
+- Deploy NestJS first — blocked: no deploy credentials in this environment.
+- Static "coming soon" on auth — rejected: directive required working email auth.
+
+**Implications:**
+- Prod env must set `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DATABASE_URL` (if proxying), and optionally `RESEND_API_KEY`.
+- When an API is later deployed, set `API_ORIGIN`/`backendOrigin` so the route proxies instead of using local mode.
 
 ---

@@ -47,24 +47,39 @@ export class PlatformConfigService implements OnModuleInit {
         return config.value as T;
       }
     } catch {
-      return null;
+      return this.envFallback<T>(key);
     }
 
+    return this.envFallback<T>(key);
+  }
+
+  /** Env-derived fallback for keys with no admin-edited DB row yet. */
+  private envFallback<T>(key: string): T | null {
+    if (key === 'google_oauth') {
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      if (clientId) return { clientId, enabled: true } as unknown as T;
+    }
     return null;
   }
 
   async getAll(): Promise<Record<string, unknown>> {
     try {
       const configs = await this.db.select().from(platformConfig);
-      return configs.reduce(
+      const map = configs.reduce(
         (acc, c) => {
           acc[c.key] = c.value;
           return acc;
         },
         {} as Record<string, unknown>,
       );
+      if (!('google_oauth' in map)) {
+        const fb = this.envFallback<unknown>('google_oauth');
+        if (fb) map.google_oauth = fb;
+      }
+      return map;
     } catch {
-      return {};
+      const fb = this.envFallback<unknown>('google_oauth');
+      return fb ? { google_oauth: fb } : {};
     }
   }
 

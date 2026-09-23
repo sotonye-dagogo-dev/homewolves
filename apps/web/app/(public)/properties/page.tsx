@@ -1,14 +1,21 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useListings } from '@/hooks/use-listings';
 import { useFilterPills } from '@/hooks/use-platform-config';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { incrementView } from '@/lib/listings';
+import {
+  buildListingParams,
+  matchesPillClientSide,
+  parseListingResponse,
+  pillFromSearchParams,
+  dedupePills,
+} from '@/lib/property-filters';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Search, LayoutGrid, List, Map, Heart, Share2, X, ChevronDown, Check } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type ViewMode = 'grid' | 'list' | 'map';
 type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'most_viewed';
@@ -20,67 +27,90 @@ const sortOptions: { value: SortOption; label: string }[] = [
   { value: 'most_viewed', label: 'Most Viewed' },
 ];
 
-const VALID_PILLS = ['sale', 'rent', 'shortlet', 'land', 'new_dev'];
-
-function readSearchParam(name: string): string {
-  if (typeof window === 'undefined') return '';
-  return new URLSearchParams(window.location.search).get(name) ?? '';
+export default function PropertiesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen" style={{ background: 'var(--color-bg-base)' }} />
+      }
+    >
+      <PropertiesContent />
+    </Suspense>
+  );
 }
 
-export default function PropertiesPage() {
+function PropertiesContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlSearch = searchParams.get('search') ?? '';
+  const urlCategory = searchParams.get('category') ?? '';
+
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sort, setSort] = useState<SortOption>('newest');
   const [sortOpen, setSortOpen] = useState(false);
-  const [search, setSearch] = useState<string>(() => readSearchParam('search'));
-  const [debouncedSearch, setDebouncedSearch] = useState<string>(() => readSearchParam('search'));
-  const [activePill, setActivePill] = useState<string>(() => {
-    const cat = readSearchParam('category');
-    return cat && VALID_PILLS.includes(cat) ? cat : 'all';
-  });
+  const [search, setSearch] = useState<string>(urlSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState<string>(urlSearch);
+  const [activePill, setActivePill] = useState<string>(() => pillFromSearchParams(`category=${urlCategory}`));
   const [page, setPage] = useState(0);
   const [listings, setListings] = useState<any[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
   const { data: filterPills } = useFilterPills();
-
+  const appliedKeyRef = useRef<string>('');
   const searchTimerRef = useRef<NodeJS.Timeout>();
+  const syncedUrlRef = useRef<string>(`${urlSearch}|${urlCategory}`);
 
-  const categoryMap: Record<string, string | undefined> = {
-    all: undefined,
-    sale: 'SALE',
-    rent: 'RENT',
-    shortlet: 'SHORTLET',
-    land: 'LAND',
-    new_dev: undefined,
-  };
-
-  const params: Record<string, string> = {};
-  const cat = categoryMap[activePill];
-  if (cat) params.category = cat;
-  if (debouncedSearch) params.search = debouncedSearch;
-  params.take = '12';
-  params.skip = String(page * 12);
-
-  const { data, isFetching } = useListings(params);
-
+  // ── URL → state (nav links, back/forward, direct loads) ──
   useEffect(() => {
-    if (data?.listings) {
-      if (page === 0) {
-        setListings(data.listings);
-      } else {
-        setListings((prev) => [...prev, ...data.listings]);
-      }
-      setHasMore(data.listings.length >= 12);
-    }
-  }, [data, page]);
+    const key = `${urlSearch}|${urlCategory}`;
+    if (key === syncedUrlRef.current) return;
+    syncedUrlRef.current = key;
+    setSearch(urlSearch);
+    setDebouncedSearch(urlSearch);
+    setActivePill(pillFromSearchParams(`category=${urlCategory}`));
+  }, [urlSearch, urlCategory]);
 
+  // ── state → URL (so nav query params always drive the page) ──
   useEffect(() => {
+    const key = `${search}|${activePill === 'all' ? '' : activePill}`;
+    if (key === syncedUrlRef.current) return;
+    syncedUrlRef.current = key;
+    const qs = new URLSearchParams();
+    if (search) qs.set('search', search);
+    if (activePill !== 'all') qs.set('category', activePill);
+    const next = qs.toString();
+    const current = typeof window !== 'undefined' ? window.location.search.replace(/^\?/, '') : '';
+    if (next === current) return;
+    router.replace(next ? `/properties?${next}` : '/properties', { scroll: false });
+  }, [search, activePill, router]);
+
+  // ── Reset FIRST whenever the filter changes (fixes "All" → empty) ──
+  useEffect(() => {
+    appliedKeyRef.current = '';
     setPage(0);
     setListings([]);
     setHasMore(true);
   }, [activePill, debouncedSearch]);
+
+  const params = buildListingParams(activePill, debouncedSearch, page);
+  const { data, isFetching } = useListings(params);
+
+  // ── Data effect runs AFTER the reset effect (declaration order) ──
+  useEffect(() => {
+    const pageItems = parseListingResponse(data);
+    const key = `${activePill}|${debouncedSearch}`;
+    if (page === 0 || appliedKeyRef.current !== key) {
+      appliedKeyRef.current = key;
+      setListings(pageItems);
+    } else if (pageItems.length > 0) {
+      setListings((prev) => {
+        const seen = new Set(prev.map((p) => p?.id));
+        return [...prev, ...pageItems.filter((p) => !seen.has(p?.id))];
+      });
+    }
+    setHasMore(pageItems.length >= 12);
+  }, [data, page, activePill, debouncedSearch]);
 
   useEffect(() => {
     clearTimeout(searchTimerRef.current);
@@ -130,9 +160,11 @@ export default function PropertiesPage() {
   if (sort === 'most_viewed')
     sortedListings.sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0));
 
+  const filteredListings = sortedListings.filter((l) => matchesPillClientSide(l, activePill));
+
   const activeFilters: { key: string; label: string }[] = [];
   if (activePill !== 'all') {
-    const pill = filterPills?.find((p: any) => p.id === activePill);
+    const pill = dedupePills(filterPills).find((p: any) => p.id === activePill);
     if (pill) activeFilters.push({ key: activePill, label: pill.label });
   }
   if (debouncedSearch) activeFilters.push({ key: 'search', label: `"${debouncedSearch}"` });
@@ -270,7 +302,7 @@ export default function PropertiesPage() {
               {data?.total ?? 0}
             </span>
           </button>
-          {(filterPills ?? []).map((pill: any) => (
+          {dedupePills(filterPills).map((pill: any) => (
             <button
               key={pill.id}
               onClick={() => setActivePill(pill.id)}
@@ -375,7 +407,7 @@ export default function PropertiesPage() {
         {/* Grid view (default) */}
         {viewMode === 'grid' && (
           <div className="grid gap-4 md:gap-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 xl:gap-6">
-            {sortedListings.map((listing) => (
+            {filteredListings.map((listing) => (
               <PropertyCard
                 key={listing.id}
                 listing={listing}
@@ -388,7 +420,7 @@ export default function PropertiesPage() {
         {/* List view */}
         {viewMode === 'list' && (
           <div className="flex flex-col gap-3">
-            {sortedListings.map((listing) => (
+            {filteredListings.map((listing) => (
               <PropertyCardHorizontal
                 key={listing.id}
                 listing={listing}
@@ -436,14 +468,14 @@ export default function PropertiesPage() {
             />
           </div>
         )}
-        {!hasMore && listings.length > 0 && (
+        {!hasMore && filteredListings.length > 0 && (
           <p className="text-center text-xs py-6" style={{ color: 'var(--color-text-tertiary)' }}>
             You&apos;ve reached the end
           </p>
         )}
 
         {/* Empty state */}
-        {!isFetching && listings.length === 0 && (
+        {!isFetching && filteredListings.length === 0 && (
           <div className="text-center py-16">
             <div className="flex justify-center mb-3" style={{ color: 'var(--color-text-muted)' }}><Search className="w-10 h-10" /></div>
             <p className="text-base font-medium" style={{ color: 'var(--color-text-secondary)' }}>

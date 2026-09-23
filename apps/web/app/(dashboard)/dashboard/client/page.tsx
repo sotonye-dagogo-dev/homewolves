@@ -26,7 +26,7 @@ export default function ClientDashboardPage() {
   const { data: txData, isLoading: txLoading } = useMyTransactions();
   const [activeTab, setActiveTab] = useState<TabId>('transactions');
 
-  const savedListings = savedData?.flatMap((col: any) => col.listingIds ?? []) ?? [];
+  const savedListings = (Array.isArray(savedData) ? savedData : []).flatMap((col: any) => col?.listingIds ?? []);
   const recentList = Array.isArray(recentViews) ? recentViews : [];
 
   return (
@@ -75,7 +75,7 @@ export default function ClientDashboardPage() {
                   <div key={i} className="h-20 skeleton rounded-xl" />
                 ))}
               </div>
-            ) : !txData || txData.length === 0 ? (
+            ) : !txData || (Array.isArray(txData) ? txData : txData.transactions ?? []).length === 0 ? (
               <div className="p-8 text-center rounded-xl" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border-glass)' }}>
                 <div className="text-4xl mb-3">📄</div>
                 <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>No transactions yet</h3>
@@ -85,7 +85,7 @@ export default function ClientDashboardPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {(Array.isArray(txData) ? txData : txData.transactions ?? []).map((tx: any) => (
+                {(Array.isArray(txData) ? txData : Array.isArray(txData?.transactions) ? txData.transactions : []).map((tx: any) => (
                   <Link
                     key={tx.id}
                     href={`/dashboard/agent/transactions/${tx.id}`}
@@ -219,7 +219,7 @@ export default function ClientDashboardPage() {
 
         {/* Documents */}
         {activeTab === 'documents' && (
-          <DocumentsVault transactions={(Array.isArray(txData) ? txData : txData?.transactions ?? [])} />
+          <DocumentsVault transactions={Array.isArray(txData) ? txData : Array.isArray(txData?.transactions) ? txData.transactions : []} />
         )}
 
         {/* Notifications */}

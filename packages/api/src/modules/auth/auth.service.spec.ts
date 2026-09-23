@@ -74,12 +74,38 @@ describe('AuthService', () => {
         .mockReturnValue(createChain([user]));
 
       const reg = await service.register({ email: 'a@b.com', phone: '123', firstName: 'A', lastName: 'B' });
-      const result = await service.verifyOtp({ email: 'a@b.com', otp: reg.otp });
+      const result = await service.verifyOtp({ email: 'a@b.com', otp: reg.otp! });
 
       expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'OTP_VERIFIED' }));
       expect(activityService.awardForUser).toHaveBeenCalledWith('u-1', 'BUYER', 'daily_login', expect.anything());
       expect(result.accessToken).toBe('access-token');
       expect(result.refreshToken).toBeTruthy();
+    });
+
+    it('auto-creates a user when none exists (register does not insert a row)', async () => {
+      // register: email lookup → empty; verify: user lookup → empty; insert → created
+      mocks.select
+        .mockReturnValueOnce(createChain([])) // register duplicate check
+        .mockReturnValue(createChain([])); // verify user lookup
+      mocks.insert.mockReturnValueOnce(
+        createChain([{ ...user, id: 'u-created', email: 'a@b.com' }]),
+      );
+
+      const reg = await service.register({ email: 'a@b.com', phone: '123', firstName: 'A', lastName: 'B' });
+      const result = await service.verifyOtp({ email: 'a@b.com', otp: reg.otp! });
+
+      expect(mocks.insert).toHaveBeenCalledWith(users);
+      expect(result.accessToken).toBe('access-token');
+      expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'OTP_VERIFIED' }));
+    });
+
+    it('does not leak the OTP in production register responses', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      mocks.select.mockReturnValue(createChain([]));
+      const result = await service.register({ email: 'prod@b.com' });
+      expect(result.message).toBe('OTP sent');
+      expect(result).not.toHaveProperty('otp');
+      vi.unstubAllEnvs();
     });
   });
 
@@ -284,7 +310,7 @@ describe('AuthService', () => {
         .mockReturnValue(createChain([user]));
 
       const reg = await service.register({ email: 'a@b.com', phone: '123', firstName: 'A', lastName: 'B' });
-      const verified = await service.verifyOtp({ email: 'a@b.com', otp: reg.otp });
+      const verified = await service.verifyOtp({ email: 'a@b.com', otp: reg.otp! });
 
       const rotated = await service.refreshToken(verified.refreshToken);
 
@@ -299,7 +325,7 @@ describe('AuthService', () => {
         .mockReturnValue(createChain([user]));
 
       const reg = await service.register({ email: 'a@b.com', phone: '123', firstName: 'A', lastName: 'B' });
-      const verified = await service.verifyOtp({ email: 'a@b.com', otp: reg.otp });
+      const verified = await service.verifyOtp({ email: 'a@b.com', otp: reg.otp! });
 
       await service.logout('u-1');
       await expect(service.refreshToken(verified.refreshToken)).rejects.toThrow('Invalid or expired refresh token');

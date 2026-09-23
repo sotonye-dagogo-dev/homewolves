@@ -84,10 +84,13 @@ export function useNotifications(userId?: string, token?: string) {
     };
   }, [userId, token, queryClient]);
 
+  const rawNotifications = notifData?.notifications;
+  const rawUnread = unreadData?.count;
+
   return {
-    notifications: (notifData?.notifications ?? []) as Notification[],
-    total: notifData?.total ?? 0,
-    unreadCount: (unreadData?.count ?? 0) as number,
+    notifications: (Array.isArray(rawNotifications) ? rawNotifications : []) as Notification[],
+    total: (typeof notifData?.total === 'number' ? notifData.total : Array.isArray(rawNotifications) ? rawNotifications.length : 0),
+    unreadCount: (typeof rawUnread === 'number' ? rawUnread : 0) as number,
     notifsLoading,
     markRead: (ids: string[]) => markRead.mutateAsync(ids),
     markAllRead: () => markAllRead.mutateAsync(),

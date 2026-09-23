@@ -41,7 +41,3 @@ export async function exchangeGoogleCredential(credential: string, opts?: { refe
   }
   return res.json() as Promise<{ accessToken: string; refreshToken: string; user: any }>;
 }
-
-export function getGoogleClientId(): string | null {
-  return process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? null;
-}

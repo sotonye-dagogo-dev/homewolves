@@ -1,8 +1,8 @@
 # Dependency Graph
 
 > **Metadata**
-> - last-updated-by: update-ai-system
-> - last-verified-against-code: 2026-08-13
+> - last-updated-by: sync-context
+> - last-verified-against-code: 2026-09-23
 > - staleness-policy: auto-regenerable — can be derived from import analysis tools. Manual content only for conventions and rules that cannot be inferred from code.
 
 > **Overview:** Maps how modules depend on each other in the Homewolves NestJS backend. Agents consult this before modifying a module to understand the impact radius. This file is **auto-regenerable** — prefer tool-based import analysis for ground truth, and treat manual entries as supplementary.
@@ -102,6 +102,8 @@ apps/web (Next.js 14)
   → packages/types (global types — zero-import)
   → packages/config (fallbacks — compiled/bundled)
   → packages/api (REST client — type-safe)
+  → app/api/v1/auth/[action] → lib/server/auth-local (local OTP/JWT when backendOrigin null; proxies NestJS otherwise)
+  → lib/property-filters (URL↔pill sync for properties page)
   → shadcn/ui (Radix primitives — through Hw* wrappers only)
   → TanStack Query (server state)
   → Zustand (client state)

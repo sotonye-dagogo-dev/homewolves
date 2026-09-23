@@ -62,9 +62,9 @@ export default function MessagesPage() {
     [handleSend],
   );
 
-  const filteredConvos = conversations?.filter((c: any) =>
-    c.messages?.[0]?.content?.toLowerCase().includes(searchQuery.toLowerCase()),
-  ) ?? [];
+  const filteredConvos = (Array.isArray(conversations) ? conversations : []).filter((c: any) =>
+    c?.messages?.[0]?.content?.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   const otherParticipantName = (conversation: any) => {
     const otherId = conversation?.participantIds?.find((id: string) => id !== user?.id);
@@ -283,9 +283,10 @@ export default function MessagesPage() {
                 )}
                 {messages?.map((msg: any, idx: number) => {
                   const isSelf = msg.senderId === user?.id;
+                  const prev: any = idx > 0 ? messages[idx - 1] : null;
                   const showDateDivider =
                     idx === 0 ||
-                    new Date(msg.createdAt).toDateString() !== new Date(messages[idx - 1]?.createdAt).toDateString();
+                    new Date(msg.createdAt).toDateString() !== new Date(prev?.createdAt ?? 0).toDateString();
 
                   return (
                     <div key={msg.id}>

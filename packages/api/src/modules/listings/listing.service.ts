@@ -84,6 +84,7 @@ export class ListingService {
     search?: string;
     ownerId?: string;
     featured?: boolean;
+    verified?: boolean;
   }) {
     const conditions = [];
     if (params.category) conditions.push(eq(listings.category, params.category as never));
@@ -91,6 +92,7 @@ export class ListingService {
     if (params.status) conditions.push(eq(listings.status, params.status as never));
     if (params.ownerId) conditions.push(eq(listings.ownerId, params.ownerId));
     if (params.featured != null) conditions.push(eq(listings.featured, params.featured));
+    if (params.verified != null) conditions.push(eq(listings.verified, params.verified));
     if (params.minPrice != null) conditions.push(gte(listings.price, String(params.minPrice)));
     if (params.maxPrice != null) conditions.push(lte(listings.price, String(params.maxPrice)));
     if (params.search) {

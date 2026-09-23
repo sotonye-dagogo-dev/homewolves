@@ -82,7 +82,7 @@ export default function ClientDetailPage() {
     ? (ratings.reduce((sum: number, r: any) => sum + r.score, 0) / ratings.length).toFixed(1)
     : '—';
 
-  const clientInspections = inspections?.filter((i: any) => i.clientId === id) ?? [];
+  const clientInspections = (Array.isArray(inspections) ? inspections : []).filter((i: any) => i?.clientId === id);
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">

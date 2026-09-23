@@ -33,6 +33,14 @@ export const FALLBACK_FILTER_PILLS: FilterPillConfig[] = [
   { id: 'verified', label: 'Verified', queryParam: 'verified', active: true, displayOrder: 8 },
 ];
 
+// Google OAuth — client ID is public (not a secret). Server env GOOGLE_CLIENT_ID
+// takes precedence when served by the API/config route; this is the hardcoded
+// admin-editable fallback.
+export const FALLBACK_GOOGLE_OAUTH = {
+  clientId: '741943434744-0p05rl562etpe48t90qdbatu15l6n1kc.apps.googleusercontent.com',
+  enabled: true,
+};
+
 export const FALLBACK_NAV_ITEMS: NavItemConfig[] = [
   { id: 'explore', label: 'Explore', path: '/', icon: 'Compass', roles: ['GUEST', 'BUYER'] as UserRole[], active: true, displayOrder: 1 },
   { id: 'properties', label: 'Properties', path: '/properties', icon: 'Building2', roles: ['GUEST', 'BUYER'] as UserRole[], active: true, displayOrder: 2 },

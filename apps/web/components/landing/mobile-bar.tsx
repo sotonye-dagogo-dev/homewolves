@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Search, MessageCircle, User, Plus } from 'lucide-react';
+import { Home, MessageCircle, User, Plus } from 'lucide-react';
 
 const tabs = [
   {
@@ -10,13 +10,6 @@ const tabs = [
     icon: Home,
     aria: 'Explore properties',
     href: '/properties',
-    match: '/properties',
-  },
-  {
-    label: 'Search',
-    icon: Search,
-    aria: 'Search properties',
-    href: '/properties#search',
     match: '/properties',
   },
   { label: 'Chat', icon: MessageCircle, aria: 'Messages', href: '/messages', match: '/messages' },
