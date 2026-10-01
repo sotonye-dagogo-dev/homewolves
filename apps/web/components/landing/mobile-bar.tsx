@@ -27,7 +27,7 @@ export function MobileBar() {
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] h-20 pb-[10px] bg-[var(--color-bg-glass)] backdrop-blur-[var(--glass-blur-heavy)] border-t border-[var(--color-border-glass)] flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] min-h-20 pb-[calc(10px+env(safe-area-inset-bottom))] bg-[var(--color-bg-glass)] backdrop-blur-[var(--glass-blur-heavy)] border-t border-[var(--color-border-glass)] flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
       role="navigation"
       aria-label="Bottom navigation"
     >

@@ -1,6 +1,6 @@
 import { TopNav } from '@/components/landing/top-nav';
 import { HeroSection } from '@/components/landing/hero-section';
-import { StatsStrip } from '@/components/landing/stats-strip';
+import { AdBanner } from '@/components/landing/ad-banner';
 import { CategoryBento } from '@/components/landing/category-bento';
 import { FeaturedListings } from '@/components/landing/featured-listings';
 import { HowItWorks } from '@/components/landing/how-it-works';
@@ -35,7 +35,7 @@ export default function HomePage() {
 
       <main id="main-content">
         <HeroSection />
-        <StatsStrip />
+        <AdBanner />
         <CategoryBento />
         <FeaturedListings />
         <HowItWorks />
