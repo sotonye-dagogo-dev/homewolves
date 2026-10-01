@@ -23,6 +23,11 @@ interface AuthState {
 
   register: (email: string) => Promise<{ otp: string }>;
   verifyOtp: (email: string, otp: string) => Promise<void>;
+  registerWithPassword: (input: { email: string; password: string; firstName: string; lastName: string; phone?: string; role?: string; referralCode?: string }) => Promise<void>;
+  loginWithPassword: (email: string, password: string) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<{ resetToken?: string }>;
+  resetPassword: (token: string, password: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
   completeProfile: (data: {
     email: string;
     firstName: string;
@@ -55,15 +60,18 @@ export const useAuth = create<AuthState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email }),
           });
+          const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.message ?? 'Registration failed');
+            if (res.status === 409) throw new Error('This email already has an account. Try signing in instead.');
+            throw new Error(data.message ?? 'Could not send a code. Please try again.');
           }
-          const data = await res.json();
           return data;
         } catch (e: any) {
-          set({ error: e.message, isLoading: false });
-          throw e;
+          const msg = e?.message === 'Failed to fetch'
+            ? 'Could not reach the server. Check your connection and try again.'
+            : (e.message ?? 'Could not send a code. Please try again.');
+          set({ error: msg, isLoading: false });
+          throw new Error(msg);
         } finally {
           set({ isLoading: false });
         }
@@ -77,11 +85,11 @@ export const useAuth = create<AuthState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, otp }),
           });
+          const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.message ?? 'Verification failed');
+            if (res.status === 401) throw new Error('That code is incorrect or expired. Check your email and try again.');
+            throw new Error(data.message ?? 'Could not verify that code. Please try again.');
           }
-          const data = await res.json();
           set({
             accessToken: data.accessToken,
             user: data.user,
@@ -94,26 +102,132 @@ export const useAuth = create<AuthState>()(
         }
       },
 
-      completeProfile: async (data) => {
+      registerWithPassword: async (input) => {
+        set({ isLoading: true, error: null });
+        try {
+          const res = await fetch(`${getApiBase()}/auth/register-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(input),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message ?? 'Could not create your account. Please try again.');
+          set({ accessToken: data.accessToken ?? null, user: data.user ?? null });
+        } catch (e: any) {
+          const msg = e?.message === 'Failed to fetch'
+            ? 'Could not reach the server. Check your connection and try again.'
+            : (e.message ?? 'Could not create your account. Please try again.');
+          set({ error: msg, isLoading: false });
+          throw new Error(msg);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      loginWithPassword: async (email, password) => {
+        set({ isLoading: true, error: null });
+        try {
+          const res = await fetch(`${getApiBase()}/auth/login-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message ?? 'Email or password is incorrect.');
+          set({ accessToken: data.accessToken ?? null, user: data.user ?? null });
+        } catch (e: any) {
+          const msg = e?.message === 'Failed to fetch'
+            ? 'Could not reach the server. Check your connection and try again.'
+            : (e.message ?? 'Email or password is incorrect.');
+          set({ error: msg, isLoading: false });
+          throw new Error(msg);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      requestPasswordReset: async (email) => {
+        set({ isLoading: true, error: null });
+        try {
+          const res = await fetch(`${getApiBase()}/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message ?? 'Could not send the reset link. Please try again.');
+          return data;
+        } catch (e: any) {
+          const msg = e?.message ?? 'Could not send the reset link. Please try again.';
+          set({ error: msg, isLoading: false });
+          throw new Error(msg);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      resetPassword: async (token, password) => {
+        set({ isLoading: true, error: null });
+        try {
+          const res = await fetch(`${getApiBase()}/auth/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, password }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message ?? 'That reset link is invalid or expired.');
+          set({ accessToken: data.accessToken ?? null, user: data.user ?? null });
+        } catch (e: any) {
+          const msg = e?.message ?? 'That reset link is invalid or expired.';
+          set({ error: msg, isLoading: false });
+          throw new Error(msg);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      resendVerification: async (email) => {
+        set({ isLoading: true, error: null });
+        try {
+          const res = await fetch(`${getApiBase()}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message ?? 'Could not resend the code. Please try again.');
+          return;
+        } catch (e: any) {
+          const msg = e?.message ?? 'Could not resend the code. Please try again.';
+          set({ error: msg, isLoading: false });
+          throw new Error(msg);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      completeProfile: async (profile) => {
         set({ isLoading: true, error: null });
         try {
           const res = await fetch(`${getApiBase()}/auth/complete-profile`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+            body: JSON.stringify(profile),
           });
+          const result = await res.json().catch(() => ({}));
           if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.message ?? 'Profile completion failed');
+            throw new Error(result.message ?? 'Could not save your profile. Please try again.');
           }
-          const result = await res.json();
           set({
-            accessToken: result.accessToken,
-            user: result.user,
+            accessToken: result.accessToken ?? null,
+            user: result.user ?? null,
           });
         } catch (e: any) {
-          set({ error: e.message, isLoading: false });
-          throw e;
+          const msg = e?.message === 'Failed to fetch'
+            ? 'Could not reach the server. Check your connection and try again.'
+            : (e.message ?? 'Could not save your profile. Please try again.');
+          set({ error: msg, isLoading: false });
+          throw new Error(msg);
         } finally {
           set({ isLoading: false });
         }

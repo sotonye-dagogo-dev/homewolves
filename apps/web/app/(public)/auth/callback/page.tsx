@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { BrandLogo } from '@/components/shared/brand-logo';
 
 function parseFragment(url: string): URLSearchParams {
   const params = new URLSearchParams();
@@ -56,8 +57,8 @@ export default function AuthCallbackPage() {
   return (
     <div className="min-h-screen bg-background grid place-items-center px-4">
       <div className="max-w-sm w-full p-8 rounded-xl bg-[var(--color-bg-glass)] border border-[var(--color-border-glass)] shadow-glass text-center">
-        <div className="w-12 h-12 mx-auto bg-accent rounded-md grid place-items-center text-2xl text-inverse mb-4">
-          HW
+        <div className="flex justify-center mb-4">
+          <BrandLogo size="lg" showName={false} />
         </div>
         <p className="text-foreground font-body text-base">{message}</p>
         {message !== 'Completing your sign-in...' && (
