@@ -1,4 +1,4 @@
-import { FALLBACK_AMENITIES, FALLBACK_FILTER_PILLS, FALLBACK_NAV_ITEMS, FALLBACK_PROPERTY_TYPES, FALLBACK_FEATURE_FLAGS, FALLBACK_BRAND, FALLBACK_GOOGLE_OAUTH } from '@/config/fallbacks';
+import { FALLBACK_AMENITIES, FALLBACK_FILTER_PILLS, FALLBACK_NAV_ITEMS, FALLBACK_PROPERTY_TYPES, FALLBACK_FEATURE_FLAGS, FALLBACK_BRAND, FALLBACK_GOOGLE_OAUTH, FALLBACK_PRODUCTS, FALLBACK_SERVICES, FALLBACK_AD_SLOTS } from '@/config/fallbacks';
 import { getApiBase } from '@/lib/api-base';
 
 
@@ -45,6 +45,12 @@ export function getFallbackFor(key: string): unknown {
       return FALLBACK_FEATURE_FLAGS;
     case 'google_oauth':
       return FALLBACK_GOOGLE_OAUTH;
+    case 'products':
+      return FALLBACK_PRODUCTS;
+    case 'services':
+      return FALLBACK_SERVICES;
+    case 'ad_slots':
+      return FALLBACK_AD_SLOTS;
     default:
       return null;
   }

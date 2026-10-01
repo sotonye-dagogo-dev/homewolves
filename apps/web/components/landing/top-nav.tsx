@@ -5,14 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bell, Menu, X } from 'lucide-react';
 import { HwButton } from '@/components/ui';
-import { useBrand } from '@/hooks/use-platform-config';
+import { BrandLogo } from '@/components/shared/brand-logo';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 
 export function TopNav() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
-  const { data: brand } = useBrand();
   const { requireAuth } = useRequireAuth('/dashboard/agent/listings/new');
 
   useEffect(() => {
@@ -33,13 +32,13 @@ export function TopNav() {
         role="navigation"
         aria-label="Main navigation"
       >
-        <div className="flex items-center gap-3 lg:gap-6">
+        <div className="flex items-center gap-2 lg:gap-6 min-w-0">
           <button
             type="button"
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
-            className={`lg:hidden w-10 h-10 rounded-full grid place-items-center transition-colors ${
+            className={`lg:hidden w-10 h-10 rounded-full grid place-items-center transition-colors shrink-0 ${
               scrolled || mobileOpen ? 'text-foreground hover:bg-[var(--color-border-subtle)]' : 'text-white hover:bg-white/10'
             }`}
           >
@@ -47,26 +46,17 @@ export function TopNav() {
           </button>
           <Link
             href="/"
-            className={`flex items-center gap-2 font-display text-xl lg:text-2xl font-bold tracking-tight transition-colors duration-normal ${
-              scrolled || mobileOpen ? 'text-[var(--color-brand-primary)]' : 'text-[var(--color-text-inverse)]'
-            }`}
+            aria-label="Homewolves home"
+            className="flex items-center min-w-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            {brand?.logoUrl ? (
-              <img
-                src={brand.logoUrl}
-                alt={brand.companyName || 'Homewolves'}
-                className="h-7 lg:h-8 w-auto"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            ) : null}
-            <span>{brand?.companyName || 'Homewolves'}</span>
+            <span className={scrolled || mobileOpen ? '[&>span>span:last-child]:!text-[var(--color-brand-primary)]' : '[&>span>span:last-child]:!text-white'}>
+              <BrandLogo size="sm" />
+            </span>
           </Link>
 
         </div>
 
-        <div className="flex items-center gap-2 lg:gap-3">
+        <div className="flex items-center gap-2 lg:gap-3 shrink-0">
           <Link
             href="/properties"
             className={`hidden lg:inline-flex text-sm font-semibold transition-colors ${
@@ -74,6 +64,22 @@ export function TopNav() {
             }`}
           >
             Properties
+          </Link>
+          <Link
+            href="/products"
+            className={`hidden lg:inline-flex text-sm font-semibold transition-colors ${
+              scrolled ? 'text-[var(--color-text-secondary)] hover:text-[var(--color-brand-primary)]' : 'text-white/80 hover:text-white'
+            }`}
+          >
+            Products
+          </Link>
+          <Link
+            href="/services"
+            className={`hidden lg:inline-flex text-sm font-semibold transition-colors ${
+              scrolled ? 'text-[var(--color-text-secondary)] hover:text-[var(--color-brand-primary)]' : 'text-white/80 hover:text-white'
+            }`}
+          >
+            Services
           </Link>
           <Link
             href="/pricing"
@@ -115,6 +121,15 @@ export function TopNav() {
             <div className="grid grid-cols-2 gap-2">
               <Link href="/properties" onClick={() => setMobileOpen(false)} className="rounded-xl px-4 py-3 text-sm font-semibold bg-[var(--color-bg-glass)] border border-[var(--color-border-subtle)] text-center">
                 Properties
+              </Link>
+              <Link href="/products" onClick={() => setMobileOpen(false)} className="rounded-xl px-4 py-3 text-sm font-semibold bg-[var(--color-bg-glass)] border border-[var(--color-border-subtle)] text-center">
+                Products
+              </Link>
+              <Link href="/services" onClick={() => setMobileOpen(false)} className="rounded-xl px-4 py-3 text-sm font-semibold bg-[var(--color-bg-glass)] border border-[var(--color-border-subtle)] text-center">
+                Services
+              </Link>
+              <Link href="/advertise" onClick={() => setMobileOpen(false)} className="rounded-xl px-4 py-3 text-sm font-semibold bg-[var(--color-bg-glass)] border border-[var(--color-border-subtle)] text-center">
+                Advertise
               </Link>
               <Link href="/pricing" onClick={() => setMobileOpen(false)} className="rounded-xl px-4 py-3 text-sm font-semibold bg-[var(--color-bg-glass)] border border-[var(--color-border-subtle)] text-center">
                 Pricing

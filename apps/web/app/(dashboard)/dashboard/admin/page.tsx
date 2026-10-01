@@ -234,7 +234,13 @@ export default function AdminDashboardPage() {
               <div className="p-5 rounded-xl" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-glass)' }}>
                 <div className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--color-text-muted)' }}>Quick Actions</div>
                 <div className="flex flex-wrap gap-3">
-                  <Link href="/dashboard/admin/moderation" className="px-5 py-2 text-sm font-semibold rounded-full transition-all" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
+                  <Link href="/dashboard/admin/catalog" className="px-5 py-2 text-sm font-semibold rounded-full transition-all" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
+                    Manage Catalogue
+                  </Link>
+                  <Link href="/dashboard/admin/ads" className="px-5 py-2 text-sm font-semibold rounded-full transition-all" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
+                    Manage Ad Banner
+                  </Link>
+                  <Link href="/dashboard/admin/moderation" className="px-5 py-2 text-sm font-semibold rounded-full transition-all" style={{ background: 'var(--color-bg-elevated)', color: 'var(--color-brand-primary)', border: '1px solid var(--color-brand-primary)' }}>
                     Moderate Listings
                   </Link>
                   <Link href="/dashboard/admin/payments" className="px-5 py-2 text-sm font-semibold rounded-full transition-all" style={{ background: 'var(--color-bg-elevated)', color: 'var(--color-brand-primary)', border: '1px solid var(--color-brand-primary)' }}>

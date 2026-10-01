@@ -158,3 +158,108 @@ export function generateReferralCode(): string {
 export function isValidEmail(email: unknown): email is string {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && email.length <= 255;
 }
+
+export function isValidPassword(password: unknown): password is string {
+  return typeof password === 'string' && password.length >= 8 && password.length <= 128;
+}
+
+/** Friendly validation message — avoids leaking native "pattern mismatch" strings. */
+export function emailError(email: string): string | null {
+  if (!email.trim()) return 'Enter your email address.';
+  if (!isValidEmail(email)) return 'That email address doesn’t look right — check for typos.';
+  return null;
+}
+
+export function passwordError(password: string): string | null {
+  if (!password) return 'Enter your password.';
+  if (password.length < 8) return 'Password must be at least 8 characters.';
+  if (password.length > 128) return 'Password must be under 128 characters.';
+  return null;
+}
+
+// ─── Password hashing (scrypt, no extra deps) ─────────────────────────────
+import { scrypt as _scrypt, randomBytes as _randomBytes } from 'node:crypto';
+
+function scryptAsync(password: string, salt: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    _scrypt(password, salt, 64, (err, derived) => {
+      if (err) reject(err);
+      else resolve(derived as Buffer);
+    });
+  });
+}
+
+/** Stored format: `scrypt:<salt-hex>:<hash-hex>` */
+export async function hashPassword(password: string): Promise<string> {
+  const salt = _randomBytes(16).toString('hex');
+  const derived = await scryptAsync(password, salt);
+  return `scrypt:${salt}:${derived.toString('hex')}`;
+}
+
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  try {
+    const [scheme, salt, hash] = stored.split(':');
+    if (scheme !== 'scrypt' || !salt || !hash) return false;
+    const derived = await scryptAsync(password, salt);
+    const a = Buffer.from(derived.toString('hex'));
+    const b = Buffer.from(hash);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+// ─── Password-reset tokens (stateless, HMAC-signed) ───────────────────────
+export interface ResetState {
+  email: string;
+  exp: number;
+}
+
+export const RESET_COOKIE = 'hw_reset';
+
+export function encodeResetToken(state: ResetState): string {
+  const payload = b64url(JSON.stringify(state));
+  return `${payload}.${hmac(payload)}`;
+}
+
+export function decodeResetToken(value: string | undefined | null): ResetState | null {
+  if (!value) return null;
+  try {
+    const [payload, sig] = value.split('.');
+    if (!payload || !sig) return null;
+    const expected = hmac(payload);
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+    const state = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as ResetState;
+    if (!state.email || !state.exp) return null;
+    if (state.exp < Date.now()) return null;
+    return state;
+  } catch {
+    return null;
+  }
+}
+
+/** Sends a password-reset email via Resend when configured; no-ops otherwise. */
+export async function sendResetEmail(to: string, resetLink: string): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM_EMAIL ?? 'hello@mail.homewolves.com',
+        to: [to],
+        subject: 'Reset your Homewolves password',
+        html: `<p>Hi there,</p><p>Use this link to reset your password (expires in 30 minutes):</p><p><a href="${resetLink}">Reset password</a></p>`,
+      }),
+    });
+  } catch {
+    // Email delivery must never break the auth flow.
+  }
+}

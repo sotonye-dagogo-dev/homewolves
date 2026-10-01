@@ -331,6 +331,82 @@ export const FALLBACK_BLOG_POSTS: Array<{
   },
 ];
 
+// ─── MARKETPLACE: PRODUCTS & SERVICES (config-driven) ─────────────────────
+export interface ProductItem {
+  id: string;
+  name: string;
+  description: string;
+  price: { amount: number; currency: string };
+  category: string;
+  image: string;
+  vendor: string;
+  inStock: boolean;
+  featured: boolean;
+  active: boolean;
+  displayOrder: number;
+}
+
+export interface ServiceItem {
+  id: string;
+  name: string;
+  description: string;
+  priceFrom: { amount: number; currency: string };
+  category: string;
+  image: string;
+  provider: string;
+  rating: number;
+  featured: boolean;
+  active: boolean;
+  displayOrder: number;
+}
+
+export const FALLBACK_PRODUCTS: ProductItem[] = [
+  { id: 'prod-cement', name: 'Dangote Cement (50kg)', description: 'High-grade Portland cement for all construction work. Bulk discounts available.', price: { amount: 8500, currency: 'NGN' }, category: 'Building Materials', image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80', vendor: 'Homewolves Supplies', inStock: true, featured: true, active: true, displayOrder: 1 },
+  { id: 'prod-blocks', name: 'Concrete Blocks (9 inch)', description: 'Vibrated solid blocks, cured for strength. Per unit pricing.', price: { amount: 650, currency: 'NGN' }, category: 'Building Materials', image: 'https://images.unsplash.com/photo-1590725175785-d4d0b1e9e0e8?w=800&q=80', vendor: 'Homewolves Supplies', inStock: true, featured: true, active: true, displayOrder: 2 },
+  { id: 'prod-roofing', name: 'Aluminium Roofing Sheets', description: 'Long-span aluminium sheets, multiple colours. Per square metre.', price: { amount: 12000, currency: 'NGN' }, category: 'Roofing', image: 'https://images.unsplash.com/photo-1632759145351-1d592919f522?w=800&q=80', vendor: 'RoofMasters NG', inStock: true, featured: false, active: true, displayOrder: 3 },
+  { id: 'prod-tiles', name: 'Porcelain Floor Tiles (60x60)', description: 'Premium polished porcelain tiles. Per carton of 4.', price: { amount: 18500, currency: 'NGN' }, category: 'Finishes', image: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=800&q=80', vendor: 'TileHub', inStock: true, featured: false, active: true, displayOrder: 4 },
+  { id: 'prod-paint', name: 'Premium Emulsion Paint (20L)', description: 'Weather-shield exterior emulsion. Multiple colours.', price: { amount: 45000, currency: 'NGN' }, category: 'Finishes', image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=800&q=80', vendor: 'ColorLine Paints', inStock: true, featured: false, active: true, displayOrder: 5 },
+  { id: 'prod-door', name: 'Security Doors', description: 'Turkish-style steel security doors with frame.', price: { amount: 185000, currency: 'NGN' }, category: 'Accessories', image: 'https://images.unsplash.com/photo-1509644851169-2acc08aa25b5?w=800&q=80', vendor: 'SafeEntry Ltd', inStock: true, featured: true, active: true, displayOrder: 6 },
+];
+
+export const FALLBACK_SERVICES: ServiceItem[] = [
+  { id: 'svc-valuation', name: 'Property Valuation', description: 'Certified estate surveyors provide bank-grade valuation reports within 72 hours.', priceFrom: { amount: 75000, currency: 'NGN' }, category: 'Advisory', image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80', provider: 'Homewolves Advisory', rating: 4.8, featured: true, active: true, displayOrder: 1 },
+  { id: 'svc-legal', name: 'Title Search & Legal', description: 'Lawyers verify C of O, deeds, and survey plans before you pay.', priceFrom: { amount: 120000, currency: 'NGN' }, category: 'Legal', image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80', provider: 'Homewolves Legal', rating: 4.9, featured: true, active: true, displayOrder: 2 },
+  { id: 'svc-renovation', name: 'Renovation & Remodelling', description: 'Vetted contractors for full-home renovation with milestone billing.', priceFrom: { amount: 500000, currency: 'NGN' }, category: 'Construction', image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800&q=80', provider: 'BuildRight NG', rating: 4.7, featured: false, active: true, displayOrder: 3 },
+  { id: 'svc-movers', name: 'Movers & Logistics', description: 'Insured packing and moving across Lagos, Abuja, and PH.', priceFrom: { amount: 80000, currency: 'NGN' }, category: 'Moving', image: 'https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=800&q=80', provider: 'SwiftMove', rating: 4.6, featured: false, active: true, displayOrder: 4 },
+  { id: 'svc-cleaning', name: 'Post-Construction Cleaning', description: 'Deep cleaning for new builds and shortlets.', priceFrom: { amount: 45000, currency: 'NGN' }, category: 'Cleaning', image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80', provider: 'SparklePro', rating: 4.7, featured: false, active: true, displayOrder: 5 },
+  { id: 'svc-pm', name: 'Property Management', description: 'Rent collection, maintenance, and tenant screening for landlords.', priceFrom: { amount: 100000, currency: 'NGN' }, category: 'Management', image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80', provider: 'Homewolves PM', rating: 4.8, featured: true, active: true, displayOrder: 6 },
+];
+
+// ─── AD BANNER SLOTS (config-driven, admin-managed) ────────────────────────
+export interface AdSlot {
+  id: string;
+  title: string;
+  subtitle: string;
+  image: string;
+  ctaLabel: string;
+  ctaHref: string;
+  active: boolean;
+  displayOrder: number;
+}
+
+export interface AdApplication {
+  id: string;
+  name: string;
+  email: string;
+  company: string;
+  message: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+export const FALLBACK_AD_SLOTS: AdSlot[] = [
+  { id: 'ad-mortgage', title: 'Own it now, pay over time', subtitle: 'Mortgage from 15% per annum — pre-approval in 48 hours.', image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=80', ctaLabel: 'Get pre-approved', ctaHref: '/services?category=Advisory', active: true, displayOrder: 1 },
+  { id: 'ad-cement', title: 'Building this quarter?', subtitle: 'Bulk cement & blocks delivered to site, any state.', image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1200&q=80', ctaLabel: 'Shop materials', ctaHref: '/products', active: true, displayOrder: 2 },
+];
+
+export const FALLBACK_AD_APPLICATIONS: AdApplication[] = [];
+
 // Lightweight email-template fallbacks — activation only when the templates
 // API is unreachable. The API seeds its own full copies (email-templates.defaults.ts).
 export const FALLBACK_EMAIL_TEMPLATES: EmailTemplate[] = [

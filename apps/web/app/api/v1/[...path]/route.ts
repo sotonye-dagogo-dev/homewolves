@@ -20,6 +20,10 @@ import {
   FALLBACK_SUBSCRIPTION_PLANS,
   FALLBACK_LISTINGS,
   FALLBACK_BLOG_POSTS,
+  FALLBACK_PRODUCTS,
+  FALLBACK_SERVICES,
+  FALLBACK_AD_SLOTS,
+  FALLBACK_AD_APPLICATIONS,
 } from '@/config/fallbacks';
 
 export const dynamic = 'force-dynamic';
@@ -77,6 +81,9 @@ function fallbackForPath(path: string, searchParams: URLSearchParams): unknown |
       nav_items: FALLBACK_NAV_ITEMS,
       property_types: FALLBACK_PROPERTY_TYPES,
       feature_flags: FALLBACK_FEATURE_FLAGS,
+      products: FALLBACK_PRODUCTS,
+      services: FALLBACK_SERVICES,
+      ad_slots: FALLBACK_AD_SLOTS,
       google_oauth: {
         clientId: process.env.GOOGLE_CLIENT_ID || undefined,
         enabled: Boolean(process.env.GOOGLE_CLIENT_ID),
@@ -113,6 +120,32 @@ function fallbackForPath(path: string, searchParams: URLSearchParams): unknown |
       // allow slug fallback to first
       return null;
     }
+  }
+
+  // Marketplace: products & services (config-driven catalogue)
+  if (p === 'marketplace/products' || p === 'products') {
+    const active = [...FALLBACK_PRODUCTS].sort((a, b) => a.displayOrder - b.displayOrder);
+    return { products: active };
+  }
+  if (p.startsWith('marketplace/products/') || p.startsWith('products/')) {
+    const id = p.split('/').pop() ?? '';
+    return (FALLBACK_PRODUCTS as unknown[]).find((x) => (x as { id: string }).id === id) ?? null;
+  }
+  if (p === 'marketplace/services' || p === 'services') {
+    const active = [...FALLBACK_SERVICES].sort((a, b) => a.displayOrder - b.displayOrder);
+    return { services: active };
+  }
+  if (p.startsWith('marketplace/services/') || p.startsWith('services/')) {
+    const id = p.split('/').pop() ?? '';
+    return (FALLBACK_SERVICES as unknown[]).find((x) => (x as { id: string }).id === id) ?? null;
+  }
+
+  // Ad slots (config-driven banner) + ad applications
+  if (p === 'ads/slots') {
+    return { slots: [...FALLBACK_AD_SLOTS].sort((a, b) => a.displayOrder - b.displayOrder) };
+  }
+  if (p === 'ads/applications') {
+    return { applications: FALLBACK_AD_APPLICATIONS };
   }
 
   // Subscriptions plans
@@ -233,6 +266,20 @@ async function proxyOrFallback(req: NextRequest, params: { path?: string[] }) {
   if (method === 'GET') {
     const fb = fallbackForPath(path, req.nextUrl.searchParams);
     if (fb !== null) return NextResponse.json(fb, { status: 200 });
+  }
+
+  // No-backend mutations that are safe to acknowledge locally (config-driven
+  // demo mode): ad-space applications are accepted and queued for admin review.
+  if (method === 'POST' && path.toLowerCase() === 'ads/applications') {
+    const body = await req.json().catch(() => ({}));
+    const email = typeof (body as { email?: unknown }).email === 'string' ? ((body as { email: string }).email ?? '') : '';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ message: 'Enter a valid email address.' }, { status: 400 });
+    }
+    return NextResponse.json(
+      { ok: true, id: `ad-app-${Date.now().toString(36)}`, queued: true },
+      { status: 200 },
+    );
   }
 
   // No backend and no fallback -> 200 empty for unknown GETs to avoid browser 404 logs

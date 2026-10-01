@@ -19,6 +19,12 @@ import {
   otpCookieOptions,
   OTP_COOKIE,
   sendOtpEmail,
+  hashPassword,
+  verifyPassword,
+  isValidPassword,
+  encodeResetToken,
+  decodeResetToken,
+  sendResetEmail,
 } from '@/lib/server/auth-local';
 
 export const dynamic = 'force-dynamic';
@@ -153,6 +159,166 @@ async function applyReferral(sql: SqlClient, userId: string, code: string): Prom
 }
 
 // ─── Handlers ───────────────────────────────────────────────────────────────
+
+async function ensureAuthColumns(sql: SqlClient): Promise<void> {
+  try {
+    await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "passwordHash" TEXT`;
+  } catch {
+    // Table may not exist in fallback mode — callers handle gracefully.
+  }
+}
+
+async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
+  const body = await req.json().catch(() => ({}));
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  const password = typeof body.password === 'string' ? body.password : '';
+  const firstName = typeof body.firstName === 'string' ? body.firstName.trim() : '';
+  const lastName = typeof body.lastName === 'string' ? body.lastName.trim() : '';
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  const role = ['BUYER', 'AGENT', 'DEVELOPER', 'HOMEOWNER'].includes(body.role) ? body.role : 'BUYER';
+  const referralCode = typeof body.referralCode === 'string' ? body.referralCode : '';
+
+  if (!isValidEmail(email)) {
+    return NextResponse.json({ message: 'Enter a valid email address.' }, { status: 400 });
+  }
+  if (!isValidPassword(password)) {
+    return NextResponse.json({ message: 'Password must be at least 8 characters.' }, { status: 400 });
+  }
+  if (!firstName || !lastName) {
+    return NextResponse.json({ message: 'Enter your first and last name.' }, { status: 400 });
+  }
+
+  const origin = backendOrigin();
+  if (origin) return proxyToBackend(req, 'register-password');
+
+  const sql = await getSql();
+  if (!sql) return notConfigured();
+  await ensureAuthColumns(sql);
+
+  try {
+    const existing = await findUserByEmail(sql, email);
+    if (existing) {
+      return NextResponse.json({ message: 'This email already has an account. Try signing in instead.' }, { status: 409 });
+    }
+    const passwordHash = await hashPassword(password);
+    const newCode = await ensureReferralCode(sql);
+    const rows = await sql`
+      INSERT INTO "User" (id, email, "firstName", "lastName", phone, role, verified, "passwordHash", "referralCode", preferences, "createdAt", "updatedAt")
+      VALUES (${crypto.randomUUID()}, ${email}, ${firstName}, ${lastName}, ${phone || null}, ${role}::"UserRole", false, ${passwordHash}, ${newCode}, '{}'::jsonb, now(), now())
+      RETURNING *
+    `;
+    const user = rows[0] ?? null;
+    if (!user) return NextResponse.json({ message: 'Could not create your account. Please try again.' }, { status: 500 });
+    if (referralCode) {
+      try { await applyReferral(sql, user.id as string, referralCode); } catch { /* ignore */ }
+    }
+    // Send verification OTP (email verification flow)
+    const otp = generateOtp();
+    await sendOtpEmail(email, otp, firstName);
+    const res = NextResponse.json(issueTokens(user as never));
+    res.cookies.set(
+      OTP_COOKIE,
+      encodeOtpCookie({ email, otp, exp: Date.now() + 10 * 60 * 1000, purpose: 'register' }),
+      otpCookieOptions(),
+    );
+    return res;
+  } catch {
+    return NextResponse.json({ message: 'Could not create your account. Please try again.' }, { status: 500 });
+  }
+}
+
+async function handleLoginPassword(req: NextRequest): Promise<NextResponse> {
+  const body = await req.json().catch(() => ({}));
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  const password = typeof body.password === 'string' ? body.password : '';
+  if (!isValidEmail(email) || !password) {
+    return NextResponse.json({ message: 'Enter your email and password.' }, { status: 400 });
+  }
+
+  const origin = backendOrigin();
+  if (origin) return proxyToBackend(req, 'login-password');
+
+  const sql = await getSql();
+  if (!sql) return notConfigured();
+  await ensureAuthColumns(sql);
+
+  try {
+    const user = await findUserByEmail(sql, email);
+    if (!user) {
+      return NextResponse.json({ message: 'Email or password is incorrect.' }, { status: 401 });
+    }
+    const stored = user.passwordHash as string | null | undefined;
+    if (!stored) {
+      return NextResponse.json({ message: 'This account uses email-code sign-in. Continue with email code or set a password via Forgot password.' }, { status: 401 });
+    }
+    const ok = await verifyPassword(password, stored);
+    if (!ok) {
+      return NextResponse.json({ message: 'Email or password is incorrect.' }, { status: 401 });
+    }
+    return NextResponse.json(issueTokens(user as never));
+  } catch {
+    return NextResponse.json({ message: 'Could not sign you in. Please try again.' }, { status: 500 });
+  }
+}
+
+async function handleForgotPassword(req: NextRequest): Promise<NextResponse> {
+  const body = await req.json().catch(() => ({}));
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  if (!isValidEmail(email)) {
+    return NextResponse.json({ message: 'Enter a valid email address.' }, { status: 400 });
+  }
+
+  const origin = backendOrigin();
+  if (origin) return proxyToBackend(req, 'forgot-password');
+
+  const sql = await getSql();
+  if (!sql) return notConfigured();
+
+  const user = await findUserByEmail(sql, email).catch(() => null);
+  const token = encodeResetToken({ email, exp: Date.now() + 30 * 60 * 1000 });
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
+  if (user) {
+    await sendResetEmail(email, `${siteUrl.replace(/\/$/, '')}/auth?reset=${token}`);
+  }
+  // Always return success to avoid email enumeration; expose token outside production for e2e/dev.
+  return NextResponse.json(
+    process.env.NODE_ENV === 'production' ? { message: 'If that email has an account, a reset link is on its way.' } : { message: 'If that email has an account, a reset link is on its way.', resetToken: token },
+  );
+}
+
+async function handleResetPassword(req: NextRequest): Promise<NextResponse> {
+  const body = await req.json().catch(() => ({}));
+  const token = typeof body.token === 'string' ? body.token : '';
+  const password = typeof body.password === 'string' ? body.password : '';
+  if (!isValidPassword(password)) {
+    return NextResponse.json({ message: 'Password must be at least 8 characters.' }, { status: 400 });
+  }
+  const state = decodeResetToken(token);
+  if (!state) {
+    return NextResponse.json({ message: 'That reset link is invalid or expired. Request a new one.' }, { status: 400 });
+  }
+
+  const origin = backendOrigin();
+  if (origin) return proxyToBackend(req, 'reset-password');
+
+  const sql = await getSql();
+  if (!sql) return notConfigured();
+  await ensureAuthColumns(sql);
+
+  try {
+    const user = await findUserByEmail(sql, state.email);
+    if (!user) return NextResponse.json({ message: 'That reset link is invalid or expired. Request a new one.' }, { status: 400 });
+    const passwordHash = await hashPassword(password);
+    const rows = await sql`
+      UPDATE "User" SET "passwordHash" = ${passwordHash}, "updatedAt" = now()
+      WHERE id = ${user.id as string}
+      RETURNING *
+    `;
+    return NextResponse.json(issueTokens((rows[0] ?? user) as never));
+  } catch {
+    return NextResponse.json({ message: 'Could not reset your password. Please try again.' }, { status: 500 });
+  }
+}
 
 async function handleRegister(req: NextRequest): Promise<NextResponse> {
   const body = await req.json().catch(() => ({}));
@@ -498,6 +664,14 @@ export async function POST(req: NextRequest, ctx: { params: { action: string } }
   switch (action) {
     case 'register':
       return handleRegister(req);
+    case 'register-password':
+      return handleRegisterPassword(req);
+    case 'login-password':
+      return handleLoginPassword(req);
+    case 'forgot-password':
+      return handleForgotPassword(req);
+    case 'reset-password':
+      return handleResetPassword(req);
     case 'login':
       return handleLogin(req);
     case 'verify-otp':
