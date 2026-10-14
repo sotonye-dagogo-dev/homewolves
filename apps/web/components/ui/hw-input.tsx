@@ -28,7 +28,7 @@ const HwInput = forwardRef<HTMLInputElement, HwInputProps>(
           ref={ref}
           aria-invalid={error ? true : props['aria-invalid']}
           className={cn(formFieldClassName(config, glass), className)}
-          style={{ colorScheme: 'light', ...style }}
+          style={style}
           {...props}
         />
         {error ? <p role="alert" className={FORM_FIELD_ERROR_CLASS}>{error}</p> : null}

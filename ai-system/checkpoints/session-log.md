@@ -647,3 +647,28 @@ Deploy; verify live register-password; run `drizzle-kit` migration for `password
 
 **Notes / Blockers:**
 - `npx jest` shim in packages/api is broken (babel); use `npm test` (vitest) for api suites.
+
+## Session 20c — 2026-10-14 (fix-build: register-password 500 persists + white-on-white inputs)
+
+**Completed:**
+- Root-caused persistent `POST /api/v1/auth/register-password → 500` after migrations: `passwordHash` was in `schema.ts` but in NO migration SQL (0000–0003); `drizzle-kit migrate` therefore never created it and the runtime ALTER failure was swallowed. Added migration `0004_stale_starjammers.sql` + snapshot + journal entry.
+- Hardened `handleRegisterPassword`: `ensureAuthColumns` returns boolean + logs, INSERT retries once after re-ensuring columns, persistent column failure returns 503 `MISSING_PASSWORD_COLUMN` with actionable hint (not generic 500); new `isMissingColumnError()` helper.
+- Fixed white-on-white fields: new `FORM_FIELD_SURFACE_STYLE` in `form-field-config.ts` consumed by auth + advertise pages; `globals.css` baseline now enforces `background-color: var(--color-bg-input)`; removed forced `colorScheme: 'light'` from Hw* wrappers; products/services `bg-white` → `bg-[var(--color-bg-input)]`.
+- QA: web `tsc --noEmit` 0 errors, web UI vitest 21/21 (hw-input 7/7), api auth vitest 21/21. (`npx jest` in packages/api remains broken pre-existing — no TS transform; use `npm test`/vitest per prior session note.)
+
+**Files Modified:**
+- `packages/api/drizzle/migrations/0004_stale_starjammers.sql` (new), `meta/0004_snapshot.json` (new), `meta/_journal.json`
+- `apps/web/app/api/v1/auth/[action]/route.ts` — retry + 503 mapping + column-error helper
+- `apps/web/components/ui/form-field-config.ts` (+`FORM_FIELD_SURFACE_STYLE`), `hw-input.tsx`, `hw-select.tsx`, `hw-textarea.tsx`
+- `apps/web/app/globals.css`, `apps/web/app/(public)/{auth,advertise,products,services}/page.tsx`
+- `ai-system/{repair-system.md,checkpoints/session-log.md,summaries/dev-history.md,memory/lessons-learned.md,testing/test-results.md}`
+
+**Next Task:**
+Run `drizzle-kit migrate` (picks up 0004) on production DB, then verify live register-password; visual pass over dark-theme form surfaces.
+
+**Assumptions Made:**
+- Drizzle `migrate` consumes SQL + journal only (snapshot is for `generate`); hand-writing the 0004 snapshot to mirror `generate` output is safe and additive.
+- Element-selector `background-color` in the baseline loses to utility classes, so explicit field classes still win (non-breaking).
+
+**Notes / Blockers:**
+- None blocking.

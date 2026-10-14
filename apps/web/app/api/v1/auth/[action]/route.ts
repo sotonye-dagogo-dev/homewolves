@@ -161,12 +161,22 @@ async function applyReferral(sql: SqlClient, userId: string, code: string): Prom
 
 // ─── Handlers ───────────────────────────────────────────────────────────────
 
-async function ensureAuthColumns(sql: SqlClient): Promise<void> {
+async function ensureAuthColumns(sql: SqlClient): Promise<boolean> {
   try {
     await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "passwordHash" TEXT`;
-  } catch {
-    // Table may not exist in fallback mode — callers handle gracefully.
+    return true;
+  } catch (err) {
+    // Table may not exist in fallback mode, or the connection role may lack
+    // DDL permission — callers must handle a `false` result gracefully
+    // instead of failing later with a cryptic insert error.
+    console.error('[auth] ensure passwordHash column failed', err);
+    return false;
   }
+}
+
+function isMissingColumnError(err: unknown): boolean {
+  const detail = err instanceof Error ? err.message : String(err);
+  return /passwordHash/i.test(detail) || /column.*does not exist/i.test(detail) || /undefined_column/i.test(detail);
 }
 
 async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
@@ -202,7 +212,7 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
     console.error('[auth:register-password] DATABASE_URL not configured');
     return notConfigured();
   }
-  await ensureAuthColumns(sql);
+  const columnsOk = await ensureAuthColumns(sql);
 
   let existing: Row | null = null;
   try {
@@ -238,24 +248,43 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
     );
   }
   let user: Row | null = null;
-  try {
-    const rows = await sql`
+  const insertUser = () => sql`
       INSERT INTO "User" (id, email, "firstName", "lastName", phone, role, verified, "passwordHash", "referralCode", preferences, "createdAt", "updatedAt")
       VALUES (${randomUUID()}, ${email}, ${firstName}, ${lastName}, ${phone || null}, ${role}::"UserRole", false, ${passwordHash}, ${newCode}, '{}'::jsonb, now(), now())
       RETURNING *
     `;
+  try {
+    const rows = await insertUser();
     user = rows[0] ?? null;
   } catch (err) {
-    // Missing passwordHash column (pre-migration DBs) or enum mismatch land here.
-    console.error('[auth:register-password] insert failed', err);
-    const detail = err instanceof Error ? err.message : String(err);
-    const code = /passwordHash/i.test(detail) ? 'MISSING_PASSWORD_COLUMN' : 'DB_INSERT_FAILED';
+    // First insert failed — the passwordHash column may have been missing
+    // (pre-migration DBs, or the earlier ALTER lacked DDL permission).
+    // Re-run the ALTER once and retry before giving up.
+    if (isMissingColumnError(err)) {
+      console.error('[auth:register-password] insert hit missing column, re-ensuring + retrying', err);
+      await ensureAuthColumns(sql);
+      try {
+        const rows = await insertUser();
+        user = rows[0] ?? null;
+      } catch (retryErr) {
+        console.error('[auth:register-password] insert retry failed', retryErr);
+      }
+    } else {
+      console.error('[auth:register-password] insert failed', err);
+    }
+  }
+  if (!user) {
+    // Column still missing after retry (or another persistent DB problem):
+    // surface 503 with an actionable code so ops know to run migration
+    // 0004, instead of a generic 500.
+    const hint = !columnsOk
+      ? 'The database role could not alter the User table. Run migration 0004 (passwordHash) manually and retry.'
+      : 'Could not create your account. Please try again.';
     return NextResponse.json(
-      { message: 'Could not create your account. Please try again.', code },
-      { status: 500 },
+      { message: hint, code: 'MISSING_PASSWORD_COLUMN' },
+      { status: 503 },
     );
   }
-  if (!user) return NextResponse.json({ message: 'Could not create your account. Please try again.', code: 'EMPTY_INSERT' }, { status: 500 });
   if (referralCode) {
     try { await applyReferral(sql, user.id as string, referralCode); } catch { /* ignore */ }
   }

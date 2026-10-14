@@ -49,7 +49,7 @@ function ServicesContent() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mt-6 mb-4">
-        <label className="flex-1 flex items-center gap-2 rounded-full border border-[var(--color-border-default)] bg-white px-4 min-h-[48px]">
+        <label className="flex-1 flex items-center gap-2 rounded-full border border-[var(--color-border-default)] bg-[var(--color-bg-input)] px-4 min-h-[48px]">
           <Search className="w-4 h-4 text-muted-foreground shrink-0" />
           <input
             value={query}
@@ -64,7 +64,7 @@ function ServicesContent() {
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           aria-label="Filter by category"
-          className="rounded-full border border-[var(--color-border-default)] bg-white px-4 min-h-[48px] text-sm font-semibold min-w-0"
+          className="rounded-full border border-[var(--color-border-default)] bg-[var(--color-bg-input)] px-4 min-h-[48px] text-sm font-semibold min-w-0"
           style={{ color: 'var(--color-text-primary)' }}
         >
           <option value="">All categories</option>
