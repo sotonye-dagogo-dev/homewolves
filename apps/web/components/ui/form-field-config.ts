@@ -45,3 +45,14 @@ export const FORM_FIELD_ERROR_CLASS =
 
 export const FORM_FIELD_LABEL_CLASS =
   'block text-sm font-semibold mb-1.5 text-[var(--color-text-secondary)]';
+
+/**
+ * Shared inline surface style for raw (non-Hw*) inputs/selects.
+ * Pairs `color` with the theme-aware `--color-bg-input` token so text is
+ * never white-on-white: light theme → dark text on white, dark theme →
+ * light text on dark. Import this instead of hardcoding `#FFFFFF`.
+ */
+export const FORM_FIELD_SURFACE_STYLE = {
+  color: 'var(--color-text-primary)',
+  backgroundColor: 'var(--color-bg-input)',
+} as const;

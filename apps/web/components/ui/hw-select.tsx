@@ -33,7 +33,7 @@ const HwSelect = forwardRef<HTMLSelectElement, HwSelectProps>(
           ref={ref}
           aria-invalid={error ? true : props['aria-invalid']}
           className={cn(formFieldClassName(config), 'pr-10 cursor-pointer', className)}
-          style={{ colorScheme: 'light', ...style }}
+          style={style}
           {...props}
         >
           {children}

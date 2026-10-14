@@ -8,6 +8,7 @@ import { BrandLogo } from '@/components/shared/brand-logo';
 import { Upload, Eye, EyeOff, MailCheck } from 'lucide-react';
 import { loadGoogleScript, exchangeGoogleCredential } from '@/lib/google-auth';
 import { useGoogleOauth } from '@/hooks/use-platform-config';
+import { FORM_FIELD_SURFACE_STYLE } from '@/components/ui/form-field-config';
 
 type Mode = 'signin' | 'signup' | 'otp' | 'forgot' | 'reset' | 'profile' | 'agent-id' | 'verify-notice';
 
@@ -21,9 +22,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const inputCls =
   'w-full min-h-[52px] px-4 py-3 font-body text-base rounded-md shadow-xs transition-all duration-fast outline-none focus:ring-2 focus:ring-[rgba(45,106,159,0.35)] focus:border-[var(--color-brand-secondary)] border border-[var(--color-border-default)] placeholder:text-[var(--color-text-muted)]';
 const inputStyle = {
-  color: 'var(--color-text-primary)',
-  backgroundColor: '#FFFFFF',
-  colorScheme: 'light',
+  ...FORM_FIELD_SURFACE_STYLE,
+  colorScheme: 'light dark',
 } as React.CSSProperties;
 
 function ErrorAlert({ message }: { message: string }) {
@@ -543,7 +543,7 @@ function AuthPageInner() {
                     onPaste={i === 0 ? (e) => handleOtpPaste(e, otpValues) : undefined}
                     aria-label={`Code digit ${i + 1}`}
                     className={`w-11 h-14 sm:w-[52px] sm:h-[60px] text-center font-display text-xl sm:text-2xl font-bold rounded-md shadow-xs transition-all outline-none border-2 focus:border-[var(--color-brand-secondary)] ${val ? 'border-[var(--color-success)]' : 'border-[var(--color-border-default)]'}`}
-                    style={{ color: 'var(--color-text-primary)', backgroundColor: '#FFFFFF' }}
+                    style={{ color: 'var(--color-text-primary)', backgroundColor: 'var(--color-bg-input)' }}
                   />
                 ))}
               </div>
