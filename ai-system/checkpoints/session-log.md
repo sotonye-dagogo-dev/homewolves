@@ -599,3 +599,24 @@ E2E Playwright pass (`apps/web/e2e/`) + visual check of nav on mobile/desktop; r
 
 **Notes / Blockers:**
 - None blocking. Two pre-existing lint `no-empty` warnings untouched (sitemap.ts, messaging.ts).
+
+## Session 20 — 2026-10-14 (execute-feature: property-detail navbar clash + gallery sizing)
+
+**Completed:**
+- Navbar clash resolved: removed BOTH duplicate fixed `top-0` bars from `PropertyDetailClient` (desktop `fixed top-0 z-50` nav with back + BrandLogo + share/save, and mobile `fixed top-0` transparent-gradient bar with back + title + share) that stacked under the global `TopNav` (`fixed top-0 z-[100]` from `PublicLayout`) and produced the jumbled back-button / listing-name / share-icon / Homewolves-logo overlap.
+- Replaced with ONE in-flow sticky sub-header (`sticky top-14 lg:top-16 z-40`, glass bg + bottom border): back button + truncated listing title + share/save. No brand logo in the sub-header — the global nav already owns branding, so no duplicate logo/text can clash. Removed the now-unused `BrandLogo` import.
+- Desktop gallery constrained to ~80% viewport per directive (was full-bleed `w-full aspect 4/3`, overflowing large screens): section is now `mx-auto w-full lg:w-[80%] lg:max-w-[1080px]`, hero frame `aspect-[4/3] lg:aspect-[16/9] lg:max-h-[72vh] lg:rounded-2xl` with border/shadow; mobile stays full-bleed `4/3`. `sizes` updated to `80vw` on desktop. Thumbnail strip inherits the constrained width.
+- QA: `npm install`; `tsc --noEmit` clean (zero `PropertyDetailClient` errors); `eslint` on the edited file clean; web vitest 21 files / 153 tests pass; `next build` green.
+
+**Files Modified:**
+- `apps/web/components/listings/PropertyDetailClient.tsx` — removed duplicate fixed navs + BrandLogo import, added sticky sub-header below global nav, constrained desktop gallery to 80% viewport
+
+**Next Task:**
+Visual check of `/properties/[id]` on mobile + desktop against the live global nav; E2E Playwright pass (`apps/web/e2e/`) still queued from Session 19.
+
+**Assumptions Made:**
+- Dropping the transparent image-overlay mobile bar (Airbnb-style) is acceptable — readability and no-clash with the global nav take priority per the directive.
+- `lg:w-[80%]` + `max-w-[1080px]` + `max-h-[72vh]` satisfies the requested 75–85% viewport band on desktop.
+
+**Notes / Blockers:**
+- None blocking.

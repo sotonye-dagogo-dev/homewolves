@@ -10,7 +10,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { recordView } from '@/lib/interactions';
 import { ScheduleInspectionModal } from '@/components/shared/ScheduleInspectionModal';
-import { BrandLogo } from '@/components/shared/brand-logo';
 import { formatPrice } from '@/lib/format-price';
 import Link from 'next/link';
 
@@ -94,58 +93,44 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
     <div className="min-h-screen" style={{ background: 'var(--color-bg-base)' }}>
       <a href="#detail-main" className="skip-link">Skip to content</a>
 
-      {/* ─── Desktop Top Nav ─── */}
-      <nav
-        className="hidden lg:flex fixed top-0 left-0 right-0 z-50 h-16 items-center justify-between px-10"
+      {/* ─── Detail sub-header — sits BELOW the global TopNav (sticky at
+          top-14 / lg:top-16) so it never clashes with the main navbar.
+          Single bar for mobile + desktop: back action, truncated title,
+          share/save. No brand logo here — the global nav already owns it. ─── */}
+      <div
+        className="sticky top-14 lg:top-16 z-40 flex items-center justify-between gap-3 px-4 lg:px-10 py-2.5"
         style={{
           background: 'var(--color-bg-glass)',
           backdropFilter: 'var(--glass-blur)',
           borderBottom: '1px solid var(--color-border-glass)',
         }}
       >
-        <button onClick={() => router.push('/properties')} className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          <ArrowLeft className="w-4 h-4" /> Back to properties
+        <button onClick={() => router.back()} className="flex items-center gap-2 text-sm shrink-0 min-w-0" style={{ color: 'var(--color-text-secondary)' }} aria-label="Back to properties">
+          <ArrowLeft className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline font-medium">Back</span>
         </button>
-        <Link href="/" aria-label="Home" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-          <BrandLogo size="sm" />
-        </Link>
-        <div className="flex items-center gap-3">
-          <button onClick={() => handleShare(listing?.title ?? 'Property')} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ color: 'var(--color-text-secondary)' }} aria-label="Share"><Share2 className="w-5 h-5" /></button>
-          <button
-            onClick={handleToggleSave}
-            className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-            style={{ color: saved ? 'var(--color-error)' : 'var(--color-text-secondary)' }}
-            aria-label="Save"
-          >
-            <Heart className="w-5 h-5" fill={saved ? 'currentColor' : 'none'} />
-          </button>
-        </div>
-      </nav>
-
-      {/* ─── Mobile Top Bar ─── */}
-      <header
-        className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4"
-        style={{
-          height: '56px',
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%)',
-        }}
-      >
-        <button onClick={() => router.back()} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-glass-dark)', backdropFilter: 'var(--glass-blur)', color: 'var(--color-text-inverse)' }} aria-label="Back">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <span className="text-sm font-semibold truncate max-w-[200px]" style={{ color: 'var(--color-text-inverse)', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
+        <span className="text-sm font-semibold truncate flex-1 text-center min-w-0" style={{ color: 'var(--color-text-primary)' }}>
           {listing.title}
         </span>
-        <button onClick={() => handleShare(listing.title)} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-glass-dark)', backdropFilter: 'var(--glass-blur)', color: 'var(--color-text-inverse)' }} aria-label="Share">
-          <Share2 className="w-5 h-5" />
-        </button>
-      </header>
+        <div className="flex items-center gap-1 shrink-0">
+          <button onClick={() => handleShare(listing?.title ?? 'Property')} className="w-9 h-9 rounded-full flex items-center justify-center transition-colors" style={{ color: 'var(--color-text-secondary)' }} aria-label="Share this property"><Share2 className="w-4 h-4" /></button>
+          <button
+            onClick={handleToggleSave}
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+            style={{ color: saved ? 'var(--color-error)' : 'var(--color-text-secondary)' }}
+            aria-label={saved ? 'Remove from saved' : 'Save this property'}
+            aria-pressed={saved}
+          >
+            <Heart className="w-4 h-4" fill={saved ? 'currentColor' : 'none'} />
+          </button>
+        </div>
+      </div>
 
-      {/* ─── §4.3 Zone 1 — Image Gallery ─── */}
-      <section className="gallery" aria-label="Property images">
-        <div className="relative w-full" style={{ aspectRatio: '4/3', overflow: 'hidden' }}>
+      {/* ─── §4.3 Zone 1 — Image Gallery (desktop constrained to ~80% viewport) ─── */}
+      <section className="gallery mx-auto w-full lg:w-[80%] lg:max-w-[1080px] lg:pt-6 lg:px-0" aria-label="Property images">
+        <div className="relative w-full overflow-hidden aspect-[4/3] lg:aspect-[16/9] lg:rounded-2xl lg:border lg:shadow-sm lg:max-h-[72vh]" style={{ borderColor: 'var(--color-border-subtle)' }}>
           {currentImage?.url ? (
-            <Image src={currentImage.url} alt={listing.title} fill className="object-cover" sizes="(min-width: 1024px) 60vw, 100vw" priority />
+            <Image src={currentImage.url} alt={listing.title} fill className="object-cover" sizes="(min-width: 1024px) 80vw, 100vw" priority />
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--color-brand-primary)', color: 'white' }}>
               <Home className="w-12 h-12" />
