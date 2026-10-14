@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-19
+> - last-updated-by: execute-feature-session-20
 > - last-verified-against-code: 2026-10-14
 > - staleness-policy: this file is overwritten every session — always current
 
@@ -12,14 +12,14 @@
 
 ## Current Status
 
-**Status:** CLEAR — execute-feature Session 19 (design-system + nav/menu hardening) completed 2026-10-14.
+**Status:** CLEAR — execute-feature Session 20 (property-detail navbar clash + gallery sizing) completed 2026-10-14.
 
 Verified green:
-- `tsc --noEmit` clean (apps/web)
-- web vitest 21 files / 153 tests pass; api 17 files / 159 tests pass
-- `next lint` — only 2 pre-existing `no-empty` warnings
-- `next build` — 33 routes green including new `ƒ /dashboard/agent/listings/[id]/edit`
+- `tsc --noEmit` clean (apps/web, zero PropertyDetailClient errors)
+- web vitest 21 files / 153 tests pass
+- `eslint` on edited file clean
+- `next build` green
 
-Documentation written: Session 19 in `session-log.md` + `summaries/dev-history.md`, lesson in `memory/lessons-learned.md`, deep-sync metadata refresh (repo-map, task-queue last-synced, design-system verified date).
+Documentation written: Session 20 in `session-log.md` (Session 19 docs retained).
 
 No active in-progress tasks. Next: E2E Playwright pass + visual nav review on mobile/desktop.
