@@ -241,11 +241,10 @@ export const useAuth = create<AuthState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email }),
           });
+          const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.message ?? 'Login failed');
+            throw new Error(data.message ?? 'Login failed');
           }
-          const data = await res.json();
           return data;
         } catch (e: any) {
           set({ error: e.message, isLoading: false });
@@ -263,11 +262,10 @@ export const useAuth = create<AuthState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accessToken, ...opts }),
           });
+          const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.message ?? 'OAuth sign-in failed');
+            throw new Error(data.message ?? 'OAuth sign-in failed');
           }
-          const data = await res.json();
           set({
             accessToken: data.accessToken,
             user: data.user,
@@ -288,11 +286,10 @@ export const useAuth = create<AuthState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ credential, ...opts }),
           });
+          const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.message ?? 'Google sign-in failed');
+            throw new Error(data.message ?? 'Google sign-in failed');
           }
-          const data = await res.json();
           set({ accessToken: data.accessToken, user: data.user });
         } catch (e: any) {
           set({ error: e.message, isLoading: false });

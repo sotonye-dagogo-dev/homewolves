@@ -23,6 +23,7 @@ import {
 import { useEntityAudit } from '@/hooks/use-audit';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { HwButton, HwBadge, HwInput } from '@/components/ui';
+import { PartyPopper, Paperclip } from 'lucide-react';
 
 function getTxApi() { return `${getApiBase()}/transactions`; }
 
@@ -467,8 +468,8 @@ export default function TransactionDetailPage() {
             {/* Completion (step 7+) */}
             {activeStep >= 7 && (
               <div className="completion-celebration" style={{ textAlign: 'center', padding: 'var(--space-10) var(--space-4)' }}>
-                <div className="celebration-icon" style={{ width: 80, height: 80, borderRadius: 'var(--radius-full)', background: 'var(--color-success-bg)', color: 'var(--color-success)', display: 'grid', placeItems: 'center', margin: '0 auto var(--space-4)', fontSize: 36, animation: 'celebrate-pulse 1.5s ease-spring infinite alternate' }}>
-                  🎉
+                <div className="celebration-icon" style={{ width: 80, height: 80, borderRadius: 'var(--radius-full)', background: 'var(--color-success-bg)', color: 'var(--color-success)', display: 'grid', placeItems: 'center', margin: '0 auto var(--space-4)' }}>
+                  <PartyPopper className="w-9 h-9" />
                 </div>
                 <h2 className="text-2xl font-bold font-display" style={{ color: 'var(--color-brand-primary)' }}>Transaction Complete</h2>
                 <p className="text-sm mt-2 mb-6" style={{ color: 'var(--color-text-secondary)' }}>All steps have been completed successfully.</p>
@@ -480,7 +481,7 @@ export default function TransactionDetailPage() {
                   ))}
                 </div>
                 <div style={{ marginTop: 'var(--space-6)' }}>
-                  <HwButton variant="primary">View Completion Summary</HwButton>
+                  <HwButton variant="primary" onClick={() => window.print()}>View Completion Summary</HwButton>
                 </div>
               </div>
             )}
@@ -499,18 +500,18 @@ export default function TransactionDetailPage() {
           </div>
 
           {/* Payments List */}
-          {tx.payments && tx.payments.length > 0 && activeStep !== 5 && (
+          {(tx.payments ?? []).length > 0 && activeStep !== 5 && (
             <div className="mt-6">
               <h3 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-muted)' }}>Payments</h3>
               <div className="space-y-2">
-                {tx.payments.map((p: any) => (
+                {(tx.payments ?? []).map((p: any) => (
                   <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur)', borderColor: 'var(--color-border-glass)' }}>
                     <div>
                       <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{p.type}</div>
                       <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{p.currency} {Number(p.amount).toLocaleString()}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {p.evidenceUrl && <a href={p.evidenceUrl} target="_blank" rel="noreferrer" className="text-xs text-amber-600 hover:underline">📎</a>}
+                      {p.evidenceUrl && <a href={p.evidenceUrl} target="_blank" rel="noreferrer" className="text-amber-600 hover:underline" aria-label="Evidence"><Paperclip className="w-4 h-4" /></a>}
                       <HwBadge className={p.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}>{p.status}</HwBadge>
                     </div>
                   </div>

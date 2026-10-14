@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MessageCircle, User, Plus } from 'lucide-react';
+import { Home, MessageCircle, User, Plus, LayoutDashboard } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
-const tabs = [
+const GUEST_TABS = [
   {
     label: 'Explore',
     icon: Home,
@@ -24,6 +25,18 @@ const tabs = [
 
 export function MobileBar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const role = user?.role;
+  const isStaff = role === 'AGENT' || role === 'DEVELOPER' || role === 'HOMEOWNER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const exploreTab = GUEST_TABS[0]!;
+  const chatTab = GUEST_TABS[1]!;
+  const tabs = isStaff
+    ? [
+        exploreTab,
+        chatTab,
+        { label: 'Dashboard', icon: LayoutDashboard, aria: 'Dashboard', href: '/dashboard', match: '/dashboard' },
+      ]
+    : GUEST_TABS;
 
   return (
     <nav

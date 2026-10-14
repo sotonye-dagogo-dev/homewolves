@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: fix-build
-> - last-verified-against-code: 2026-09-23
+> - last-updated-by: execute-feature-session-19
+> - last-verified-against-code: 2026-10-14
 > - staleness-policy: historical entries do not go stale
 
 > **Overview:** Chronological log of completed development work. Each sprint ends with a summary entry. Agents add entries after completing tasks. Useful for understanding what has been built, when decisions were made, and what patterns have emerged.
@@ -358,3 +358,25 @@ Vercel failed compiling Session 17's local auth route: webpack could not resolve
 **Next Sprint Focus:**
 Push and redeploy on Vercel; confirm CI build passes.
 
+
+---
+
+## 2026-10-14 — execute-feature: Design-System + Nav/Menu Tightening (Session 19)
+
+**Summary:**
+Single-session hardening pass over branding, navigation, auth, CRUD, routing, error handling, and responsiveness. Stale hardcoded brand text replaced with config-driven `BrandLogo`/`useBrand`/`FALLBACK_BRAND` everywhere; dead buttons/links wired; null-safety guards added; QA fully green (web 153, api 159, typecheck clean, build 33 routes).
+
+**Completed:**
+- BrandLogo everywhere (top-nav, dashboard, admin, properties, detail, footer, metadata) with image-only + derived-initials fallback
+- TopNav layout/overlap fix, auth avatar, role-aware MobileBar
+- Auth JSON-safe errors, PKCE code exchange, redirect preservation
+- New listing edit page closing the `/edit` 404; safe price formatting lib
+- Toast/batch-bar/sticky-bar/notification responsive offsets; icon-library compliance
+
+**Key Changes:**
+- New modules: `apps/web/lib/format-price.ts`, `apps/web/app/(dashboard)/dashboard/agent/listings/[id]/edit/page.tsx`
+- `useListings(params, { enabled })` signature extended (non-breaking optional param)
+- `BrandLogo` gains optional `textClassName` prop (non-breaking)
+
+**Next Sprint Focus:**
+E2E + visual review; remaining minor debt ( Supabase `actions.ts` dead path, properties replace-loop hardening).

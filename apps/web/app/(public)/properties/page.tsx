@@ -16,6 +16,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Search, LayoutGrid, List, Map, Heart, Share2, X, ChevronDown, Check } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { BrandLogo } from '@/components/shared/brand-logo';
+import { priceToNumber, formatPrice } from '@/lib/format-price';
 
 type ViewMode = 'grid' | 'list' | 'map';
 type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'most_viewed';
@@ -154,9 +156,9 @@ function PropertiesContent() {
 
   const sortedListings = [...listings];
   if (sort === 'price_asc')
-    sortedListings.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+    sortedListings.sort((a, b) => priceToNumber(a.price) - priceToNumber(b.price));
   if (sort === 'price_desc')
-    sortedListings.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+    sortedListings.sort((a, b) => priceToNumber(b.price) - priceToNumber(a.price));
   if (sort === 'most_viewed')
     sortedListings.sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0));
 
@@ -176,9 +178,9 @@ function PropertiesContent() {
         Skip to content
       </a>
 
-      {/* Mobile top bar */}
+      {/* Mobile top bar — sits below the global TopNav (h-14) to avoid overlap */}
       <header
-        className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4"
+        className="md:hidden fixed top-14 left-0 right-0 z-50 flex items-center justify-between px-4"
         style={{
           height: '56px',
           background: 'var(--color-bg-glass)',
@@ -188,14 +190,10 @@ function PropertiesContent() {
       >
         <Link
           href="/"
-          className="font-bold"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'var(--text-lg)',
-            color: 'var(--color-brand-primary)',
-          }}
+          aria-label="Home"
+          className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          Homewolves
+          <BrandLogo size="sm" showName={false} />
         </Link>
         <div className="flex items-center gap-2">
           <button
@@ -217,11 +215,11 @@ function PropertiesContent() {
           </Link>
         </div>
       </header>
-      <div className="md:hidden h-[56px]" aria-hidden />
+      <div className="md:hidden h-[112px]" aria-hidden />
 
       {/* Filter section */}
       <section
-        className="sticky z-40 top-[56px] md:top-0"
+        className="sticky z-40 top-[112px] md:top-0"
         style={{
           background: 'var(--color-bg-base)',
           borderBottom: '1px solid var(--color-border-subtle)',
@@ -582,7 +580,7 @@ function PropertyCard({ listing, onClick }: { listing: any; onClick: () => void 
               color: 'var(--color-text-accent)',
             }}
           >
-            {listing.currency} {parseFloat(listing.price).toLocaleString()}
+            {formatPrice(listing.price, listing.currency ?? 'NGN')}
             <span
               style={{
                 fontFamily: 'var(--font-body)',
@@ -710,7 +708,7 @@ function PropertyCardHorizontal({ listing, onClick }: { listing: any; onClick: (
               color: 'var(--color-text-accent)',
             }}
           >
-            {listing.currency} {parseFloat(listing.price).toLocaleString()}
+            {formatPrice(listing.price, listing.currency ?? 'NGN')}
           </div>
         </div>
       </div>

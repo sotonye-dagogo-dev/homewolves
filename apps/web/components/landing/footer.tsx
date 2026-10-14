@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { Instagram, Twitter, Linkedin, Youtube } from 'lucide-react';
 import { BrandLogo } from '@/components/shared/brand-logo';
+import { useBrand } from '@/hooks/use-platform-config';
+import { FALLBACK_BRAND } from '@/config/fallbacks';
 
 const footerNav = [
   {
@@ -40,6 +42,8 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const { data: brand } = useBrand();
+  const companyName = brand?.companyName || FALLBACK_BRAND.companyName;
   return (
     <footer
       className="w-full py-16 lg:py-20 px-4 lg:px-10 bg-[var(--color-bg-elevated)] border-t border-border"
@@ -100,7 +104,7 @@ export function Footer() {
 
         <div className="flex flex-col lg:flex-row items-center justify-between pt-8 border-t border-[var(--color-border-subtle)] gap-6">
           <div className="text-xs text-muted-foreground order-2 lg:order-1">
-            &copy; {new Date().getFullYear()} Homewolves Inc. All rights reserved.
+            &copy; {new Date().getFullYear()} {companyName} Inc. All rights reserved.
           </div>
 
           <div className="flex items-center gap-6 bg-[var(--color-bg-glass)] backdrop-blur-[var(--glass-blur-subtle)] border border-[var(--color-border-glass)] rounded-lg px-6 py-4 shadow-glass order-1 lg:order-2">

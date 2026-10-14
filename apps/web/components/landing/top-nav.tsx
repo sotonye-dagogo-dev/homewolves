@@ -7,12 +7,22 @@ import { Bell, Menu, X } from 'lucide-react';
 import { HwButton } from '@/components/ui';
 import { BrandLogo } from '@/components/shared/brand-logo';
 import { useRequireAuth } from '@/hooks/use-require-auth';
+import { useAuth } from '@/hooks/use-auth';
+import { useBrand } from '@/hooks/use-platform-config';
+import { FALLBACK_BRAND } from '@/config/fallbacks';
 
 export function TopNav() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const { requireAuth } = useRequireAuth('/dashboard/agent/listings/new');
+  const { user } = useAuth();
+  const { data: brand } = useBrand();
+  const companyName = brand?.companyName || FALLBACK_BRAND.companyName;
+  const onTransparentHero = !scrolled && !mobileOpen;
+  const avatarInitials = user?.firstName || user?.lastName
+    ? `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`.toUpperCase()
+    : null;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 100);
@@ -24,7 +34,7 @@ export function TopNav() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-1/2 -translate-x-1/2 z-[100] w-full max-w-[var(--bp-3xl,1920px)] h-14 lg:h-16 flex items-center justify-between px-4 lg:px-10 transition-[background] duration-normal ease-default ${
+        className={`fixed top-0 left-0 right-0 z-[100] h-14 lg:h-16 transition-[background] duration-normal ease-default ${
           scrolled || mobileOpen
             ? 'bg-[var(--color-bg-glass)] backdrop-blur-[var(--glass-blur)] border-b border-[var(--color-border-glass)]'
             : 'bg-transparent'
@@ -32,6 +42,7 @@ export function TopNav() {
         role="navigation"
         aria-label="Main navigation"
       >
+        <div className="mx-auto w-full max-w-[var(--bp-3xl,1920px)] h-full flex items-center justify-between px-4 lg:px-10">
         <div className="flex items-center gap-2 lg:gap-6 min-w-0">
           <button
             type="button"
@@ -46,12 +57,10 @@ export function TopNav() {
           </button>
           <Link
             href="/"
-            aria-label="Homewolves home"
+            aria-label={`${companyName} home`}
             className="flex items-center min-w-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
-            <span className={scrolled || mobileOpen ? '[&>span>span:last-child]:!text-[var(--color-brand-primary)]' : '[&>span>span:last-child]:!text-white'}>
-              <BrandLogo size="sm" />
-            </span>
+            <BrandLogo size="sm" textClassName={onTransparentHero ? '!text-white' : undefined} />
           </Link>
 
         </div>
@@ -105,11 +114,17 @@ export function TopNav() {
 
           <Link
             href="/dashboard/client"
-            className="w-9 h-9 rounded-full bg-accent grid place-items-center text-inverse text-xs font-semibold border-2 border-transparent hover:border-accent transition-colors duration-fast shrink-0"
+            className="w-9 h-9 rounded-full bg-accent grid place-items-center text-inverse text-xs font-semibold border-2 border-transparent hover:border-accent transition-colors duration-fast shrink-0 overflow-hidden"
             aria-label="Profile"
           >
-            HW
+            {user?.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+            ) : (
+              <span aria-hidden="true">{avatarInitials ?? companyName.slice(0, 2).toUpperCase()}</span>
+            )}
           </Link>
+        </div>
         </div>
       </nav>
 
@@ -117,7 +132,7 @@ export function TopNav() {
       {mobileOpen && (
         <div className="fixed inset-0 z-[99] lg:hidden" role="dialog" aria-modal="true" aria-label="Mobile navigation">
           <button aria-label="Close menu backdrop" className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <div className="absolute top-14 left-0 right-0 bg-[var(--color-bg-elevated)] border-b border-[var(--color-border-default)] shadow-xl p-4 flex flex-col gap-3 max-h-[calc(100dvh-56px)] overflow-y-auto">
+          <div className="absolute top-14 lg:top-16 left-0 right-0 bg-[var(--color-bg-elevated)] border-b border-[var(--color-border-default)] shadow-xl p-4 flex flex-col gap-3 max-h-[calc(100dvh-3.5rem-5.5rem)] overflow-y-auto">
             <div className="grid grid-cols-2 gap-2">
               <Link href="/properties" onClick={() => setMobileOpen(false)} className="rounded-xl px-4 py-3 text-sm font-semibold bg-[var(--color-bg-glass)] border border-[var(--color-border-subtle)] text-center">
                 Properties

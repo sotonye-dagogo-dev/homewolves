@@ -1,8 +1,8 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: update-ai-system
-> - last-verified-against-code: 2026-08-13
+> - last-updated-by: execute-feature-session-19
+> - last-verified-against-code: 2026-10-14
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Practical knowledge accumulated during Homewolves development — things that worked well, things that didn't, and patterns worth repeating. Different from `repair-system.md` (tracks errors); this file tracks development process insights and architectural wisdom. Uses supersedes/superseded-by links for evolving practices.
@@ -258,6 +258,22 @@ Turbo cache hits can mask fresh type errors. The api `build` (`nest build`) is t
 **Apply When:**
 - After editing specs — run `packages/api && npm run build` (or `npm run typecheck` directly) rather than trusting the turbo root summary.
 - Keep spec files in the same `noUnusedLocals`/strict posture as source files.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Config-Driven Brand Text Prevents Nav Staleness
+
+**Context:**
+Session 19 found `Homewolves`/`HW`/`H` hardcoded in 8+ nav surfaces (top-nav, dashboard, admin, properties, detail, footer, metadata) drifting from `FALLBACK_BRAND.companyName`.
+
+**What We Learned:**
+Every user-visible brand string must resolve via `useBrand()`/`FALLBACK_BRAND`/`BrandLogo` — including `aria-label`s, avatars, copyright, and metadata. A deep-selector CSS hack (`[&>span>span:last-child]`) to recolor brand text is a smell that the component needs an explicit prop (`textClassName`).
+
+**Apply When:**
+Adding any header/nav/footer/SEO surface. Never hardcode the company name or initials.
 
 **Supersedes:** None
 **Superseded by:** None
