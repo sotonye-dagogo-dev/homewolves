@@ -4,15 +4,24 @@ import userEvent from '@testing-library/user-event';
 import { HwInput } from './hw-input';
 
 describe('HwInput', () => {
-  it('renders an input with the glass styling by default', () => {
+  it('renders a high-contrast solid field by default', () => {
     render(<HwInput placeholder="Search" />);
     const input = screen.getByPlaceholderText('Search');
-    expect(input).toHaveClass('rounded-full', 'border-glass');
+    // Opaque token bg + primary text guarantee legibility (form audit).
+    expect(input.className).toContain('bg-[var(--color-bg-input)]');
+    expect(input.className).toContain('text-[var(--color-text-primary)]');
   });
 
-  it('renders a plain input when glass is disabled', () => {
+  it('renders a pill glass field when glass is set', () => {
+    render(<HwInput placeholder="Search" glass />);
+    const input = screen.getByPlaceholderText('Search');
+    expect(input).toHaveClass('rounded-full');
+  });
+
+  it('renders a rounded form field when glass is disabled', () => {
     render(<HwInput placeholder="Name" glass={false} />);
     const input = screen.getByPlaceholderText('Name');
+    expect(input).toHaveClass('rounded-md');
     expect(input).not.toHaveClass('rounded-full');
   });
 
@@ -32,5 +41,11 @@ describe('HwInput', () => {
   it('is disabled when the disabled prop is set', () => {
     render(<HwInput placeholder="Name" disabled />);
     expect(screen.getByPlaceholderText('Name')).toBeDisabled();
+  });
+
+  it('renders an error message with alert role', () => {
+    render(<HwInput placeholder="Name" error="Required" />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Required');
+    expect(screen.getByPlaceholderText('Name')).toHaveAttribute('aria-invalid', 'true');
   });
 });

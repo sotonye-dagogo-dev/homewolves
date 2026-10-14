@@ -63,3 +63,43 @@ export const googleLoginSchema = z
   })
   .strict();
 export type GoogleLoginDto = z.infer<typeof googleLoginSchema>;
+
+// ─── Password auth (parity with web local-auth fallback) ─────────────
+// Additive, non-breaking: new routes only; existing OTP/OAuth flows untouched.
+const passwordField = z.string().min(8).max(128);
+
+export const registerPasswordSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email().max(255),
+    password: passwordField,
+    firstName: z.string().trim().min(1).max(100),
+    lastName: z.string().trim().min(1).max(100),
+    phone: z.string().trim().max(20).optional(),
+    role: z.enum(['BUYER', 'AGENT', 'DEVELOPER', 'HOMEOWNER']).optional(),
+    referralCode: z.string().trim().max(20).optional(),
+  })
+  .strict();
+export type RegisterPasswordDto = z.infer<typeof registerPasswordSchema>;
+
+export const loginPasswordSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email().max(255),
+    password: z.string().min(1).max(128),
+  })
+  .strict();
+export type LoginPasswordDto = z.infer<typeof loginPasswordSchema>;
+
+export const forgotPasswordSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email().max(255),
+  })
+  .strict();
+export type ForgotPasswordDto = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().trim().min(1),
+    password: passwordField,
+  })
+  .strict();
+export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;

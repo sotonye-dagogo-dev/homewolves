@@ -7,8 +7,9 @@ import { AuditService } from '../audit/audit.service';
 import { ActivityService } from '../activity/activity.service';
 import { ReferralsService } from '../referrals/referrals.service';
 import { EmailService } from '../email/email.service';
-import { RegisterDto, VerifyOtpDto, LoginDto, CompleteProfileDto } from './dto/register.dto';
+import { RegisterDto, VerifyOtpDto, LoginDto, CompleteProfileDto, RegisterPasswordDto, LoginPasswordDto } from './dto/register.dto';
 import * as crypto from 'crypto';
+import { scrypt as _scrypt, randomBytes as _randomBytes, timingSafeEqual } from 'node:crypto';
 
 export type UserRow = typeof users.$inferSelect;
 
@@ -212,6 +213,125 @@ export class AuthService {
     for (const [token, data] of this.refreshStore.entries()) {
       if (data.userId === userId) this.refreshStore.delete(token);
     }
+  }
+
+  // ─── Password auth (scrypt, no extra deps — mirrors web auth-local) ──
+  private scryptAsync(password: string, salt: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      _scrypt(password, salt, 64, (err, derived) => {
+        if (err) reject(err);
+        else resolve(derived as Buffer);
+      });
+    });
+  }
+
+  private async hashPassword(password: string): Promise<string> {
+    const salt = _randomBytes(16).toString('hex');
+    const derived = await this.scryptAsync(password, salt);
+    return `scrypt:${salt}:${derived.toString('hex')}`;
+  }
+
+  private async verifyPassword(password: string, stored: string): Promise<boolean> {
+    try {
+      const [scheme, salt, hash] = stored.split(':');
+      if (scheme !== 'scrypt' || !salt || !hash) return false;
+      const derived = await this.scryptAsync(password, salt);
+      const a = Buffer.from(derived.toString('hex'));
+      const b = Buffer.from(hash);
+      if (a.length !== b.length) return false;
+      return timingSafeEqual(a, b);
+    } catch {
+      return false;
+    }
+  }
+
+  async registerWithPassword(dto: RegisterPasswordDto) {
+    const email = dto.email.trim().toLowerCase();
+    const [existing] = await this.db.select().from(users).where(eq(users.email, email));
+    if (existing) throw new ConflictException('This email already has an account. Try signing in instead.');
+
+    const passwordHash = await this.hashPassword(dto.password);
+    const role = (dto.role ?? UserRole.BUYER) as (typeof users.$inferInsert)['role'];
+    const referralCode = await this.referralsService.ensureCodeForNewUser();
+    const [created] = await this.db
+      .insert(users)
+      .values({
+        email,
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        phone: dto.phone?.trim() || undefined,
+        role,
+        passwordHash,
+        referralCode,
+      })
+      .returning();
+    if (!created) throw new BadRequestException('Could not create your account. Please try again.');
+
+    if (dto.referralCode) {
+      try {
+        await this.applyReferralOnSignup(created, dto.referralCode);
+      } catch {
+        // Invalid referral must not block registration.
+      }
+    }
+
+    const otp = this.generateOtp();
+    this.otpStore.set(email, { code: otp, expiresAt: Date.now() + 10 * 60 * 1000 });
+    void this.emailService.send(email, 'otp_code', {
+      firstName: created.firstName ?? 'there',
+      otp,
+      expiresInMinutes: 10,
+    });
+
+    await this.audit.log({
+      entityType: 'User',
+      entityId: created.id,
+      action: 'PASSWORD_REGISTERED',
+      actor: { id: created.id, role: created.role, name: `${created.firstName} ${created.lastName}` },
+    });
+
+    return this.generateTokens(created);
+  }
+
+  async loginWithPassword(dto: LoginPasswordDto) {
+    const email = dto.email.trim().toLowerCase();
+    const [user] = await this.db.select().from(users).where(eq(users.email, email));
+    if (!user) throw new UnauthorizedException('Email or password is incorrect.');
+    if (!user.passwordHash) {
+      throw new UnauthorizedException(
+        'This account uses email-code sign-in. Continue with email code or set a password via Forgot password.',
+      );
+    }
+    const ok = await this.verifyPassword(dto.password, user.passwordHash);
+    if (!ok) throw new UnauthorizedException('Email or password is incorrect.');
+    return this.generateTokens(user);
+  }
+
+  async forgotPassword(email: string) {
+    const normalized = email.trim().toLowerCase();
+    const [user] = await this.db.select().from(users).where(eq(users.email, normalized));
+    if (user) {
+      void this.emailService.send(normalized, 'password_reset', {
+        firstName: user.firstName ?? 'there',
+        siteUrl: process.env.WEB_URL ?? 'https://homewolves.africa',
+      });
+    }
+    // Always succeed to avoid email enumeration.
+    return { message: 'If that email has an account, a reset link is on its way.' };
+  }
+
+  async resetPasswordWithToken(token: string, password: string) {
+    // Stateless reset tokens are issued by the web local-auth layer; the Nest
+    // API accepts a refresh-style fallback: validate via JWT when possible.
+    // Minimal safe behaviour: require the caller to have verified email via OTP
+    // is out of scope — instead treat `token` as opaque and reject with a
+    // friendly message directing clients to the web /api route when the API
+    // was not the issuer. Non-breaking: endpoint exists so proxies stop 404ing.
+    void token;
+    void password;
+    throw new BadRequestException(
+      'Password reset via the API service is not enabled. Use the web reset flow and try again.',
+    );
   }
 
   /**

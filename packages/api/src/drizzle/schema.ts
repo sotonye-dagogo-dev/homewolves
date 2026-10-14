@@ -149,6 +149,10 @@ export const users = pgTable('User', {
   referredById: text('referredById'),
   provider: text('provider'),
   providerId: text('providerId'),
+  // Password auth (scrypt:<salt>:<hash>). Nullable: OTP/OAuth accounts have none.
+  // Added for /auth/register-password + login-password parity with the web
+  // local-auth fallback (which ALTERs this column at runtime on legacy DBs).
+  passwordHash: text('passwordHash'),
   createdAt: createdAt('createdAt'),
   updatedAt: updatedAt('updatedAt'),
 }, (t) => [

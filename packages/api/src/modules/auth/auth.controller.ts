@@ -12,6 +12,10 @@ import {
   RefreshTokenDto,
   SupabaseLoginDto,
   GoogleLoginDto,
+  RegisterPasswordDto,
+  LoginPasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
   registerSchema,
   verifyOtpSchema,
   loginSchema,
@@ -19,6 +23,10 @@ import {
   refreshTokenSchema,
   supabaseLoginSchema,
   googleLoginSchema,
+  registerPasswordSchema,
+  loginPasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from './dto/register.dto';
 
 @Controller('auth')
@@ -29,6 +37,32 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE)
   register(@Body(new ZodValidationPipe(registerSchema)) dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  // Password auth — parity with the web local-auth fallback so the
+  // same-origin proxy never 404s when a backend origin IS configured.
+  @Post('register-password')
+  @Throttle(AUTH_THROTTLE)
+  registerPassword(@Body(new ZodValidationPipe(registerPasswordSchema)) dto: RegisterPasswordDto) {
+    return this.authService.registerWithPassword(dto);
+  }
+
+  @Post('login-password')
+  @Throttle(AUTH_THROTTLE)
+  loginPassword(@Body(new ZodValidationPipe(loginPasswordSchema)) dto: LoginPasswordDto) {
+    return this.authService.loginWithPassword(dto);
+  }
+
+  @Post('forgot-password')
+  @Throttle(AUTH_THROTTLE)
+  forgotPassword(@Body(new ZodValidationPipe(forgotPasswordSchema)) dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @Post('reset-password')
+  @Throttle(AUTH_THROTTLE)
+  resetPassword(@Body(new ZodValidationPipe(resetPasswordSchema)) dto: ResetPasswordDto) {
+    return this.authService.resetPasswordWithToken(dto.token, dto.password);
   }
 
   @Post('verify-otp')
