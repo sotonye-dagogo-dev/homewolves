@@ -311,3 +311,37 @@ Define every referenced token in `globals.css` for all three themes (light/dark/
 
 **Supersedes:** None
 **Superseded by:** None
+
+---
+
+## Schema Without Migration Is a Silent No-Op — Grep the SQL Before Merging
+
+**Context:**
+Session 20c: production `register-password → 500` survived "migrations applied" because `passwordHash` lived only in `schema.ts` — no `drizzle/migrations/*.sql` referenced it. The web fallback's runtime ALTER masked the gap in dev and failed silently in prod (DDL permissions), so the INSERT kept 500ing.
+
+**What We Learned:**
+`drizzle-kit migrate` only runs SQL files; a schema.ts edit without generated SQL changes nothing in the DB. Always `grep <column|table> drizzle/migrations/*.sql` in the same PR, and treat runtime DDL as a best-effort fallback (log + return actionable 503, never swallow).
+
+**Apply When:**
+- Any `schema.ts` edit — run `drizzle-kit generate`, commit SQL + snapshot + journal together.
+- Any runtime `ALTER … IF NOT EXISTS` — return its success boolean and log failures.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Theme-Token Text Needs Theme-Token Backgrounds
+
+**Context:**
+Session 20c: `color: var(--color-text-primary)` (near-white in dark theme) on hardcoded `#FFFFFF`/`bg-white` produced invisible white-on-white inputs/selects, while options stayed legible via the opaque baseline. Forced `colorScheme: 'light'` in Hw* wrappers compounded it.
+
+**What We Learned:**
+Pair tokens: theme-aware foreground ⇒ theme-aware background (`FORM_FIELD_SURFACE_STYLE` / `bg-[var(--color-bg-input)]`). Enforce the background in the global baseline (element selector keeps it overridable), and let `[data-theme]` CSS own `color-scheme` instead of inline overrides.
+
+**Apply When:**
+- Styling any form surface — no `#FFFFFF`/`bg-white` on fields; use the shared surface style.
+- Building wrappers — never force `colorScheme`; pass caller `style` through untouched.
+
+**Supersedes:** None
+**Superseded by:** None

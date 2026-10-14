@@ -403,3 +403,21 @@ Resolved the production `POST /api/v1/auth/register-password → 500` and audite
 
 **Next Sprint Focus:**
 Deploy and verify live register-password; run `drizzle-kit` migration to materialize `passwordHash` on existing DBs; visual pass over dark-theme form surfaces.
+
+## 2026-10-14 — fix-build: register-password 500 After Migrations + White-on-White Inputs (Session 20c)
+
+**Summary:**
+Follow-up to Session 20b: the register-password 500 persisted because `passwordHash` never had migration SQL, and form fields regressed to white-on-white where hardcoded white surfaces met theme-aware text. Both fixed with additive, config-driven changes.
+
+**Completed:**
+- Migration `0004_stale_starjammers.sql` + snapshot + journal for `User.passwordHash` (the actual missing piece behind "migrations applied but still 500")
+- Register handler: boolean `ensureAuthColumns` with logging, single insert retry, 503 `MISSING_PASSWORD_COLUMN` with ops hint, `isMissingColumnError()` helper
+- `FORM_FIELD_SURFACE_STYLE` shared constant; auth/advertise pages off hardcoded `#FFFFFF`; products/services off `bg-white`; baseline enforces token background; Hw* wrappers stop forcing light `colorScheme`
+- QA: web tsc 0 errors, web UI 21/21, api auth 21/21 (vitest)
+
+**Key Changes:**
+- New: `packages/api/drizzle/migrations/0004_stale_starjammers.sql`, `meta/0004_snapshot.json`
+- Rule: schema.ts change must ship with migration SQL in the same PR (`grep <column> drizzle/migrations/*.sql`); form surfaces must pair theme-token text with theme-token backgrounds
+
+**Next Sprint Focus:**
+Run migrate for 0004 in production and verify live register-password; dark-theme visual pass.

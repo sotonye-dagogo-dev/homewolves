@@ -224,3 +224,46 @@
 - Cause: Variable defined in `.env.local` but not in production environment
 - Fix: Add to deployment environment variables
 - Prevention: Add a startup validation check that throws if required env vars are missing
+
+### Register-Password 500 persists after migrations — passwordHash had schema but no migration SQL (Session 20c, 2026-10-14)
+
+**Symptom:**
+`POST /api/v1/auth/register-password → 500` persisted in production even after the operator ran drizzle migrations and confirmed they applied.
+
+**Root Cause:**
+`passwordHash` existed in `packages/api/src/drizzle/schema.ts` but in none of the migration SQL files (`0000`–`0003`); `0003` only added `BugReport` columns. Running `drizzle-kit migrate` therefore never created the column — the only thing creating it was the web fallback's runtime `ALTER TABLE … ADD COLUMN IF NOT EXISTS`, whose failure was swallowed silently, so the subsequent INSERT kept failing with a 500 (`MISSING_PASSWORD_COLUMN`).
+
+**Fix Applied:**
+- Added migration `0004_stale_starjammers.sql` (`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "passwordHash" text;`) + `meta/0004_snapshot.json` + journal entry. Operator must run `drizzle-kit migrate` once more to materialize it.
+- Hardened `handleRegisterPassword`: `ensureAuthColumns` now returns boolean + logs; INSERT retries once after re-ensuring columns; persistent column failure returns 503 `MISSING_PASSWORD_COLUMN` with an actionable hint instead of a generic 500.
+- Added `isMissingColumnError()` helper (matches `passwordHash` / `column does not exist` / `undefined_column`).
+
+**Prevention:**
+Every schema.ts change must ship with a generated migration (`drizzle-kit generate`) in the same PR — verify with `grep <column> drizzle/migrations/*.sql` before merging. Never rely on runtime DDL as the sole column creator (pooled roles may lack DDL permission).
+
+**Files Affected:**
+`packages/api/drizzle/migrations/0004_stale_starjammers.sql` (new), `packages/api/drizzle/migrations/meta/0004_snapshot.json` (new), `packages/api/drizzle/migrations/meta/_journal.json`, `apps/web/app/api/v1/auth/[action]/route.ts`
+**Date:** 2026-10-14
+**Status:** Active
+
+### White-on-white input/select text in dark theme — hardcoded #FFFFFF backgrounds (Session 20c, 2026-10-14)
+
+**Symptom:**
+Most inputs showed a white background with white (invisible) text; select boxes likewise, while native dropdown options rendered with a dark background and legible text.
+
+**Root Cause:**
+Fields paired theme-aware text (`color: var(--color-text-primary)` → near-white in dark theme) with hardcoded white surfaces (`backgroundColor: '#FFFFFF'`, `bg-white`). In dark theme this is white-on-white. The global baseline only enforced `color`, not `background-color`, so raw fields inherited the mismatch; `HwInput/HwSelect/HwTextarea` additionally forced `colorScheme: 'light'`, fighting the dark-theme `color-scheme`. (Options looked fine because the baseline already forced opaque token backgrounds on `option`.)
+
+**Fix Applied:**
+- `form-field-config.ts` gains `FORM_FIELD_SURFACE_STYLE` (`color: var(--color-text-primary)` + `background: var(--color-bg-input)`); auth + advertise pages consume it instead of `#FFFFFF`.
+- `globals.css` baseline now also sets `background-color: var(--color-bg-input)` on `input/select/textarea` (element selector — utility classes still override).
+- Removed forced `colorScheme: 'light'` from Hw* wrappers (caller `style` still passes through); `color-scheme` is now driven by `[data-theme]` CSS.
+- `products`/`services` search labels + selects: `bg-white` → `bg-[var(--color-bg-input)]`.
+
+**Prevention:**
+Never hardcode `#FFFFFF`/`bg-white` on a form surface — use `FORM_FIELD_SURFACE_STYLE` or `bg-[var(--color-bg-input)]`. Token-mixing rule: if `color` comes from a theme token, `background` must come from one too.
+
+**Files Affected:**
+`apps/web/components/ui/form-field-config.ts`, `apps/web/components/ui/hw-input.tsx`, `hw-select.tsx`, `hw-textarea.tsx`, `apps/web/app/globals.css`, `apps/web/app/(public)/auth/page.tsx`, `apps/web/app/(public)/advertise/page.tsx`, `apps/web/app/(public)/products/page.tsx`, `apps/web/app/(public)/services/page.tsx`
+**Date:** 2026-10-14
+**Status:** Active

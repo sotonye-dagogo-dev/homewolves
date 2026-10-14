@@ -354,6 +354,7 @@
   select,
   textarea {
     color: var(--color-text-primary);
+    background-color: var(--color-bg-input);
     color-scheme: light;
   }
   [data-theme='dark'] input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),

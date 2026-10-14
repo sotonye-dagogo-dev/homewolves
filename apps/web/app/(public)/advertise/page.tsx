@@ -4,10 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Megaphone, Check } from 'lucide-react';
 import { submitAdApplication } from '@/lib/ads';
+import { FORM_FIELD_SURFACE_STYLE } from '@/components/ui/form-field-config';
 
 const inputCls =
   'w-full min-h-[52px] px-4 py-3 font-body text-base rounded-md border border-[var(--color-border-default)] placeholder:text-[var(--color-text-muted)] outline-none focus:ring-2 focus:ring-[rgba(45,106,159,0.35)]';
-const inputStyle = { color: 'var(--color-text-primary)', backgroundColor: '#FFFFFF' } as React.CSSProperties;
+const inputStyle = { ...FORM_FIELD_SURFACE_STYLE } as React.CSSProperties;
 
 export default function AdvertisePage() {
   const [name, setName] = useState('');
