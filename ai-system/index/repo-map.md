@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-19
+> - last-updated-by: execute-feature-session-20
 > - last-verified-against-code: 2026-10-14
 > - staleness-policy: auto-regenerable — can be derived from `Get-ChildItem -Recurse` or `tree` command. Manual content only where intent cannot be derived from structure.
 
@@ -40,7 +40,7 @@ homewolves/
 │   │   │   ├── (dashboard)/     ← Authenticated: agent/client dashboards, transactions, messages
 │   │   │   └── (admin)/         ← Admin panel routes
 │   │   ├── components/
-│   │   │   ├── ui/              ← Hw* wrappers (HwButton, HwInput, etc.) — the only import for UI primitives
+│   │   │   ├── ui/              ← Hw* wrappers (HwButton, HwInput, HwSelect, HwTextarea, etc.) — the only import for UI primitives
 │   │   │   ├── landing/         ← Landing page zones (HeroSection, StatsStrip, CategoryBento, etc.)
 │   │   │   ├── listings/        ← Property card, gallery, filter bar, forms
 │   │   │   ├── dashboard/       ← Bento grid cells, KPI widgets, charts

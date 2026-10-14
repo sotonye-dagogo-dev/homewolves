@@ -1,7 +1,7 @@
 # Design System
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-19
+> - last-updated-by: execute-feature-session-20
 > - last-verified-against-code: 2026-10-14
 > - staleness-policy: re-verify if UI components or styling dependencies change
 
@@ -74,6 +74,7 @@ Each wrapper: imports shadcn primitive → applies design tokens via `cn()` → 
 - OTP input: 6 digit boxes, auto-focus progression
 - Floating labels: Label animates up on focus/fill
 - Error messages: Red text below field, icon
+- **Field contrast baseline (2026-10-14 audit):** all `input`/`select`/`textarea` render `color: var(--color-text-primary)` on `background: var(--color-bg-input)` with `placeholder: var(--color-text-muted)`; native `select option`/`optgroup` are forced opaque (`--color-bg-input` + `--color-text-primary`) in both themes so dropdown options are never white-on-white; `:-webkit-autofill` is pinned to the primary text color; new tokens `--color-bg-input`, `--color-bg-input-disabled`, `--color-text-tertiary`, `--color-danger` (= `--color-error` alias), `--color-bg-canvas` defined for light/dark/high-contrast in `apps/web/app/globals.css`. Reusable wrappers `HwInput`/`HwSelect`/`HwTextarea` (in `apps/web/components/ui/`) consume shared `form-field-config.ts` (`FormFieldConfig`, `FALLBACK_FORM_FIELD`, `formFieldClassName()`) — feature code passes `config` rather than hardcoding colors.
 
 ### Navigation
 - **Web desktop:** Top bar (glass, blur, 64px) — logo left, search centre, auth right

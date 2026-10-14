@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-19
+> - last-updated-by: execute-feature-session-20
 > - last-verified-against-code: 2026-10-14
 > - staleness-policy: historical entries do not go stale
 
@@ -380,3 +380,26 @@ Single-session hardening pass over branding, navigation, auth, CRUD, routing, er
 
 **Next Sprint Focus:**
 E2E + visual review; remaining minor debt ( Supabase `actions.ts` dead path, properties replace-loop hardening).
+
+---
+
+## 2026-10-14 — execute-feature: register-password 500 Fix + Form Contrast Audit (Session 20)
+
+**Summary:**
+Resolved the production `POST /api/v1/auth/register-password → 500` and audited every input/select/textarea for text legibility. The 500 was a masked config/schema failure (JWT-secret throw + missing `passwordHash` column collapsing into a generic catch); handlers now log structured errors and return split 400/409/503 codes. The audit found undefined CSS tokens (`--color-bg-input`, `--color-text-tertiary`, `--color-danger`) and transparent-glass fields causing invisible text; tokens are now defined per-theme with a global form baseline.
+
+**Completed:**
+- Web `auth/[action]` route: `node:crypto` `randomUUID` import (no global `crypto`), per-stage try/catch with `console.error` + `code` field (`DB_LOOKUP_FAILED`, `MISSING_PASSWORD_COLUMN`, `TOKEN_CONFIG`, …), JWT-config failures return 503 not 500
+- Drizzle `users` gains nullable `passwordHash` (additive; documents the web fallback's runtime ALTER)
+- Nest API gains `register-password` / `login-password` / `forgot-password` / `reset-password` routes + Zod DTOs + scrypt service methods (no new deps) so the same-origin proxy never 404s when a backend origin is configured
+- `globals.css`: new tokens per theme + global `input/select/textarea/option/autofill/disabled/focus` contrast baseline
+- New reusable `HwSelect`, `HwTextarea`, shared `form-field-config.ts` (`FALLBACK_FORM_FIELD`, `formFieldClassName`); `HwInput` reworked to solid high-contrast + `config`/`error` props (legacy `glass` kept, now implies pill radius)
+- QA: web tsc clean, api tsc clean, web UI tests 21/21, api auth tests 21/21, eslint clean on touched UI files
+
+**Key Changes:**
+- New modules: `apps/web/components/ui/hw-select.tsx`, `hw-textarea.tsx`, `form-field-config.ts`
+- Non-breaking: additive API routes/columns/props only; `HwInput` default visual shifts glass-pill → solid-rounded (intended legibility fix)
+- Ops note: production still requires `JWT_SECRET` + `DATABASE_URL`; missing values now surface as 503 `TOKEN_CONFIG` / `Auth requires DATABASE_URL` with server logs instead of opaque 500s
+
+**Next Sprint Focus:**
+Deploy and verify live register-password; run `drizzle-kit` migration to materialize `passwordHash` on existing DBs; visual pass over dark-theme form surfaces.
