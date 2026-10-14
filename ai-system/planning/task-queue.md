@@ -1,9 +1,9 @@
 # Development Task Queue
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-19
+> - last-updated-by: execute-feature-session-20
 > - last-verified-against-code: 2026-10-14
-> - last-synced: 2026-10-14 (Session 19 — design-system + nav hardening)
+> - last-synced: 2026-10-14 (Session 20 — property-detail navbar clash + gallery sizing)
 > - staleness-policy: re-verify before each session
 
 > **Overview:** Sprint-level task queue with complexity tagging. Agents execute tasks top to bottom within the current sprint. Each task is sized so it can be completed in a single session. Sprint 1–3 are complete; the current focus is hardening, Backlog items, and the next scheduled phase.
