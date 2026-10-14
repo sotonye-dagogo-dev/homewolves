@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useNotificationBell } from '@/hooks/use-notifications';
 import { LayoutDashboard, Home, Users, ShieldCheck, FileText, MessageCircle, Bell, User, Menu, X, Bug } from 'lucide-react';
 import Link from 'next/link';
+import { BrandLogo } from '@/components/shared/brand-logo';
 
 function buildNavItems(user: any) {
   const isAgent = user?.role === 'AGENT' || user?.role === 'DEVELOPER' || user?.role === 'HOMEOWNER';
@@ -94,13 +95,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }}
       >
         <div className="flex items-center gap-3 px-6 py-5 border-b" style={{ borderColor: 'var(--color-border-default)' }}>
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
-            style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}
-          >
-            H
-          </div>
-          <span className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>Homewolves</span>
+          <Link href="/" aria-label="Dashboard home" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+            <BrandLogo size="sm" />
+          </Link>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
@@ -161,7 +158,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         >
           <Menu className="w-6 h-6" />
         </button>
-        <span className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>Homewolves</span>
+        <Link href="/" aria-label="Dashboard home" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+          <BrandLogo size="sm" showName={false} />
+        </Link>
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="relative p-1"
@@ -237,7 +236,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <>
             <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
             <div
-              className="fixed md:absolute md:top-14 md:right-4 z-50 w-full md:w-80 max-h-[70vh] flex flex-col rounded-xl shadow-xl"
+              className="fixed top-14 left-4 right-4 md:absolute md:top-14 md:right-4 md:left-auto z-50 w-auto md:w-80 max-h-[70vh] flex flex-col rounded-xl shadow-xl"
               style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-default)', maxWidth: 'calc(100vw - 32px)' }}
             >
               <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--color-border-subtle)' }}>

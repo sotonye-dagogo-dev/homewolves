@@ -3,14 +3,40 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Search, Moon, Share2, Heart, Home, BedDouble, Bath, Maximize2, Calendar, Map, Check, Zap, ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { Search, Share2, Heart, Home, BedDouble, Bath, Maximize2, Calendar, Map, Check, Zap, ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useListing, useListings } from '@/hooks/use-listings';
 import { useCheckSaved, useToggleSave, useRecentViews } from '@/hooks/use-interactions';
 import { useAuth } from '@/hooks/use-auth';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { recordView } from '@/lib/interactions';
 import { ScheduleInspectionModal } from '@/components/shared/ScheduleInspectionModal';
+import { BrandLogo } from '@/components/shared/brand-logo';
+import { formatPrice } from '@/lib/format-price';
 import Link from 'next/link';
+
+function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hw-toast', { detail: { message, type } }));
+  }
+}
+
+async function handleShare(title: string) {
+  try {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    if (typeof navigator !== 'undefined' && (navigator as unknown as { share?: (d: { title: string; url: string }) => Promise<void> }).share) {
+      await (navigator as unknown as { share: (d: { title: string; url: string }) => Promise<void> }).share({ title, url });
+      return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+      emitToast('Link copied to clipboard', 'success');
+      return;
+    }
+    emitToast(url, 'info');
+  } catch {
+    /* user dismissed share sheet — no-op */
+  }
+}
 
 export default function PropertyDetailClient({ initialListing }: { initialListing?: unknown }) {
   const { id } = useParams<{ id: string }>();
@@ -80,12 +106,11 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
         <button onClick={() => router.push('/properties')} className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           <ArrowLeft className="w-4 h-4" /> Back to properties
         </button>
-        <Link href="/" className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', color: 'var(--color-brand-primary)' }}>
-          Homewolves
+        <Link href="/" aria-label="Home" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+          <BrandLogo size="sm" />
         </Link>
         <div className="flex items-center gap-3">
-          <button className="w-10 h-10 rounded-full flex items-center justify-center" style={{ color: 'var(--color-text-secondary)' }} aria-label="Toggle theme"><Moon className="w-5 h-5" /></button>
-          <button className="w-10 h-10 rounded-full flex items-center justify-center" style={{ color: 'var(--color-text-secondary)' }} aria-label="Share"><Share2 className="w-5 h-5" /></button>
+          <button onClick={() => handleShare(listing?.title ?? 'Property')} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ color: 'var(--color-text-secondary)' }} aria-label="Share"><Share2 className="w-5 h-5" /></button>
           <button
             onClick={handleToggleSave}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
@@ -111,7 +136,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
         <span className="text-sm font-semibold truncate max-w-[200px]" style={{ color: 'var(--color-text-inverse)', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
           {listing.title}
         </span>
-        <button className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-glass-dark)', backdropFilter: 'var(--glass-blur)', color: 'var(--color-text-inverse)' }} aria-label="Share">
+        <button onClick={() => handleShare(listing.title)} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-glass-dark)', backdropFilter: 'var(--glass-blur)', color: 'var(--color-text-inverse)' }} aria-label="Share">
           <Share2 className="w-5 h-5" />
         </button>
       </header>
@@ -201,7 +226,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
       <div
         className="lg:hidden fixed left-0 right-0 z-40 flex items-center gap-3 px-4 py-3"
         style={{
-          bottom: '80px',
+          bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
           background: 'var(--color-bg-glass)',
           backdropFilter: 'var(--glass-blur-heavy)',
           borderTop: '1px solid var(--color-border-glass)',
@@ -209,14 +234,14 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
         }}
       >
         <div className="shrink-0" style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-text-accent)' }}>
-          {listing.currency} {parseFloat(listing.price).toLocaleString()}
+          {formatPrice(listing.price, listing.currency ?? 'NGN')}
           <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 400, color: 'var(--color-text-muted)' }}>/{listing.category === 'RENT' ? 'yr' : ''}</span>
         </div>
         <div className="flex-1 flex justify-end gap-2">
           <button onClick={handleToggleSave} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: saved ? 'var(--color-error)' : 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: saved ? 'white' : 'var(--color-text-primary)' }}>
             <Heart className="w-5 h-5" fill={saved ? 'currentColor' : 'none'} />
           </button>
-          <button className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }} aria-label="Share">
+          <button onClick={() => handleShare(listing.title)} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }} aria-label="Share">
             <Share2 className="w-5 h-5" />
           </button>
           <button onClick={() => { if (requireAuth('Messaging')) router.push('/messages'); }} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
@@ -230,7 +255,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
         id="detail-main"
         style={{
           padding: 'var(--space-4)',
-          paddingBottom: 'calc(var(--space-4) + 160px)',
+          paddingBottom: 'calc(var(--space-4) + 190px)',
           maxWidth: '1280px',
           margin: '0 auto',
           overflowX: 'hidden',
@@ -252,14 +277,14 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
             {/* ─── §4.3 Zone 2 — Desktop Action Bar ─── */}
             <div className="hidden lg:flex items-center justify-between gap-4 py-4" style={{ borderBottom: '1px solid var(--color-border-subtle)' }}>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', fontWeight: 700, color: 'var(--color-text-accent)' }}>
-                {listing.currency} {parseFloat(listing.price).toLocaleString()}
+                {formatPrice(listing.price, listing.currency ?? 'NGN')}
                 <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-base)', fontWeight: 400, color: 'var(--color-text-muted)' }}> / {listing.category === 'RENT' ? 'yr' : 'sale'}</span>
               </div>
               <div className="flex items-center gap-3">
                 <button onClick={handleToggleSave} className="w-11 h-11 rounded-full flex items-center justify-center" style={{ color: saved ? 'var(--color-error)' : 'var(--color-text-secondary)' }}>
                   <Heart className="w-5 h-5" fill={saved ? 'currentColor' : 'none'} />
                 </button>
-                <button className="w-11 h-11 rounded-full flex items-center justify-center" style={{ color: 'var(--color-text-secondary)' }}>
+                <button onClick={() => handleShare(listing.title)} className="w-11 h-11 rounded-full flex items-center justify-center" style={{ color: 'var(--color-text-secondary)' }} aria-label="Share">
                   <Share2 className="w-5 h-5" />
                 </button>
                 <button onClick={() => { if (requireAuth('Scheduling inspections')) setInspectionModalOpen(true); }} className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>
@@ -429,7 +454,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
                       </div>
                       <div className="p-2.5">
                         <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-md)', fontWeight: 700, color: 'var(--color-text-accent)' }}>
-                          {s.currency} {parseFloat(s.price).toLocaleString()}
+                          {formatPrice(s.price, s.currency ?? 'NGN')}
                         </div>
                         <div className="text-sm font-semibold truncate mt-1" style={{ color: 'var(--color-text-primary)' }}>{s.title}</div>
                       </div>
@@ -490,9 +515,9 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
                 <button onClick={() => { if (requireAuth('Messaging')) router.push('/messages'); }} className="flex-1 px-4 py-2 rounded-full text-sm font-semibold transition-all" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
                   Chat
                 </button>
-                <button className="flex-1 px-4 py-2 rounded-full text-sm font-semibold transition-all" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>
+                <a href={listing.owner?.phone ? `tel:${listing.owner.phone}` : undefined} onClick={(e) => { if (!listing.owner?.phone) { e.preventDefault(); emitToast('Agent phone number is not available', 'info'); } }} className="flex-1 px-4 py-2 rounded-full text-sm font-semibold transition-all text-center" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>
                   Call
-                </button>
+                </a>
               </div>
             </div>
 

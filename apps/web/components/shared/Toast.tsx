@@ -51,8 +51,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
-        <div aria-live="polite" aria-atomic="true" className="sr-only" />
+      <div className="fixed bottom-24 lg:bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {toasts.length > 0 ? toasts[toasts.length - 1]?.message : ''}
+        </div>
         {toasts.map((t) => (
           <div
             key={t.id}

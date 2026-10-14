@@ -1,8 +1,8 @@
 # Design System
 
 > **Metadata**
-> - last-updated-by: bootstrap-project
-> - last-verified-against-code: 2026-08-05
+> - last-updated-by: execute-feature-session-19
+> - last-verified-against-code: 2026-10-14
 > - staleness-policy: re-verify if UI components or styling dependencies change
 
 > **Overview:** Homewolves uses a glassmorphism + bento grid aesthetic inspired by JamesEdition. The design communicates trust, luxury, and clarity for the African real estate market. All tokens are defined as CSS custom properties in `apps/web/app/globals.css` (and DESIGN.md in `ai-system/docs/`). This file is a quick-reference summary — agents building UI must read DESIGN.md in full before writing frontend code. The colour, typography, and spacing tables below are the **single source of truth** for design tokens (per `standards/engineering-principles.md` §5) — components must consume these tokens rather than redeclaring values.

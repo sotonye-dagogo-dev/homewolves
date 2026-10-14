@@ -2,8 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useAuditLog, useExportAuditCsv, useExportAuditPdf } from '@/hooks/use-audit';
+import { BrandLogo } from '@/components/shared/brand-logo';
+import { useTheme } from '@/components/shared/ThemeProvider';
+import { Moon, Sun, LayoutDashboard, Home, ArrowLeftRight, FileText, Users, Settings } from 'lucide-react';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -11,31 +15,22 @@ const TABS = [
 ] as const;
 
 const NAV_ITEMS = [
-  { id: 'overview', label: 'Overview', icon: 'M3 3h7v7H3zm11 0h7v7h-7zm0 11h7v7h-7zM3 14h7v7H3z' },
-  { id: 'listings', label: 'Listings', badge: '12', icon: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10' },
-  { id: 'transactions', label: 'Transactions', badge: '8', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
-  { id: 'audit', label: 'Audit Log', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8' },
+  { id: 'overview', label: 'Overview', Icon: LayoutDashboard },
+  { id: 'listings', label: 'Listings', badge: '12', Icon: Home },
+  { id: 'transactions', label: 'Transactions', badge: '8', Icon: ArrowLeftRight },
+  { id: 'audit', label: 'Audit Log', Icon: FileText },
 ] as const;
 
 const BOTTOM_NAV = [
-  { id: 'users', label: 'Users', icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75' },
-  { id: 'config', label: 'Config', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z' },
+  { id: 'users', label: 'Users', Icon: Users },
+  { id: 'config', label: 'Config', Icon: Settings },
 ] as const;
-
-function NavIcon({ path }: { path: string }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      {path.split(' ').map((d, i) => {
-        if (d.startsWith('M')) return <path key={i} d={d} />;
-        return <path key={i} d={d} />;
-      })}
-    </svg>
-  );
-}
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'audit'>('overview');
   const { user } = useAuth();
+  const router = useRouter();
+  const { theme, setTheme } = useTheme();
 
   const [entityType, setEntityType] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
@@ -69,9 +64,9 @@ export default function AdminDashboardPage() {
         aria-label="Admin navigation"
       >
         <div className="px-6 py-4 mb-6">
-          <div className="font-display text-xl font-bold" style={{ color: 'var(--color-brand-primary)' }}>
-            Homewolves
-          </div>
+          <Link href="/" aria-label="Admin home" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+            <BrandLogo size="sm" />
+          </Link>
         </div>
 
         <div className="flex-1 flex flex-col gap-1 px-3">
@@ -80,7 +75,9 @@ export default function AdminDashboardPage() {
               key={item.id}
               type="button"
               onClick={() => {
-                if (item.id === 'overview' || item.id === 'audit') setActiveTab(item.id);
+                if (item.id === 'overview' || item.id === 'audit') { setActiveTab(item.id); return; }
+                if (item.id === 'listings') { router.push('/dashboard/agent/listings'); return; }
+                if (item.id === 'transactions') { router.push('/dashboard/agent/transactions'); return; }
               }}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-left ${
                 activeTab === item.id ? 'bg-white font-semibold shadow-xs' : ''
@@ -91,7 +88,7 @@ export default function AdminDashboardPage() {
               }}
             >
               <span className="w-5 flex items-center justify-center shrink-0">
-                <NavIcon path={item.icon} />
+                <item.Icon className="w-[18px] h-[18px]" />
               </span>
               <span>{item.label}</span>
               {'badge' in item && item.badge && (
@@ -111,11 +108,15 @@ export default function AdminDashboardPage() {
             <button
               key={item.id}
               type="button"
+              onClick={() => {
+                if (item.id === 'users') { router.push('/dashboard/agent/clients'); return; }
+                if (item.id === 'config') { router.push('/dashboard/admin/email-templates'); return; }
+              }}
               className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-left"
               style={{ color: 'var(--color-text-secondary)' }}
             >
               <span className="w-5 flex items-center justify-center shrink-0">
-                <NavIcon path={item.icon} />
+                <item.Icon className="w-[18px] h-[18px]" />
               </span>
               <span>{item.label}</span>
             </button>
@@ -153,21 +154,12 @@ export default function AdminDashboardPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="w-10 h-10 flex items-center justify-center rounded-full transition-colors"
               style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', color: 'var(--color-text-muted)' }}
               aria-label="Toggle theme"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
+              {theme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
             </button>
           </div>
         </header>

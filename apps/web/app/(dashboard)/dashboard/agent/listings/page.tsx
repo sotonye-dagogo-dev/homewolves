@@ -5,18 +5,20 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Home } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { formatPrice } from '@/lib/format-price';
 
 export default function AgentListingsPage() {
   const { user } = useAuth();
-  const { data, isLoading } = useListings({ ownerId: user?.id ?? '' });
+  const { data, isLoading } = useListings({ ownerId: user?.id ?? '' }, { enabled: Boolean(user?.id) });
   const deleteListing = useDeleteListing();
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this listing permanently?')) return;
     try {
       await deleteListing.mutateAsync(id);
+      window.dispatchEvent(new CustomEvent('hw-toast', { detail: { message: 'Listing deleted', type: 'success' } }));
     } catch (error) {
-      void error;
+      window.dispatchEvent(new CustomEvent('hw-toast', { detail: { message: error instanceof Error ? error.message : 'Could not delete listing', type: 'error' } }));
     }
   };
 
@@ -106,7 +108,7 @@ export default function AgentListingsPage() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-bold text-[var(--color-text-primary)]">
-                        {listing.currency} {parseFloat(listing.price).toLocaleString()}
+                        {formatPrice(listing.price, listing.currency ?? 'NGN')}
                       </p>
                       <p className="text-xs mt-0.5 text-[var(--color-text-tertiary)]">
                         {new Date(listing.createdAt).toLocaleDateString()}

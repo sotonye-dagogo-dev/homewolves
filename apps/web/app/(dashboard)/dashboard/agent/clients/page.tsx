@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Search, EllipsisVertical } from 'lucide-react';
 import { useClients } from '@/hooks/use-crm';
 
 const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
@@ -12,6 +14,7 @@ const statusConfig: Record<string, { bg: string; color: string; label: string }>
 };
 
 export default function ClientsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const { data: clients } = useClients({ search: search || undefined, status: statusFilter || undefined });
@@ -30,7 +33,7 @@ export default function ClientsPage() {
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-2 px-4 py-2 rounded-full flex-1 max-w-sm" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
-          <span style={{ color: 'var(--color-text-muted)', fontSize: 14 }}>🔍</span>
+          <span style={{ color: 'var(--color-text-muted)' }}><Search className="w-4 h-4" /></span>
           <input
             type="text"
             placeholder="Search clients..."
@@ -79,7 +82,7 @@ export default function ClientsPage() {
                 style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-border-subtle)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                onClick={() => window.location.href = `/dashboard/agent/clients/${client.id}`}
+                onClick={() => router.push(`/dashboard/agent/clients/${client.id}`)}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -108,7 +111,7 @@ export default function ClientsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <button className="w-8 h-8 rounded-full grid place-items-center text-lg transition-colors" style={{ color: 'var(--color-text-muted)' }} aria-label="More actions">⋮</button>
+                  <button onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/agent/clients/${client.id}`); }} className="w-8 h-8 rounded-full grid place-items-center transition-colors hover:bg-black/5" style={{ color: 'var(--color-text-muted)' }} aria-label="More actions"><EllipsisVertical className="w-4 h-4" /></button>
                 </td>
               </tr>
             )) : (
