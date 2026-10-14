@@ -7,7 +7,7 @@ import { fetchConversation, markConversationRead } from '@/lib/messaging';
 import { useRouter } from 'next/navigation';
 
 export default function MessagesPage() {
-  const { user, accessToken } = useAuth();
+  const { user, accessToken, hydrated } = useAuth();
   const router = useRouter();
   const [activeConvoId, setActiveConvoId] = useState<string | null>(null);
   const [showMobileChat, setShowMobileChat] = useState(false);
@@ -22,8 +22,9 @@ export default function MessagesPage() {
   const [activeConvo, setActiveConvo] = useState<any>(null);
 
   useEffect(() => {
+    if (!hydrated) return;
     if (!accessToken) router.replace('/auth');
-  }, [accessToken, router]);
+  }, [hydrated, accessToken, router]);
 
   useEffect(() => {
     if (activeConvoId) {

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/shared/ThemeProvider';
 import { QueryProvider } from '@/components/shared/QueryProvider';
 import { ToastProvider } from '@/components/shared/Toast';
+import { FALLBACK_BRAND } from '@/config/fallbacks';
 import './globals.css';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
@@ -21,17 +22,16 @@ async function getBrandConfig(): Promise<BrandConfig | null> {
 
 export async function generateMetadata(): Promise<Metadata> {
   const brand = await getBrandConfig();
-  const ogImage = brand?.ogImageUrl || '/og-image.png';
-  const companyName = brand?.companyName || 'Homewolves';
-  const tagline = brand?.tagline || 'African Real Estate Operating System';
-
+  const ogImage = brand?.ogImageUrl || FALLBACK_BRAND.ogImageUrl;
+  const companyName = brand?.companyName || FALLBACK_BRAND.companyName;
+  const tagline = brand?.tagline || FALLBACK_BRAND.tagline;
   return {
     metadataBase: new URL(SITE_URL),
     title: {
       default: `${companyName} — ${tagline}`,
       template: `%s — ${companyName}`,
     },
-    description: 'Discover, verify, and transact real estate across Africa. Homewolves is the platform for agents, buyers, developers, and homeowners.',
+    description: `Discover, verify, and transact real estate across Africa. ${companyName} is the platform for agents, buyers, developers, and homeowners.`,
     keywords: ['real estate', 'Nigeria', 'Africa', 'property', 'agent CRM', 'PropTech'],
     authors: [{ name: companyName }],
     creator: companyName,

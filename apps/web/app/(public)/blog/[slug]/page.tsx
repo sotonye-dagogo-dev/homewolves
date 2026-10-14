@@ -108,10 +108,10 @@ export default function BlogPostPage() {
               <span>{new Date(post.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
             </>
           )}
-          {post.tags?.length > 0 && (
+          {(post.tags ?? []).length > 0 && (
             <>
               <span>&middot;</span>
-              <span>{post.tags.map((t: string) => `#${t}`).join(', ')}</span>
+              <span>{(post.tags ?? []).map((t: string) => `#${t}`).join(', ')}</span>
             </>
           )}
         </div>

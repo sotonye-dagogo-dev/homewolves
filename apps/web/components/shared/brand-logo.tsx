@@ -2,12 +2,22 @@
 
 import { useState } from 'react';
 import { useBrand } from '@/hooks/use-platform-config';
+import { FALLBACK_BRAND } from '@/config/fallbacks';
 
 interface BrandLogoProps {
   size?: 'sm' | 'md' | 'lg';
   showName?: boolean;
   dark?: boolean;
   className?: string;
+  /** Override text color class (e.g. 'text-white' on transparent hero nav). Defaults to brand primary. */
+  textClassName?: string;
+}
+
+function brandInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return (parts[0]?.slice(0, 2) ?? '?').toUpperCase();
+  return `${parts[0]?.[0] ?? ''}${parts[parts.length - 1]?.[0] ?? ''}`.toUpperCase() || '?';
 }
 
 const SIZES = {
@@ -21,11 +31,11 @@ const SIZES = {
  * rounded mark; the text name is ONLY a fallback when no logo URL is
  * configured or the image fails to load (never rendered behind the image).
  */
-export function BrandLogo({ size = 'md', showName = true, className = '' }: BrandLogoProps) {
+export function BrandLogo({ size = 'md', showName = true, className = '', textClassName }: BrandLogoProps) {
   const { data: brand } = useBrand();
   const [imgFailed, setImgFailed] = useState(false);
-  const logoUrl = brand?.logoUrl || '/logo.png';
-  const companyName = brand?.companyName || 'Homewolves';
+  const logoUrl = brand?.logoUrl || FALLBACK_BRAND.logoUrl;
+  const companyName = brand?.companyName || FALLBACK_BRAND.companyName;
   const showImg = Boolean(logoUrl) && !imgFailed;
   const s = SIZES[size];
 
@@ -45,11 +55,11 @@ export function BrandLogo({ size = 'md', showName = true, className = '' }: Bran
           aria-hidden="true"
           className={`${s.img} rounded-full grid place-items-center shrink-0 bg-accent text-accent-foreground text-xs font-bold`}
         >
-          HW
+          {brandInitials(companyName)}
         </span>
       )}
       {showName && (
-        <span className={`font-display font-bold tracking-tight truncate text-[var(--color-brand-primary)] ${s.text}`}>
+        <span className={`font-display font-bold tracking-tight truncate ${textClassName ?? 'text-[var(--color-brand-primary)]'} ${s.text}`}>
           {companyName}
         </span>
       )}

@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: fix-build
-> - last-verified-against-code: 2026-09-23
+> - last-updated-by: execute-feature-session-19
+> - last-verified-against-code: 2026-10-14
 > - staleness-policy: append-only — never modify past entries
 
 > **Overview:** Append-only running log of development sessions. Each entry records what was completed, what comes next, and which files were modified. Agents write here at the end of every session so work can be resumed without re-reading the entire codebase. This file is the **append-only historical record** — use `checkpoints/in-progress.md` for current in-progress work.
@@ -544,3 +544,58 @@ Push/deploy to Vercel and confirm production build passes on CI; ensure prod env
 **Notes / Blockers:**
 - Deploy still owned by the user — re-run Vercel after this commit is pushed.
 - Pre-existing lint warnings unchanged (3).
+
+---
+
+## Session 19 — 2026-10-14 (execute-feature: design-system + nav/menu hardening)
+
+**Completed:**
+- Design-system tightening: `BrandLogo` now consumes `FALLBACK_BRAND` (no duplicated literals), derives fallback initials from `companyName`, new `textClassName` prop replaces the fragile `[&>span>span:last-child]` deep-selector hack in `TopNav`.
+- `TopNav` fixed: proper `left-0 right-0` + inner max-width container (removed contradictory `left-1/2 -translate-x-1/2 w-full`), config-driven `aria-label`, auth-aware avatar (user photo → initials → brand initials), mobile dropdown offset accounts for nav height and reserves MobileBar clearance.
+- `BrandLogo` adopted in dashboard shell, mobile top bar, admin sidebar, properties mobile header, property-detail desktop nav, footer copyright (`useBrand`), root metadata (`FALLBACK_BRAND`).
+- Removed duplicate hardcoded brand headers: properties mobile header now `BrandLogo showName={false}` at `top-14` with `112px` spacer + `top-[112px]` sticky filters (was double `top-0` under `TopNav`); `PropertyDetailClient` desktop nav uses `BrandLogo`.
+- Auth hardening: `login`/`exchangeSupabase`/`exchangeGoogle` now `.catch(() => ({}))` JSON-safe; callback handles Supabase PKCE `?code=` via `exchangeCodeForSession` and preserves `?redirect=` (defaults `/dashboard`).
+- CRUD/routing: `useListings` gains `opts.enabled` (no more `ownerId=''` pre-auth fetch); agent listings + dashboard guard on `user.id`; delete surfaces toast; new `app/(dashboard)/dashboard/agent/listings/[id]/edit` page fixes the dead `/edit` 404 (title/desc/price/status via `useUpdateListing`).
+- Null-safety: blog `tags ?? []`, tx `payments ?? []`, bug-reports `String(id ?? '')` / `String(status ?? 'OPEN')`, shared `lib/format-price.ts` (`priceToNumber`/`formatPrice`) replaces all raw `parseFloat(price).toLocaleString()` (NaN → `NGN 0`, deterministic sort).
+- Dead buttons wired: dashboard theme toggle (`useTheme` + lucide Sun/Moon), Schedule inspection → clients, Refer/Analytics → real routes/links, report spans → Links, admin nav items → real routes, admin theme toggle, tx completion → `window.print()`, share buttons → `navigator.share`/clipboard+toast, agent Call → `tel:` with toast fallback, clients rows → `router.push` (no reload), more-actions → detail nav.
+- Responsiveness: Toast `bottom-24 lg:bottom-4` + live-region mirrors latest message; `HwBatchBar` `z-[210]` above `MobileBar` with safe-area offset; detail sticky bar `bottom: calc(88px + safe-area)`; notification dropdown `top-14 left-4 right-4` on mobile; dashboard `pb-20` orphan noted (dashboard has no MobileBar — kept as safe padding).
+- Icon compliance: admin `NavIcon` inline SVGs → lucide (`LayoutDashboard/Home/ArrowLeftRight/FileText/Users/Settings`); admin + dashboard theme → lucide; clients search/more → lucide; tx celebration/evidence → lucide; global-error SVG → lucide `TriangleAlert` + Go-home link + digest ref. Featured avatar fallback `H` → `?`.
+- QA: `npm install` (924 pkgs); `tsc --noEmit` clean (fixed 4 error groups); web vitest 21 files / 153 tests pass; api 17 files / 159 tests pass; `next lint` only 2 pre-existing `no-empty` warnings; `next build` green (33 routes incl. new edit page).
+
+**Files Modified:**
+- `apps/web/components/shared/brand-logo.tsx` — FALLBACK_BRAND, brandInitials, textClassName
+- `apps/web/components/landing/top-nav.tsx` — layout, BrandLogo tone, auth avatar, dropdown offset
+- `apps/web/components/landing/mobile-bar.tsx` — role-aware tabs (staff → Dashboard)
+- `apps/web/components/landing/footer.tsx` — useBrand copyright
+- `apps/web/components/landing/featured-listings.tsx` — `?` fallback
+- `apps/web/components/shared/Toast.tsx` — mobile offset + live region
+- `apps/web/components/ui/hw-batch-bar.tsx` — z/offset above MobileBar
+- `apps/web/components/listings/PropertyDetailClient.tsx` — BrandLogo nav, share/call, formatPrice, sticky offset
+- `apps/web/app/layout.tsx` — FALLBACK_BRAND metadata
+- `apps/web/app/global-error.tsx` — lucide icon + Go home + digest
+- `apps/web/app/(public)/properties/page.tsx` — BrandLogo header, 112px offset, formatPrice
+- `apps/web/app/(public)/blog/[slug]/page.tsx` — tags guard
+- `apps/web/app/(public)/messages/page.tsx` — hydrated guard
+- `apps/web/app/(public)/auth/callback/page.tsx` — code exchange + redirect
+- `apps/web/app/(dashboard)/layout.tsx` — BrandLogo, notif dropdown position
+- `apps/web/app/(dashboard)/dashboard/page.tsx` — theme, links, formatPrice, enabled guard
+- `apps/web/app/(dashboard)/dashboard/agent/listings/page.tsx` — enabled guard, delete toast, formatPrice
+- `apps/web/app/(dashboard)/dashboard/agent/listings/[id]/edit/page.tsx` — NEW edit page
+- `apps/web/app/(dashboard)/dashboard/agent/clients/page.tsx` — router.push, lucide icons
+- `apps/web/app/(dashboard)/dashboard/agent/transactions/[id]/page.tsx` — payments guard, print, lucide
+- `apps/web/app/(dashboard)/dashboard/admin/page.tsx` — BrandLogo, routed nav, lucide, theme
+- `apps/web/app/(dashboard)/dashboard/admin/bug-reports/page.tsx` — id/status guards
+- `apps/web/hooks/use-auth.ts` — JSON-safe error parsing
+- `apps/web/hooks/use-listings.ts` — enabled opt
+- `apps/web/lib/format-price.ts` — NEW shared formatter
+
+**Next Task:**
+E2E Playwright pass (`apps/web/e2e/`) + visual check of nav on mobile/desktop; remaining tech debt (role `match` in MobileBar, `parseFragment` dead Supabase path in actions.ts, properties `router.replace` loop risk) queued as follow-ups.
+
+**Assumptions Made:**
+- Keeping `FALLBACK_*` copy the user-visible brand source of truth; API PlatformConfig overrides when reachable.
+- `window.print()` is an acceptable Completion Summary action until a dedicated summary view exists.
+- Dashboard `pb-20` retained (harmless) since dashboard layouts don't mount MobileBar.
+
+**Notes / Blockers:**
+- None blocking. Two pre-existing lint `no-empty` warnings untouched (sitemap.ts, messaging.ts).

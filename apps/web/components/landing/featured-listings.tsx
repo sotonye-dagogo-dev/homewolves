@@ -119,7 +119,7 @@ export function FeaturedListings() {
                   </div>
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--color-border-subtle)]">
                     <div className="w-7 h-7 rounded-full grid place-items-center text-[11px] font-semibold bg-primary text-primary-foreground shrink-0">
-                      {l.owner?.firstName?.[0] ?? 'H'}{l.owner?.lastName?.[0] ?? ''}
+                      {l.owner?.firstName?.[0] ?? '?'}{l.owner?.lastName?.[0] ?? ''}
                     </div>
                     <span className="text-xs font-medium text-secondary truncate">{l.owner?.firstName} {l.owner?.lastName}</span>
                   </div>

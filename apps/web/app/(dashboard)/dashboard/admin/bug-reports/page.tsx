@@ -167,7 +167,7 @@ export default function AdminBugReportsPage() {
               <tbody>
                 {reports.map((report: any) => (
                   <tr key={report.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                    <td className="py-3 px-3 text-white/40 font-mono text-xs">{report.id.slice(0, 8)}</td>
+                    <td className="py-3 px-3 text-white/40 font-mono text-xs">{String(report.id ?? '').slice(0, 8)}</td>
                     <td className="py-3 px-3">
                       <span className="text-white/70 text-xs">{TYPE_LABELS[report.type] ?? report.type}</span>
                     </td>
@@ -182,7 +182,7 @@ export default function AdminBugReportsPage() {
                     </td>
                     <td className="py-3 px-3">
                       <HwBadge className={STATUS_COLORS[report.status] ?? ''}>
-                        {report.status.replace('_', ' ')}
+                        {String(report.status ?? 'OPEN').replace('_', ' ')}
                       </HwBadge>
                     </td>
                     <td className="py-3 px-3 text-white/40 text-xs">

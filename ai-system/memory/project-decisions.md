@@ -1,8 +1,8 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: fix-build
-> - last-verified-against-code: 2026-09-23
+> - last-updated-by: execute-feature-session-19
+> - last-verified-against-code: 2026-10-14
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Log of significant architectural, technical, and product decisions. Agents consult this before proposing changes to avoid contradicting prior reasoning. Uses supersedes/superseded-by links so contradictory entries are explicitly resolved rather than both appearing equally valid.

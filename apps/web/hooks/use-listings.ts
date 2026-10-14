@@ -11,11 +11,12 @@ import {
   type CreateListingPayload,
 } from '@/lib/listings';
 
-export function useListings(params?: Record<string, string>) {
+export function useListings(params?: Record<string, string>, opts?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['listings', params],
     queryFn: () => fetchListings(params),
     staleTime: 30_000,
+    enabled: opts?.enabled ?? true,
   });
 }
 

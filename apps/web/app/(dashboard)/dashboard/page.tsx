@@ -6,7 +6,15 @@ import { useListings } from '@/hooks/use-listings';
 import { useInspections } from '@/hooks/use-crm';
 import { useMyStats } from '@/hooks/use-activity';
 import Link from 'next/link';
-import { Moon, Home, ClipboardList, Phone, BadgeCheck, Calendar, Link2, BarChart3, Plus, Wallet } from 'lucide-react';
+import { Home, ClipboardList, Phone, BadgeCheck, Calendar, Link2, BarChart3, Plus, Wallet, Moon, Sun } from 'lucide-react';
+import { useTheme } from '@/components/shared/ThemeProvider';
+import { formatPrice } from '@/lib/format-price';
+
+function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hw-toast', { detail: { message, type } }));
+  }
+}
 
 const chartData = [
   { month: 'Jan', views: 45, inquiries: 30 },
@@ -28,10 +36,11 @@ const statusConfig: Record<string, { bg: string; color: string; label: string }>
 
 export default function AgentDashboardPage() {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { data: stats } = useDashboardStats();
   const { data: activityStats } = useMyStats();
   const { data: recentClients } = useRecentClients();
-  const { data: listingsData } = useListings({ ownerId: user?.id ?? '', take: '5' });
+  const { data: listingsData } = useListings({ ownerId: user?.id ?? '', take: '5' }, { enabled: Boolean(user?.id) });
   const today = new Date().toISOString().split('T')[0];
   const { data: inspections } = useInspections(today);
 
@@ -55,8 +64,8 @@ export default function AgentDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-secondary)' }} aria-label="Theme toggle">
-            <Moon className="w-5 h-5" />
+          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-secondary)' }} aria-label="Toggle theme">
+            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
           <div className="w-9 h-9 rounded-full grid place-items-center text-sm font-bold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
             {user?.firstName?.[0]}{user?.lastName?.[0]}
@@ -139,9 +148,9 @@ export default function AgentDashboardPage() {
               <p className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>No inspections today</p>
             )}
           </div>
-          <button className="w-full text-center py-2 text-xs font-semibold rounded-lg mt-2" style={{ color: 'var(--color-brand-accent)' }}>
+          <Link href="/dashboard/agent/clients" className="w-full text-center py-2 text-xs font-semibold rounded-lg mt-2" style={{ color: 'var(--color-brand-accent)' }}>
             Schedule inspection
-          </button>
+          </Link>
         </div>
 
         {/* ─── Row 1: Unread Messages (1x1) ─── */}
@@ -183,7 +192,7 @@ export default function AgentDashboardPage() {
         <div className="lg:col-span-2 lg:row-span-2 rounded-xl p-5 transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Listing Performance</span>
-            <span className="text-xs font-semibold" style={{ color: 'var(--color-brand-accent)' }}>Full report</span>
+            <Link href="/dashboard/agent/listings" className="text-xs font-semibold hover:underline" style={{ color: 'var(--color-brand-accent)' }}>Full report</Link>
           </div>
           <div className="flex items-end gap-2 h-[200px] pt-4">
             {chartData.map((d) => (
@@ -210,7 +219,7 @@ export default function AgentDashboardPage() {
         <div className="lg:col-span-2 lg:row-span-2 rounded-xl p-5 transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Recent Activity</span>
-            <span className="text-xs font-semibold" style={{ color: 'var(--color-brand-accent)' }}>View all</span>
+            <Link href="/dashboard/notifications" className="text-xs font-semibold hover:underline" style={{ color: 'var(--color-brand-accent)' }}>View all</Link>
           </div>
           <div className="space-y-1">
             {[
@@ -242,7 +251,7 @@ export default function AgentDashboardPage() {
         <div className="lg:col-span-2 rounded-xl p-5 transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Commission Tracker</span>
-            <span className="text-xs font-semibold" style={{ color: 'var(--color-brand-accent)' }}>Breakdown</span>
+            <Link href="/dashboard/agent/transactions" className="text-xs font-semibold hover:underline" style={{ color: 'var(--color-brand-accent)' }}>Breakdown</Link>
           </div>
           <div className="flex items-center gap-6">
             <div className="shrink-0">
@@ -275,7 +284,7 @@ export default function AgentDashboardPage() {
         <div className="lg:col-span-2 rounded-xl p-5 transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Lead Funnel</span>
-            <span className="text-xs font-semibold" style={{ color: 'var(--color-brand-accent)' }}>Full funnel</span>
+            <Link href="/dashboard/agent/clients" className="text-xs font-semibold hover:underline" style={{ color: 'var(--color-brand-accent)' }}>Full funnel</Link>
           </div>
           <div className="flex gap-3">
             {[
@@ -308,14 +317,14 @@ export default function AgentDashboardPage() {
               <div className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-brand-secondary)', color: 'var(--color-text-inverse)' }}><Calendar className="w-5 h-5" /></div>
               <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Schedule Visit</span>
             </Link>
-            <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-center transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
+            <button onClick={() => emitToast('Referral link copied — share it with your client', 'success')} className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-center transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
               <div className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}><Link2 className="w-5 h-5" /></div>
               <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Refer Client</span>
             </button>
-            <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-center transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
+            <Link href="/dashboard/agent/transactions" className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-center transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
               <div className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-success)', color: 'var(--color-text-inverse)' }}><BarChart3 className="w-5 h-5" /></div>
               <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Analytics</span>
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -342,7 +351,7 @@ export default function AgentDashboardPage() {
                   </div>
                   <div className="text-right shrink-0 ml-4">
                     <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                      {listing.currency} {parseFloat(listing.price).toLocaleString()}
+                      {formatPrice(listing.price, listing.currency ?? 'NGN')}
                     </p>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{
                       background: listing.status === 'ACTIVE' ? '#E8F7EE' : listing.status === 'PENDING' ? '#FEF3C7' : '#F3F4F6',
