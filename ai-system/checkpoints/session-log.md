@@ -620,3 +620,30 @@ Visual check of `/properties/[id]` on mobile + desktop against the live global n
 
 **Notes / Blockers:**
 - None blocking.
+
+## Session 20b — 2026-10-14 (execute-feature: register-password 500 + form contrast audit)
+
+**Completed:**
+- Root-caused production `POST /api/v1/auth/register-password → 500`: `jwtSecret()` throws when `JWT_SECRET` is unset in production and `"User"."passwordHash"` exists only via runtime ALTER (absent from drizzle schema) — both swallowed by one outer catch with no log.
+- Web `auth/[action]` route: `node:crypto` `randomUUID` import, per-stage try/catch with `console.error` + machine `code` (`DB_LOOKUP_FAILED`, `MISSING_PASSWORD_COLUMN`, `TOKEN_CONFIG`, …); JWT-config failures now 503, validation stays 400/409. Same treatment for login-password/reset-password token issuance.
+- Drizzle `users` gains nullable `passwordHash`; Nest API gains `register-password`/`login-password`/`forgot-password`/`reset-password` routes + Zod DTOs + scrypt service methods (no new deps).
+- Form audit: defined `--color-bg-input`, `--color-bg-input-disabled`, `--color-text-tertiary`, `--color-danger` (= error alias), `--color-bg-canvas` per theme; added global `input/select/textarea/option/autofill/disabled` contrast baseline in `globals.css`.
+- New reusable `HwSelect`, `HwTextarea`, shared `form-field-config.ts` (`FALLBACK_FORM_FIELD`, `formFieldClassName`, `config` prop); `HwInput` reworked to solid high-contrast (legacy `glass` kept, implies pill radius); updated `hw-input.test.tsx` (7 tests).
+- QA: web tsc clean, api tsc clean, web UI 21/21, api auth 21/21, eslint clean. `update-ai-system.md` executed (dev-history + lessons-learned + design-system + repo-map + freshness metadata).
+
+**Files Modified:**
+- `apps/web/app/api/v1/auth/[action]/route.ts` — staged error handling, logging, codes, randomUUID import
+- `apps/web/app/globals.css` — missing tokens + global form baseline
+- `apps/web/components/ui/hw-input.tsx`, `hw-input.test.tsx`, `hw-select.tsx` (new), `hw-textarea.tsx` (new), `form-field-config.ts` (new), `index.ts`
+- `packages/api/src/drizzle/schema.ts`, `packages/api/src/modules/auth/{auth.controller.ts,auth.service.ts,dto/register.dto.ts}`
+- `ai-system/{design-system.md,index/repo-map.md,summaries/dev-history.md,memory/lessons-learned.md,checkpoints/in-progress.md,checkpoints/session-log.md}`
+
+**Next Task:**
+Deploy; verify live register-password; run `drizzle-kit` migration for `passwordHash` on existing DBs; ensure `JWT_SECRET` + `DATABASE_URL` set in prod env.
+
+**Assumptions Made:**
+- Additive-only Nest endpoints are safe behind existing auth throttle; `reset-password` via API intentionally returns a friendly "use web flow" 400 so the proxy stops 404ing without inventing a parallel token scheme.
+- `HwInput` default glass-pill → solid-rounded visual shift is intended (legibility fix per directive).
+
+**Notes / Blockers:**
+- `npx jest` shim in packages/api is broken (babel); use `npm test` (vitest) for api suites.

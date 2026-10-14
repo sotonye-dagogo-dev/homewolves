@@ -1,7 +1,7 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-19
+> - last-updated-by: execute-feature-session-20
 > - last-verified-against-code: 2026-10-14
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
@@ -274,6 +274,40 @@ Every user-visible brand string must resolve via `useBrand()`/`FALLBACK_BRAND`/`
 
 **Apply When:**
 Adding any header/nav/footer/SEO surface. Never hardcode the company name or initials.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Never Collapse Config Failures Into Generic 500s
+
+**Context:**
+Session 20 debugged production `POST /api/v1/auth/register-password → 500`. The cause was two config/schema issues — `jwtSecret()` throwing when `JWT_SECRET` is unset in production, and the `"User"."passwordHash"` column existing only via a runtime `ALTER TABLE` (absent from the drizzle schema) — both swallowed by a single outer `catch` returning `{ message: 'Could not create…' }` with no log and no code.
+
+**What We Learned:**
+Split auth handlers into per-stage try/catch blocks with `console.error('[auth:<action>] <stage>', err)` and machine-readable `code` fields; return 503 (`TOKEN_CONFIG`, `notConfigured()`) for missing `JWT_SECRET`/`DATABASE_URL` so ops can distinguish "not configured" from "broken". Mirror web local-auth password routes in the Nest API (additive DTOs + controller + service) so the same-origin proxy degrades to a real implementation instead of a 404/500. Add the column to the drizzle schema even when a runtime ALTER exists, so migrations materialize it.
+
+**Apply When:**
+- Adding any server route that depends on env/config or on columns created outside migrations — fail with a distinct 5xx code + log, never a bare 500.
+- Adding a web local-auth fallback action — add the matching Nest route in the same change.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Undefined CSS Vars Fail Silently — Audit Tokens Before Styling Forms
+
+**Context:**
+Session 20's form audit found `var(--color-bg-input)`, `var(--color-text-tertiary)`, and `var(--color-danger)` referenced across `ListingForm` and 40+ surfaces but defined nowhere — browsers drop the declaration, leaving transparent inputs and invisible text. Select `<option>` popups rendered by the OS ignored glass backgrounds, producing white-on-white options.
+
+**What We Learned:**
+Define every referenced token in `globals.css` for all three themes (light/dark/high-contrast), then enforce a global `input/select/textarea/option/autofill` baseline with explicit `color`, opaque option backgrounds, and `color-scheme`. Route new fields through shared `HwInput`/`HwSelect`/`HwTextarea` + `form-field-config.ts` (`FALLBACK_FORM_FIELD`, `formFieldClassName`, `config` prop) so feature code never hardcodes field colors.
+
+**Apply When:**
+- Before styling any form — `grep` the token name in `globals.css`; if missing, add it per-theme first.
+- Adding any new field — use the Hw* wrapper with `config`, never raw `<input className="bg-transparent …">`.
 
 **Supersedes:** None
 **Superseded by:** None

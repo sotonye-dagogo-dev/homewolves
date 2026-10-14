@@ -22,6 +22,7 @@
     --color-text-primary:     #0F1117;
     --color-text-secondary:   #4A5568;
     --color-text-muted:       #8A9BB0;
+    --color-text-tertiary:    #6B7A90;
     --color-text-inverse:     #FFFFFF;
     --color-text-accent:      #C8813A;
 
@@ -41,6 +42,14 @@
     --color-error-bg:         #FEE2E2;
     --color-info:             #1D4ED8;
     --color-info-bg:          #DBEAFE;
+    /* Aliases — legacy code references --color-danger / --color-danger-bg */
+    --color-danger:           var(--color-error);
+    --color-danger-bg:        var(--color-error-bg);
+
+    /* Form surfaces — single source of truth for all inputs/selects */
+    --color-bg-input:         #FFFFFF;
+    --color-bg-input-disabled:#F1F0EC;
+    --color-bg-canvas:        var(--color-bg-base);
 
     /* Transaction status */
     --color-status-pending:   #D97706;
@@ -175,6 +184,7 @@
     --color-text-primary:     #F0F4F8;
     --color-text-secondary:   #9BAEC8;
     --color-text-muted:       #5C6E82;
+    --color-text-tertiary:    #8DA0B8;
     --color-text-inverse:     #0D1117;
     --color-text-accent:      #F59E0B;
 
@@ -182,6 +192,11 @@
     --color-border-default:   rgba(255, 255, 255, 0.10);
     --color-border-strong:    rgba(255, 255, 255, 0.20);
     --color-border-glass:     rgba(255, 255, 255, 0.12);
+    --color-danger:           #F87171;
+    --color-danger-bg:        rgba(248, 113, 113, 0.12);
+    --color-bg-input:         #161B22;
+    --color-bg-input-disabled:#1F2630;
+    --color-bg-canvas:        var(--color-bg-base);
   }
 
   /* ─── HIGH CONTRAST THEME ──────────────────────────────── */
@@ -193,6 +208,12 @@
     --color-text-secondary:   #E0E0E0;
     --color-brand-accent:     #FFD700;
     --color-border-default:   #FFFFFF;
+    --color-text-tertiary:    #E0E0E0;
+    --color-danger:           #FF6B6B;
+    --color-danger-bg:        #330000;
+    --color-bg-input:         #1A1A1A;
+    --color-bg-input-disabled:#2A2A2A;
+    --color-bg-canvas:        var(--color-bg-base);
   }
 }
 
@@ -323,5 +344,67 @@
   ::-webkit-scrollbar-thumb {
     background: var(--color-border-default);
     border-radius: var(--radius-full);
+  }
+
+  /* ─── GLOBAL FORM CONTRAST BASELINE ──────────────────────
+     Guarantees legible text in every input/select/textarea even when a
+     feature passes no explicit colors. Tokens above are the source of
+     truth; these rules only enforce them. */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+  select,
+  textarea {
+    color: var(--color-text-primary);
+    color-scheme: light;
+  }
+  [data-theme='dark'] input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+  [data-theme='dark'] select,
+  [data-theme='dark'] textarea {
+    color-scheme: dark;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-text-muted);
+    opacity: 1;
+  }
+  /* Native dropdown options must be opaque — transparent glass + OS popup
+     was rendering white-on-white / invisible option text. */
+  select option,
+  select optgroup {
+    background-color: var(--color-bg-input);
+    color: var(--color-text-primary);
+  }
+  [data-theme='dark'] select option,
+  [data-theme='dark'] select optgroup {
+    background-color: var(--color-bg-input);
+    color: var(--color-text-primary);
+  }
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    background-color: var(--color-bg-input-disabled);
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+  }
+  input[aria-invalid='true'],
+  select[aria-invalid='true'],
+  textarea[aria-invalid='true'] {
+    border-color: var(--color-error);
+  }
+  /* Autofill (Chrome) otherwise paints pale-yellow bg with white text */
+  input:-webkit-autofill,
+  select:-webkit-autofill,
+  textarea:-webkit-autofill {
+    -webkit-text-fill-color: var(--color-text-primary);
+    caret-color: var(--color-text-primary);
+    transition: background-color 9999s ease-in-out 0s;
+  }
+  /* Date / time / number pickers inherit the field text color */
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator {
+    opacity: 0.65;
+    cursor: pointer;
+  }
+  input[type='password'] {
+    letter-spacing: 0.02em;
   }
 }

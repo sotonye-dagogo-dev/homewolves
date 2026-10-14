@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-20
+> - last-updated-by: execute-feature-session-20b
 > - last-verified-against-code: 2026-10-14
 > - staleness-policy: this file is overwritten every session — always current
 
@@ -12,14 +12,10 @@
 
 ## Current Status
 
-**Status:** CLEAR — execute-feature Session 20 (property-detail navbar clash + gallery sizing) completed 2026-10-14.
+**Status:** CLEAR — execute-feature Session 20b (register-password 500 fix + form contrast audit) completed 2026-10-14.
 
 Verified green:
-- `tsc --noEmit` clean (apps/web, zero PropertyDetailClient errors)
-- web vitest 21 files / 153 tests pass
-- `eslint` on edited file clean
-- `next build` green
-
-Documentation written: Session 20 in `session-log.md` (Session 19 docs retained).
-
-No active in-progress tasks. Next: E2E Playwright pass + visual nav review on mobile/desktop.
+- `tsc --noEmit` clean (apps/web + packages/api)
+- web vitest components/ui 4 files / 21 tests pass
+- api vitest src/modules/auth 21 tests pass
+- `eslint` clean on touched UI files

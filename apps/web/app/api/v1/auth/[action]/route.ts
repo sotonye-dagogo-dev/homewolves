@@ -9,6 +9,7 @@
  * work end-to-end without a 502 "API not configured".
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import {
   decodeOtpCookie,
   encodeOtpCookie,
@@ -153,7 +154,7 @@ async function applyReferral(sql: SqlClient, userId: string, code: string): Prom
   await sql`UPDATE "User" SET "referredById" = ${referrer.id as string} WHERE id = ${userId}`;
   await sql`
     INSERT INTO "Referral" (id, code, "referrerId", "referredId", status, "createdAt")
-    VALUES (${crypto.randomUUID()}, ${normalized}, ${referrer.id as string}, ${userId}, 'active', now())
+    VALUES (${randomUUID()}, ${normalized}, ${referrer.id as string}, ${userId}, 'active', now())
     ON CONFLICT ("referredId") DO NOTHING
   `;
 }
@@ -169,13 +170,18 @@ async function ensureAuthColumns(sql: SqlClient): Promise<void> {
 }
 
 async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
-  const body = await req.json().catch(() => ({}));
+  let body: Record<string, unknown> = {};
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ message: 'Invalid request body.', code: 'BAD_JSON' }, { status: 400 });
+  }
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   const password = typeof body.password === 'string' ? body.password : '';
   const firstName = typeof body.firstName === 'string' ? body.firstName.trim() : '';
   const lastName = typeof body.lastName === 'string' ? body.lastName.trim() : '';
   const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
-  const role = ['BUYER', 'AGENT', 'DEVELOPER', 'HOMEOWNER'].includes(body.role) ? body.role : 'BUYER';
+  const role = ['BUYER', 'AGENT', 'DEVELOPER', 'HOMEOWNER'].includes(body.role as string) ? (body.role as string) : 'BUYER';
   const referralCode = typeof body.referralCode === 'string' ? body.referralCode : '';
 
   if (!isValidEmail(email)) {
@@ -192,39 +198,95 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
   if (origin) return proxyToBackend(req, 'register-password');
 
   const sql = await getSql();
-  if (!sql) return notConfigured();
+  if (!sql) {
+    console.error('[auth:register-password] DATABASE_URL not configured');
+    return notConfigured();
+  }
   await ensureAuthColumns(sql);
 
+  let existing: Row | null = null;
   try {
-    const existing = await findUserByEmail(sql, email);
-    if (existing) {
-      return NextResponse.json({ message: 'This email already has an account. Try signing in instead.' }, { status: 409 });
-    }
-    const passwordHash = await hashPassword(password);
-    const newCode = await ensureReferralCode(sql);
+    existing = await findUserByEmail(sql, email);
+  } catch (err) {
+    console.error('[auth:register-password] lookup failed', err);
+    return NextResponse.json(
+      { message: 'Could not create your account. Please try again.', code: 'DB_LOOKUP_FAILED' },
+      { status: 500 },
+    );
+  }
+  if (existing) {
+    return NextResponse.json({ message: 'This email already has an account. Try signing in instead.', code: 'EMAIL_CONFLICT' }, { status: 409 });
+  }
+  let passwordHash: string;
+  try {
+    passwordHash = await hashPassword(password);
+  } catch (err) {
+    console.error('[auth:register-password] hash failed', err);
+    return NextResponse.json(
+      { message: 'Could not create your account. Please try again.', code: 'HASH_FAILED' },
+      { status: 500 },
+    );
+  }
+  let newCode: string;
+  try {
+    newCode = await ensureReferralCode(sql);
+  } catch (err) {
+    console.error('[auth:register-password] referral-code failed', err);
+    return NextResponse.json(
+      { message: 'Could not create your account. Please try again.', code: 'REFERRAL_FAILED' },
+      { status: 500 },
+    );
+  }
+  let user: Row | null = null;
+  try {
     const rows = await sql`
       INSERT INTO "User" (id, email, "firstName", "lastName", phone, role, verified, "passwordHash", "referralCode", preferences, "createdAt", "updatedAt")
-      VALUES (${crypto.randomUUID()}, ${email}, ${firstName}, ${lastName}, ${phone || null}, ${role}::"UserRole", false, ${passwordHash}, ${newCode}, '{}'::jsonb, now(), now())
+      VALUES (${randomUUID()}, ${email}, ${firstName}, ${lastName}, ${phone || null}, ${role}::"UserRole", false, ${passwordHash}, ${newCode}, '{}'::jsonb, now(), now())
       RETURNING *
     `;
-    const user = rows[0] ?? null;
-    if (!user) return NextResponse.json({ message: 'Could not create your account. Please try again.' }, { status: 500 });
-    if (referralCode) {
-      try { await applyReferral(sql, user.id as string, referralCode); } catch { /* ignore */ }
-    }
-    // Send verification OTP (email verification flow)
-    const otp = generateOtp();
-    await sendOtpEmail(email, otp, firstName);
-    const res = NextResponse.json(issueTokens(user as never));
+    user = rows[0] ?? null;
+  } catch (err) {
+    // Missing passwordHash column (pre-migration DBs) or enum mismatch land here.
+    console.error('[auth:register-password] insert failed', err);
+    const detail = err instanceof Error ? err.message : String(err);
+    const code = /passwordHash/i.test(detail) ? 'MISSING_PASSWORD_COLUMN' : 'DB_INSERT_FAILED';
+    return NextResponse.json(
+      { message: 'Could not create your account. Please try again.', code },
+      { status: 500 },
+    );
+  }
+  if (!user) return NextResponse.json({ message: 'Could not create your account. Please try again.', code: 'EMPTY_INSERT' }, { status: 500 });
+  if (referralCode) {
+    try { await applyReferral(sql, user.id as string, referralCode); } catch { /* ignore */ }
+  }
+  // Send verification OTP (email verification flow)
+  const otp = generateOtp();
+  await sendOtpEmail(email, otp, firstName);
+  let res: NextResponse;
+  try {
+    res = NextResponse.json(issueTokens(user as never));
+  } catch (err) {
+    // JWT_SECRET missing in production throws here — surface as 503, not 500.
+    console.error('[auth:register-password] token issue failed (check JWT_SECRET)', err);
+    return NextResponse.json(
+      { message: 'Sign-up is temporarily unavailable. Please try again shortly.', code: 'TOKEN_CONFIG' },
+      { status: 503 },
+    );
+  }
+  try {
     res.cookies.set(
       OTP_COOKIE,
       encodeOtpCookie({ email, otp, exp: Date.now() + 10 * 60 * 1000, purpose: 'register' }),
       otpCookieOptions(),
     );
-    return res;
-  } catch {
-    return NextResponse.json({ message: 'Could not create your account. Please try again.' }, { status: 500 });
+  } catch (err) {
+    console.error('[auth:register-password] otp cookie failed (check JWT_SECRET)', err);
+    return NextResponse.json(
+      { message: 'Sign-up is temporarily unavailable. Please try again shortly.', code: 'TOKEN_CONFIG' },
+      { status: 503 },
+    );
   }
+  return res;
 }
 
 async function handleLoginPassword(req: NextRequest): Promise<NextResponse> {
@@ -255,9 +317,18 @@ async function handleLoginPassword(req: NextRequest): Promise<NextResponse> {
     if (!ok) {
       return NextResponse.json({ message: 'Email or password is incorrect.' }, { status: 401 });
     }
-    return NextResponse.json(issueTokens(user as never));
-  } catch {
-    return NextResponse.json({ message: 'Could not sign you in. Please try again.' }, { status: 500 });
+    try {
+      return NextResponse.json(issueTokens(user as never));
+    } catch (err) {
+      console.error('[auth:login-password] token issue failed (check JWT_SECRET)', err);
+      return NextResponse.json(
+        { message: 'Sign-in is temporarily unavailable. Please try again shortly.', code: 'TOKEN_CONFIG' },
+        { status: 503 },
+      );
+    }
+  } catch (err) {
+    console.error('[auth:login-password] sign-in failed', err);
+    return NextResponse.json({ message: 'Could not sign you in. Please try again.', code: 'DB_FAILED' }, { status: 500 });
   }
 }
 
@@ -314,9 +385,18 @@ async function handleResetPassword(req: NextRequest): Promise<NextResponse> {
       WHERE id = ${user.id as string}
       RETURNING *
     `;
-    return NextResponse.json(issueTokens((rows[0] ?? user) as never));
-  } catch {
-    return NextResponse.json({ message: 'Could not reset your password. Please try again.' }, { status: 500 });
+    try {
+      return NextResponse.json(issueTokens((rows[0] ?? user) as never));
+    } catch (err) {
+      console.error('[auth:reset-password] token issue failed (check JWT_SECRET)', err);
+      return NextResponse.json(
+        { message: 'Password updated, but sign-in is temporarily unavailable. Try signing in shortly.', code: 'TOKEN_CONFIG' },
+        { status: 503 },
+      );
+    }
+  } catch (err) {
+    console.error('[auth:reset-password] reset failed', err);
+    return NextResponse.json({ message: 'Could not reset your password. Please try again.', code: 'DB_FAILED' }, { status: 500 });
   }
 }
 
@@ -411,7 +491,7 @@ async function handleVerifyOtp(req: NextRequest): Promise<NextResponse> {
     const referralCode = await ensureReferralCode(sql);
     const rows = await sql`
       INSERT INTO "User" (id, email, "firstName", "lastName", role, verified, "referralCode", preferences, "createdAt", "updatedAt")
-      VALUES (${crypto.randomUUID()}, ${email}, 'New', 'User', 'BUYER', true, ${referralCode}, '{}'::jsonb, now(), now())
+      VALUES (${randomUUID()}, ${email}, 'New', 'User', 'BUYER', true, ${referralCode}, '{}'::jsonb, now(), now())
       RETURNING *
     `;
     user = rows[0] ?? null;
@@ -457,7 +537,7 @@ async function handleCompleteProfile(req: NextRequest): Promise<NextResponse> {
     const newCode = await ensureReferralCode(sql);
     const rows = await sql`
       INSERT INTO "User" (id, email, "firstName", "lastName", phone, role, verified, "referralCode", preferences, "createdAt", "updatedAt")
-      VALUES (${crypto.randomUUID()}, ${email}, ${firstName}, ${lastName}, ${phone}, ${role}::"UserRole", true, ${newCode}, '{}'::jsonb, now(), now())
+      VALUES (${randomUUID()}, ${email}, ${firstName}, ${lastName}, ${phone}, ${role}::"UserRole", true, ${newCode}, '{}'::jsonb, now(), now())
       RETURNING *
     `;
     user = rows[0] ?? null;
@@ -529,7 +609,7 @@ async function handleGoogle(req: NextRequest): Promise<NextResponse> {
       const newCode = await ensureReferralCode(sql);
       const rows = await sql`
         INSERT INTO "User" (id, email, "firstName", "lastName", role, verified, provider, "providerId", avatar, "referralCode", preferences, "createdAt", "updatedAt")
-        VALUES (${crypto.randomUUID()}, ${email}, ${firstName ?? 'User'}, ${rest.join(' ') || '—'}, 'BUYER', true, 'google', ${providerId},
+        VALUES (${randomUUID()}, ${email}, ${firstName ?? 'User'}, ${rest.join(' ') || '—'}, 'BUYER', true, 'google', ${providerId},
                 ${typeof info.picture === 'string' ? info.picture : null}, ${newCode}, '{}'::jsonb, now(), now())
         RETURNING *
       `;
@@ -618,7 +698,7 @@ async function handleSupabase(req: NextRequest): Promise<NextResponse> {
       const newCode = await ensureReferralCode(sql);
       const rows = await sql`
         INSERT INTO "User" (id, email, "firstName", "lastName", role, verified, provider, "providerId", avatar, "referralCode", preferences, "createdAt", "updatedAt")
-        VALUES (${crypto.randomUUID()}, ${email}, ${firstName ?? 'User'}, ${rest.join(' ') || '—'}, 'BUYER', true, 'supabase', ${providerId},
+        VALUES (${randomUUID()}, ${email}, ${firstName ?? 'User'}, ${rest.join(' ') || '—'}, 'BUYER', true, 'supabase', ${providerId},
                 ${typeof metadata.avatar_url === 'string' ? metadata.avatar_url : null}, ${newCode}, '{}'::jsonb, now(), now())
         RETURNING *
       `;
