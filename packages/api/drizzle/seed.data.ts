@@ -78,6 +78,20 @@ export const SEED_MANIFEST = {
   emailTemplateKeys: [...SEED_EMAIL_TEMPLATE_KEYS],
 } as const;
 
+/**
+ * Default password for seed/demo accounts (`admin@`, `agent1@`, …).
+ * Stored format mirrors the app hasher: `scrypt:<salt-hex>:<hash-hex>`
+ * (see `hashPassword` in `apps/web/lib/server/auth-local.ts` and
+ * `AuthService.hashPassword` in `packages/api`). Hash of `Homewolves123!`.
+ *
+ * Demo-only convenience so password sign-in works against seeded rows
+ * (previously `passwordHash` was NULL, forcing every seed-account login
+ * down the email-code path). Rotate for real environments — never reuse
+ * for production users.
+ */
+export const SEED_USER_PASSWORD_HASH =
+  'scrypt:b84dc5f8db52434d630dfe55fb013e51:2dab385a2f25af6bd2dfae799c51ee5e6adb6afbc25d551357c53e864b15543a7c3e52b0419ddd2ec6dd744a305d2dba54bd538aad43d43743a8479985f86d81';
+
 export const SEED_USERS = [
   {
     id: SEED_IDS.users.admin,
@@ -88,6 +102,7 @@ export const SEED_USERS = [
     role: 'ADMIN' as const,
     verified: true,
     referralCode: 'HW-ADMIN',
+    passwordHash: SEED_USER_PASSWORD_HASH,
   },
   {
     id: SEED_IDS.users.agent1,
@@ -98,6 +113,7 @@ export const SEED_USERS = [
     role: 'AGENT' as const,
     verified: true,
     referralCode: 'HW-AGENT1',
+    passwordHash: SEED_USER_PASSWORD_HASH,
   },
   {
     id: SEED_IDS.users.agent2,
@@ -108,6 +124,7 @@ export const SEED_USERS = [
     role: 'AGENT' as const,
     verified: true,
     referralCode: 'HW-AGENT2',
+    passwordHash: SEED_USER_PASSWORD_HASH,
   },
   {
     id: SEED_IDS.users.buyer1,
@@ -118,6 +135,7 @@ export const SEED_USERS = [
     role: 'BUYER' as const,
     verified: true,
     referralCode: 'HW-BUYER1',
+    passwordHash: SEED_USER_PASSWORD_HASH,
   },
   {
     id: SEED_IDS.users.buyer2,
@@ -128,6 +146,7 @@ export const SEED_USERS = [
     role: 'BUYER' as const,
     verified: true,
     referralCode: 'HW-BUYER2',
+    passwordHash: SEED_USER_PASSWORD_HASH,
   },
 ];
 
