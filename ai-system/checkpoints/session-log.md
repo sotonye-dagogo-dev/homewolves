@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: fix-build-session-20d
+> - last-updated-by: execute-feature-session-21
 > - last-verified-against-code: 2026-10-15
 > - staleness-policy: append-only — never modify past entries
 
@@ -724,3 +724,23 @@ Redeploy on Vercel (build log should show `[vercel-build] drizzle-kit migrate co
 
 **Notes / Blockers:**
 - None blocking. Remove build-time migrate later once external DB workflow stabilises (see script header).
+
+## Session 21 — 2026-10-15 (execute-feature: Vercel build stall after `npm run vercel-build`)
+
+**Completed:**
+- Hardened `scripts/vercel-build.mjs`: migrate step was blocking `spawnSync` with no timeout — an unreachable `DATABASE_URL` (pooler/DNS hang) stalled `vercel build` with a log truncated right after `Running "npm run vercel-build"` (Vercel CLI 62.7.0). Now: `SKIP_DB_MIGRATE`/`SKIP_MIGRATIONS` escape hatch, postgres-URL validation, repo-local `drizzle-kit`/`turbo` binaries (no per-build `npx --yes` fetch), 60s migrate timeout (`VERCEL_MIGRATE_TIMEOUT_MS`) with fail-soft continue, post-build output check (`apps/web/.next` present + Root-Directory guidance).
+- Documented new knobs in `.env.example` (`SKIP_DB_MIGRATE`, `VERCEL_MIGRATE_TIMEOUT_MS`).
+- QA: `npm run vercel-build` green in 3 modes (no DB skip, `SKIP_DB_MIGRATE=1`, unreachable-DB fail-soft → web build 38 pages + `Verified Next.js output at apps/web/.next`); `npm run typecheck` 4/4; `npm test` green (web 155/155, api suite green).
+
+**Files Modified:**
+- `scripts/vercel-build.mjs` — timeout/skip/local-binary/output-check hardening
+- `.env.example` — `SKIP_DB_MIGRATE`, `VERCEL_MIGRATE_TIMEOUT_MS`
+
+**Next Task:**
+Redeploy on Vercel; expect `[vercel-build]` lines for migrate-skip/timeout + `Verified Next.js output at apps/web/.next` + `Web build completed`. If the log still truncates after `Running "npm run vercel-build"`, check dashboard Root Directory (must be repo root/empty) and build-time `DATABASE_URL` reachability; `SKIP_DB_MIGRATE=1` unblocks the build while the DB is investigated.
+
+**Assumptions Made:**
+- Vercel dashboard Root Directory is the repo root (empty) — verified by `npm run vercel-build` starting (a Root of `apps/web` would fail to find the root script). No `outputDirectory` override added; Turbo auto-detection handles `apps/web/.next`.
+
+**Notes / Blockers:**
+- None blocking.

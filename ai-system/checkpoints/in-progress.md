@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: fix-build-session-20d
+> - last-updated-by: execute-feature-session-21
 > - last-verified-against-code: 2026-10-15
 > - staleness-policy: this file is overwritten every session — always current
 
@@ -12,10 +12,9 @@
 
 ## Current Status
 
-**Status:** CLEAR — fix-build Session 20d (register-password 500 round 3 + seed NULL password hashes) completed 2026-10-15.
+**Status:** CLEAR — execute-feature Session 21 (Vercel build stall after `npm run vercel-build`) completed 2026-10-15.
 
 Verified green:
-- `npm install` clean (924 packages)
-- `tsc --noEmit` clean (apps/web + packages/api)
-- web vitest 155/155 (21 files)
-- api vitest 159/159 (17 files)
+- `npm run vercel-build` green in 3 modes (no-DB skip, `SKIP_DB_MIGRATE=1`, unreachable-DB fail-soft → 38 pages + output verified)
+- `npm run typecheck` 4/4
+- `npm test` green (web 155/155, api suite green)

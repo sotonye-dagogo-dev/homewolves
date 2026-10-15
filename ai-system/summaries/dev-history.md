@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: fix-build-session-20d
+> - last-updated-by: execute-feature-session-21
 > - last-verified-against-code: 2026-10-15
 > - staleness-policy: historical entries do not go stale
 
@@ -458,3 +458,19 @@ Unblocked platform entry: Vercel builds now apply Drizzle migrations automatical
 
 **Next Sprint Focus:**
 Verify live register-password after redeploy; remove build-time migrate later if an external DB workflow replaces it.
+
+## 2026-10-15 — execute-feature: Vercel build stall hardened (Session 21)
+
+**Summary:**
+The `vercel build` log truncated right after `Running "npm run vercel-build"` with no error — the migrate step could hang indefinitely on an unreachable DB. Hardened the entrypoint so the build always progresses to the web build with actionable logs.
+
+**Completed:**
+- `scripts/vercel-build.mjs`: 60s migrate timeout (fail-soft), `SKIP_DB_MIGRATE` escape hatch, postgres-URL validation, repo-local binaries, post-build `apps/web/.next` verification
+- `.env.example`: documented `SKIP_DB_MIGRATE`, `VERCEL_MIGRATE_TIMEOUT_MS`
+- QA: vercel-build green (skip/no-DB/unreachable-DB modes, 38 pages), typecheck 4/4, tests green
+
+**Key Changes:**
+- Rule: build-time migrate is timeout-bounded and never stalls or fails the build; dashboard Root Directory must be the repo root (empty)
+
+**Next Sprint Focus:**
+Redeploy on Vercel and confirm `[vercel-build] ... Web build completed.` in the log; use `SKIP_DB_MIGRATE=1` as the emergency unblock while DB reachability is investigated.
