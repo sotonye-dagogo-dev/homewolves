@@ -362,3 +362,15 @@ Default `postgres()` options are wrong for poolers. Set `prepare: false` + `ssl:
 
 **Supersedes:** None
 **Superseded by:** None
+
+---
+
+## Build-time migrations unblock serverless auth
+
+**Context:**
+2026-10-15 execute-feature — `register-password → 500` with no platform entry point while the DB lagged schema and the external backend was unreachable.
+
+**What We Learned:**
+In single-service Vercel deploys, running `drizzle-kit migrate` at build time (gated on `DATABASE_URL`, non-failing) is the cheapest way to guarantee the runtime schema matches code. Pair it with request-time self-heal (`ALTER TABLE IF NOT EXISTS`) and coded 503s (`DB_NOT_MIGRATED`, `MISSING_PASSWORD_COLUMN`) so any residual gap is actionable in Vercel logs instead of an opaque 500.
+
+**Supersedes:** None

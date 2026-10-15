@@ -16,12 +16,37 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
       const connectionString =
         process.env.DATABASE_URL ??
         'postgresql://postgres:postgres@localhost:5432/homewolves?schema=public';
-      this.client = postgres(connectionString, {
+      // Serverless-safe postgres.js options (mirrors web auth-local route):
+      // Supabase/pgbouncer poolers (port 6543, transaction mode) do NOT
+      // support prepared statements — every query fails otherwise, surfacing
+      // as opaque 500s on auth. Default prepare:false; opt back in with
+      // PG_PREPARE=true (direct connections only). TLS required for non-local
+      // hosts unless PG_SSL=disable or ?sslmode=disable.
+      const prepare = (process.env.PG_PREPARE ?? '').trim().toLowerCase() === 'true';
+      let ssl: unknown;
+      try {
+        const u = new URL(connectionString);
+        const host = u.hostname.toLowerCase();
+        const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+        const sslParam = (u.searchParams.get('sslmode') ?? '').toLowerCase();
+        const sslEnv = (process.env.PG_SSL ?? '').trim().toLowerCase();
+        if (sslEnv === 'disable' || sslParam === 'disable') {
+          ssl = false;
+        } else if (!isLocal) {
+          ssl = 'require';
+        }
+      } catch {
+        // Unparseable URL — let postgres throw its own descriptive error.
+      }
+      const opts: Record<string, unknown> = {
         max: 10,
         idle_timeout: 20,
         connect_timeout: 10,
         onnotice: () => {},
-      });
+        prepare,
+      };
+      if (ssl !== undefined) (opts as Record<string, unknown>).ssl = ssl;
+      this.client = postgres(connectionString, opts as never);
       this._db = drizzle(this.client, { schema });
       this.logger.log('Drizzle connected');
     } catch (err) {
