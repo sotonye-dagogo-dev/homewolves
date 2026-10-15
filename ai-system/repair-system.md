@@ -314,3 +314,25 @@ Never add an unbounded network call to the build path — every build-time netwo
 `scripts/vercel-build.mjs`, `.env.example`
 **Date:** 2026-10-15
 **Status:** Active
+
+### Vercel `Missing script: "vercel-build"` in @hw/web — dashboard Root is apps/web (Session 22, 2026-10-15)
+
+**Symptom:**
+`vercel build` prints `Running "npm run vercel-build"` then fails immediately:
+`npm error workspace @hw/web@1.0.0 / location /vercel/path0/apps/web / Missing script: "vercel-build"`.
+(Session 21 had assumed Root = repo root because the command *started*; this error proves the dashboard Root Directory is `apps/web`, so npm resolves scripts from `apps/web/package.json`, where `vercel-build` did not exist.)
+
+**Root Cause:**
+`vercel-build` existed only at the repo root (`node scripts/vercel-build.mjs`), but Vercel runs the `vercel.json` buildCommand with cwd = dashboard Root (`apps/web`). Additionally `scripts/vercel-build.mjs` assumed `process.cwd()` is the repo root for binary resolution, drizzle config path, turbo invocation, and the `.next` output check (which would have produced the doubled `apps/web/apps/web/.next` path from cwd `apps/web`).
+
+**Fix Applied:**
+- Added `"vercel-build": "next build"` to `apps/web/package.json` — the build now succeeds regardless of Root Directory (repo root → root script with migrate + turbo; `apps/web` → direct `next build`).
+- Hardened `scripts/vercel-build.mjs` with `findRepoRoot()` (walks up to `turbo.json`, falls back to script-relative path); all binary resolution, drizzle `cwd`, turbo `cwd`, and the `.next` output check use `REPO_ROOT` instead of `process.cwd()`.
+
+**Prevention:**
+Every root-level build/deploy script referenced by `vercel.json` must also exist on the workspace package Vercel may use as Root — verify with `npm run --workspace=@hw/web <script>`. Build scripts must never assume `process.cwd()` is the repo root; resolve it by walking up to a marker file (`turbo.json`).
+
+**Files Affected:**
+`apps/web/package.json`, `scripts/vercel-build.mjs`
+**Date:** 2026-10-15
+**Status:** Active

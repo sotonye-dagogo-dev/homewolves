@@ -28,19 +28,58 @@
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function log(msg) {
   console.log(`[vercel-build] ${msg}`);
+}
+
+// Resolve the monorepo root regardless of Vercel's Root Directory setting.
+// - If the dashboard Root is the repo root (empty), cwd already contains turbo.json.
+// - If the dashboard Root is apps/web, cwd is apps/web and turbo.json lives
+//   one (or more) levels up. Walking up keeps drizzle/turbo paths correct and
+//   avoids the old doubled-path check (apps/web/apps/web/.next).
+function findRepoRoot() {
+  const markers = ['turbo.json', 'package.json'];
+  const isRoot = (dir) =>
+    existsSync(join(dir, 'turbo.json')) &&
+    existsSync(join(dir, 'package.json')) &&
+    existsSync(join(dir, 'apps', 'web', 'package.json'));
+  let dir = resolve(process.cwd());
+  for (let i = 0; i < 6; i++) {
+    if (isRoot(dir)) return dir;
+    // Also accept a dir whose package.json declares workspaces apps/* (extra guard)
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  // Fallback: relative to this script (scripts/vercel-build.mjs → repo root)
+  try {
+    const scriptDir = dirname(fileURLToPath(import.meta.url));
+    const candidate = resolve(scriptDir, '..');
+    if (isRoot(candidate)) return candidate;
+  } catch {
+    // ignore — fall through to cwd
+  }
+  void markers;
+  return resolve(process.cwd());
+}
+
+const REPO_ROOT = findRepoRoot();
+if (REPO_ROOT !== resolve(process.cwd())) {
+  log(`Detected repo root at ${REPO_ROOT} (cwd is ${resolve(process.cwd())}).`);
+} else {
+  log(`Repo root is cwd (${REPO_ROOT}).`);
 }
 
 function resolveBin(name) {
   // Prefer the repo-local binary so Vercel builds don't pay an `npx --yes`
   // registry round-trip per build (log line: "turbo@x will be installed").
   for (const candidate of [
-    join(process.cwd(), 'node_modules', '.bin', name),
-    join(process.cwd(), 'packages', 'api', 'node_modules', '.bin', name),
-    join(process.cwd(), 'apps', 'web', 'node_modules', '.bin', name),
+    join(REPO_ROOT, 'node_modules', '.bin', name),
+    join(REPO_ROOT, 'packages', 'api', 'node_modules', '.bin', name),
+    join(REPO_ROOT, 'apps', 'web', 'node_modules', '.bin', name),
   ]) {
     if (existsSync(candidate)) return candidate;
   }
@@ -76,11 +115,11 @@ if (!databaseUrl) {
   // drizzle-kit reads drizzle.config.ts which loads DATABASE_URL itself.
   // Use --config to be explicit; cwd is repo root so pass relative path.
   const drizzleBin =
-    resolveBin('drizzle-kit') ?? join(process.cwd(), 'node_modules', '.bin', 'drizzle-kit');
+    resolveBin('drizzle-kit') ?? join(REPO_ROOT, 'node_modules', '.bin', 'drizzle-kit');
   let migrate;
   if (drizzleBin && existsSync(drizzleBin)) {
     migrate = run(drizzleBin, ['migrate', '--config=packages/api/drizzle.config.ts'], {
-      cwd: process.cwd(),
+      cwd: REPO_ROOT,
       timeout: MIGRATE_TIMEOUT_MS,
       killSignal: 'SIGKILL',
     });
@@ -88,7 +127,7 @@ if (!databaseUrl) {
     migrate = run(
       'npx',
       ['--yes', 'drizzle-kit', 'migrate', '--config=packages/api/drizzle.config.ts'],
-      { cwd: process.cwd(), timeout: MIGRATE_TIMEOUT_MS, killSignal: 'SIGKILL' },
+      { cwd: REPO_ROOT, timeout: MIGRATE_TIMEOUT_MS, killSignal: 'SIGKILL' },
     );
   }
   if (migrate.error) {
@@ -109,8 +148,8 @@ if (!databaseUrl) {
 log('Running web build: turbo run build --filter=@hw/web...');
 const turboBin = resolveBin('turbo');
 const build = turboBin
-  ? run(turboBin, ['run', 'build', '--filter=@hw/web...'])
-  : run('npx', ['--yes', 'turbo', 'run', 'build', '--filter=@hw/web...']);
+  ? run(turboBin, ['run', 'build', '--filter=@hw/web...'], { cwd: REPO_ROOT })
+  : run('npx', ['--yes', 'turbo', 'run', 'build', '--filter=@hw/web...'], { cwd: REPO_ROOT });
 if (build.status !== 0) {
   log(`Web build failed with code ${build.status}.`);
   process.exit(build.status);
@@ -120,10 +159,11 @@ if (build.status !== 0) {
 // Root to apps/web, Vercel would look for apps/web/apps/web/.next (doubled)
 // and fail with "output directory not found" — this explicit check makes that
 // misconfiguration obvious in the build log instead of a silent stall.
-const __nextDir = join(process.cwd(), 'apps', 'web', '.next');
+// REPO_ROOT is used (not process.cwd()) so the check is correct from either cwd.
+const __nextDir = join(REPO_ROOT, 'apps', 'web', '.next');
 if (existsSync(join(__nextDir, 'BUILD_ID')) || existsSync(join(__nextDir, 'build-manifest.json'))) {
   log(`Verified Next.js output at apps/web/.next (Root Directory = repo root is correct).`);
-} else if (existsSync(join(process.cwd(), '.next', 'BUILD_ID'))) {
+} else if (existsSync(join(REPO_ROOT, '.next', 'BUILD_ID')) || existsSync(join(process.cwd(), '.next', 'BUILD_ID'))) {
   log(
     'WARNING: Next.js output found at .next instead of apps/web/.next — ' +
       'the build ran from apps/web as cwd (dashboard Root Directory may be apps/web). ' +

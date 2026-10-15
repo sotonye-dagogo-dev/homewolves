@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-21
+> - last-updated-by: fix-build-session-22
 > - last-verified-against-code: 2026-10-15
 > - staleness-policy: this file is overwritten every session — always current
 
@@ -12,9 +12,10 @@
 
 ## Current Status
 
-**Status:** CLEAR — execute-feature Session 21 (Vercel build stall after `npm run vercel-build`) completed 2026-10-15.
+**Status:** CLEAR — fix-build Session 22 (`Missing script: "vercel-build"` in @hw/web) completed 2026-10-15.
 
 Verified green:
-- `npm run vercel-build` green in 3 modes (no-DB skip, `SKIP_DB_MIGRATE=1`, unreachable-DB fail-soft → 38 pages + output verified)
-- `npm run typecheck` 4/4
-- `npm test` green (web 155/155, api suite green)
+- `npm run vercel-build` green from `apps/web` cwd (direct `next build`, full route table) — the exact failing path
+- `npm run vercel-build` green from repo root (migrate-skip + turbo + output verified)
+- `findRepoRoot()` resolves repo root from both cwds; `npm run --workspace=@hw/web vercel-build` resolves
+- Sync-context drift fixed: `project-decisions.md` Session 21 Root assumption superseded

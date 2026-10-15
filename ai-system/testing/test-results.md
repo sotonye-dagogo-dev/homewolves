@@ -1,7 +1,7 @@
 # Test Results
 
 > **Metadata**
-> - last-updated-by: fix-build-session-20d
+> - last-updated-by: fix-build-session-22
 > - last-verified-against-code: 2026-10-15
 > - staleness-policy: overwritten on every test run — always current
 
@@ -59,3 +59,4 @@
 | 2026-09-23 | 334 | 0 | Vercel `postgres` Module not found fixed; `next build` 33 pages green; typecheck/lint 4/4 |
 | 2026-10-14 | 42 | 0 | fix-build Session 20c: web UI vitest 21/21 (hw-input 7/7), api auth vitest 21/21; web tsc 0 errors |
 | 2026-10-15 | 314 | 0 | fix-build Session 20d: web vitest 155/155 (21 files), api vitest 159/159 (17 files); web + api tsc 0 errors |
+| 2026-10-15 | — | 0 | fix-build Session 22: no unit tests touched (build-config fix). Verified `npm run vercel-build` green from BOTH cwds — `apps/web` (direct `next build`, full route table incl. products/services) and repo root (migrate-skip + turbo + `Verified Next.js output at apps/web/.next`); `findRepoRoot()` resolves repo root from either cwd; `npm run --workspace=@hw/web vercel-build` resolves (was `Missing script`) |
