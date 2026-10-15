@@ -1,9 +1,10 @@
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { and, inArray, isNull } from 'drizzle-orm';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import * as schema from '../src/drizzle/schema';
-import { SEED_USERS, SEED_LISTINGS, SEED_MEDIA, SEED_BLOG_POSTS, SEED_ACTIVITY_RULES } from './seed.data';
+import { SEED_USERS, SEED_USER_PASSWORD_HASH, SEED_LISTINGS, SEED_MEDIA, SEED_BLOG_POSTS, SEED_ACTIVITY_RULES } from './seed.data';
 import { DEFAULT_EMAIL_TEMPLATES } from '../src/modules/email/email-templates.defaults';
 import { revertSeed, revertPlatformConfigAndPlans, revertSeedUsers } from './seed.revert';
 
@@ -118,6 +119,13 @@ async function seedUsers() {
   for (const u of SEED_USERS) {
     await db.insert(schema.users).values(u as never).onConflictDoUpdate({ target: schema.users.id, set: u as never });
   }
+  // Backfill password auth for seed rows created before passwordHash existed.
+  // Non-breaking: only NULL hashes are filled — existing passwords are never
+  // overwritten. (Mirrors migration 0005 for DBs seeded by older code.)
+  await db
+    .update(schema.users)
+    .set({ passwordHash: SEED_USER_PASSWORD_HASH })
+    .where(and(inArray(schema.users.id, SEED_USERS.map((u) => u.id)), isNull(schema.users.passwordHash)));
   console.log(`Users seeded (${SEED_USERS.length})`);
 }
 

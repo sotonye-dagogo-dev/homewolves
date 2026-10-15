@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-20
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: fix-build-session-20d
+> - last-verified-against-code: 2026-10-15
 > - staleness-policy: historical entries do not go stale
 
 > **Overview:** Chronological log of completed development work. Each sprint ends with a summary entry. Agents add entries after completing tasks. Useful for understanding what has been built, when decisions were made, and what patterns have emerged.
@@ -421,3 +421,21 @@ Follow-up to Session 20b: the register-password 500 persisted because `passwordH
 
 **Next Sprint Focus:**
 Run migrate for 0004 in production and verify live register-password; dark-theme visual pass.
+
+## 2026-10-15 — fix-build: register-password 500 Round 3 + Seed NULL Password Hashes (Session 20d)
+
+**Summary:**
+Third pass on the production `register-password → 500`: ruled out seed NULL hashes as the 500 cause (they produce 401s, not 500s), hardened the Postgres client for Supabase poolers (the likely real cause), made all auth failures coded + greppable, and gave seed accounts working password auth end-to-end.
+
+**Completed:**
+- `pgOptionsFor()`: pooler-safe `prepare: false` default (`PG_PREPARE=true` opt-in), `ssl: 'require'` for non-local hosts (`PG_SSL=disable` opt-out)
+- `logDbError()` sanitized logging; outer `POST` guard returning coded JSON; `isUniqueViolationError()` → 409 instead of misleading 503
+- `SEED_USER_PASSWORD_HASH` (verified scrypt roundtrip) on `SEED_USERS`; `seed.ts` NULL-only backfill; migration `0005_wild_hellion.sql` + snapshot + journal
+- QA: npm install clean; web/api tsc 0 errors; web 155/155; api 159/159
+
+**Key Changes:**
+- New: `packages/api/drizzle/migrations/0005_wild_hellion.sql`, `meta/0005_snapshot.json`
+- Rule: serverless Postgres clients default to `prepare: false` + TLS; auth routes never return uncoded 500s
+
+**Next Sprint Focus:**
+Run migrate for 0005 in production, confirm Vercel `DATABASE_URL`/`JWT_SECRET`, verify live register-password + seed password login.

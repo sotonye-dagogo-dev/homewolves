@@ -1,8 +1,8 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-19
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: fix-build-session-20d
+> - last-verified-against-code: 2026-10-15
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Log of significant architectural, technical, and product decisions. Agents consult this before proposing changes to avoid contradicting prior reasoning. Uses supersedes/superseded-by links so contradictory entries are explicitly resolved rather than both appearing equally valid.
@@ -781,5 +781,23 @@ No NestJS API is deployed; `backendOrigin()` is null in production, so register/
 - Prod env must set `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DATABASE_URL` (if proxying), and optionally `RESEND_API_KEY`.
 - When an API is later deployed, set `API_ORIGIN`/`backendOrigin` so the route proxies instead of using local mode.
 - `postgres` is a direct `@hw/web` dependency (not only root/api) so Vercel webpack resolves the auth route import; listed in `experimental.serverComponentsExternalPackages`.
+
+---
+**Decision:** Serverless Postgres clients default to `prepare: false` + TLS (`pgOptionsFor()` in the web auth route; overridable via `PG_PREPARE=true` / `PG_SSL=disable`). Seed/demo accounts carry `SEED_USER_PASSWORD_HASH` (scrypt hash of documented demo password `Homewolves123!`); seeding and migration 0005 backfill NULL hashes only, never overwriting existing passwords.
+**Date:** 2026-10-15
+**Made by:** Implementer (fix-build Session 20d)
+**Supersedes:** Default `postgres()` options in serverless routes; NULL `passwordHash` on seed rows.
+**Superseded by:** None
+
+**Reason:**
+Supabase/pgbouncer poolers reject prepared statements, which made every auth query fail with an opaque 500; TLS is mandatory off-localhost. Seed accounts could not use password sign-in at all with NULL hashes.
+
+**Alternatives Considered:**
+- Detect pooler by port/host and only then disable prepare — rejected: fragile sniffing; `prepare: false` is safe on direct connections too.
+- Overwrite seed passwords on every seed run — rejected: would clobber changed passwords; NULL-only backfill is non-breaking.
+
+**Implications:**
+- New serverless DB clients must reuse the `pgOptionsFor()` pattern.
+- Demo password is documented in `seed.data.ts`; rotate for any non-demo environment.
 
 ---

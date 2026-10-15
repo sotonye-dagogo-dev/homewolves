@@ -1,8 +1,8 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-20
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: fix-build-session-20d
+> - last-verified-against-code: 2026-10-15
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Practical knowledge accumulated during Homewolves development — things that worked well, things that didn't, and patterns worth repeating. Different from `repair-system.md` (tracks errors); this file tracks development process insights and architectural wisdom. Uses supersedes/superseded-by links for evolving practices.
@@ -342,6 +342,23 @@ Pair tokens: theme-aware foreground ⇒ theme-aware background (`FORM_FIELD_SURF
 **Apply When:**
 - Styling any form surface — no `#FFFFFF`/`bg-white` on fields; use the shared surface style.
 - Building wrappers — never force `colorScheme`; pass caller `style` through untouched.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Serverless Postgres Needs prepare:false + TLS Against Poolers
+
+**Context:**
+Session 20d: `register-password → 500` survived confirmed migrations. The `postgres()` client used default prepared statements with no TLS config — Supabase/pgbouncer poolers (transaction mode) reject prepared statements, so every query failed from the first lookup, logged as an opaque driver object.
+
+**What We Learned:**
+Default `postgres()` options are wrong for poolers. Set `prepare: false` + `ssl: 'require'` (both env-overridable) in serverless routes, and log `{ code, message }` (never secrets) so Vercel logs are greppable. Also: NULL `passwordHash` on seed rows causes 401s, never 500s — verify the status-code path before chasing a hypothesis.
+
+**Apply When:**
+- Any new serverless route opening a Postgres client — use the shared `pgOptionsFor()` pattern.
+- Any auth/DB failure path — return `{ message, code }` JSON and a tagged log line.
 
 **Supersedes:** None
 **Superseded by:** None

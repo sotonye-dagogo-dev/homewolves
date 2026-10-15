@@ -110,13 +110,42 @@ type SqlClient = {
 
 let sqlPromise: Promise<SqlClient> | null = null;
 
+function pgOptionsFor(url: string): Record<string, unknown> {
+  // Config-driven postgres.js options (serverless-safe defaults):
+  // - `prepare: false` by default. Supabase/pgbouncer poolers (port 6543,
+  //   transaction mode) do NOT support prepared statements — every query
+  //   fails otherwise, surfacing as opaque 500s on auth. Opt back in with
+  //   PG_PREPARE=true (direct connections only).
+  // - `ssl: 'require'` for non-local hosts (Supabase mandates TLS). Opt out
+  //   with PG_SSL=disable or ?sslmode=disable.
+  const prepare = process.env.PG_PREPARE?.trim().toLowerCase() === 'true';
+  let ssl: unknown;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    const sslParam = (u.searchParams.get('sslmode') ?? '').toLowerCase();
+    const sslEnv = (process.env.PG_SSL ?? '').trim().toLowerCase();
+    if (sslEnv === 'disable' || sslParam === 'disable') {
+      ssl = false;
+    } else if (!isLocal) {
+      ssl = 'require';
+    }
+  } catch {
+    // Unparseable URL — let postgres throw its own descriptive error.
+  }
+  const opts: Record<string, unknown> = { max: 5, idle_timeout: 20, connect_timeout: 10, prepare };
+  if (ssl !== undefined) opts.ssl = ssl;
+  return opts;
+}
+
 async function getSql(): Promise<SqlClient | null> {
   const url = process.env.DATABASE_URL?.trim();
   if (!url) return null;
   if (!sqlPromise) {
     sqlPromise = (async () => {
       const postgres = (await import('postgres')).default;
-      return postgres(url, { max: 5, idle_timeout: 20, connect_timeout: 10 }) as unknown as SqlClient;
+      return postgres(url, pgOptionsFor(url)) as unknown as SqlClient;
     })();
   }
   try {
@@ -125,6 +154,24 @@ async function getSql(): Promise<SqlClient | null> {
     sqlPromise = null;
     return null;
   }
+}
+
+/**
+ * Sanitized DB-error detail for server logs. Includes driver message/code
+ * (needed to diagnose prod 500s) but never the connection string or query
+ * parameters.
+ */
+function dbErrorDetail(err: unknown): { message: string; code?: string } {
+  if (err instanceof Error) {
+    const code = (err as Error & { code?: unknown }).code;
+    return { message: err.message.slice(0, 300), code: typeof code === 'string' ? code : undefined };
+  }
+  return { message: String(err).slice(0, 300) };
+}
+
+function logDbError(tag: string, err: unknown): void {
+  const detail = dbErrorDetail(err);
+  console.error(tag, detail.code ? `${detail.code}: ${detail.message}` : detail.message);
 }
 
 async function findUserByEmail(sql: SqlClient, email: string): Promise<Row | null> {
@@ -169,7 +216,7 @@ async function ensureAuthColumns(sql: SqlClient): Promise<boolean> {
     // Table may not exist in fallback mode, or the connection role may lack
     // DDL permission — callers must handle a `false` result gracefully
     // instead of failing later with a cryptic insert error.
-    console.error('[auth] ensure passwordHash column failed', err);
+    logDbError('[auth] ensure passwordHash column failed', err);
     return false;
   }
 }
@@ -177,6 +224,12 @@ async function ensureAuthColumns(sql: SqlClient): Promise<boolean> {
 function isMissingColumnError(err: unknown): boolean {
   const detail = err instanceof Error ? err.message : String(err);
   return /passwordHash/i.test(detail) || /column.*does not exist/i.test(detail) || /undefined_column/i.test(detail);
+}
+
+function isUniqueViolationError(err: unknown): boolean {
+  const detail = err instanceof Error ? err.message : String(err);
+  const code = err instanceof Error ? (err as Error & { code?: unknown }).code : undefined;
+  return code === '23505' || /duplicate key|unique constraint|already exists/i.test(detail);
 }
 
 async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
@@ -218,9 +271,9 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
   try {
     existing = await findUserByEmail(sql, email);
   } catch (err) {
-    console.error('[auth:register-password] lookup failed', err);
+    logDbError('[auth:register-password] lookup failed', err);
     return NextResponse.json(
-      { message: 'Could not create your account. Please try again.', code: 'DB_LOOKUP_FAILED' },
+      { message: 'Could not reach the database. Please try again.', code: 'DB_LOOKUP_FAILED' },
       { status: 500 },
     );
   }
@@ -231,7 +284,7 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
   try {
     passwordHash = await hashPassword(password);
   } catch (err) {
-    console.error('[auth:register-password] hash failed', err);
+    logDbError('[auth:register-password] hash failed', err);
     return NextResponse.json(
       { message: 'Could not create your account. Please try again.', code: 'HASH_FAILED' },
       { status: 500 },
@@ -241,7 +294,7 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
   try {
     newCode = await ensureReferralCode(sql);
   } catch (err) {
-    console.error('[auth:register-password] referral-code failed', err);
+    logDbError('[auth:register-password] referral-code failed', err);
     return NextResponse.json(
       { message: 'Could not create your account. Please try again.', code: 'REFERRAL_FAILED' },
       { status: 500 },
@@ -257,20 +310,35 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
     const rows = await insertUser();
     user = rows[0] ?? null;
   } catch (err) {
+    if (isUniqueViolationError(err)) {
+      // Race with another signup (or a duplicate phone/identifier): report a
+      // clean 409 instead of the misleading MISSING_PASSWORD_COLUMN 503.
+      logDbError('[auth:register-password] insert hit unique violation', err);
+      return NextResponse.json(
+        { message: 'An account with those details already exists. Try signing in instead.', code: 'EMAIL_CONFLICT' },
+        { status: 409 },
+      );
+    }
     // First insert failed — the passwordHash column may have been missing
     // (pre-migration DBs, or the earlier ALTER lacked DDL permission).
     // Re-run the ALTER once and retry before giving up.
     if (isMissingColumnError(err)) {
-      console.error('[auth:register-password] insert hit missing column, re-ensuring + retrying', err);
+      logDbError('[auth:register-password] insert hit missing column, re-ensuring + retrying', err);
       await ensureAuthColumns(sql);
       try {
         const rows = await insertUser();
         user = rows[0] ?? null;
       } catch (retryErr) {
-        console.error('[auth:register-password] insert retry failed', retryErr);
+        if (isUniqueViolationError(retryErr)) {
+          return NextResponse.json(
+            { message: 'An account with those details already exists. Try signing in instead.', code: 'EMAIL_CONFLICT' },
+            { status: 409 },
+          );
+        }
+        logDbError('[auth:register-password] insert retry failed', retryErr);
       }
     } else {
-      console.error('[auth:register-password] insert failed', err);
+      logDbError('[auth:register-password] insert failed', err);
     }
   }
   if (!user) {
@@ -296,7 +364,7 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
     res = NextResponse.json(issueTokens(user as never));
   } catch (err) {
     // JWT_SECRET missing in production throws here — surface as 503, not 500.
-    console.error('[auth:register-password] token issue failed (check JWT_SECRET)', err);
+    logDbError('[auth:register-password] token issue failed (check JWT_SECRET)', err);
     return NextResponse.json(
       { message: 'Sign-up is temporarily unavailable. Please try again shortly.', code: 'TOKEN_CONFIG' },
       { status: 503 },
@@ -309,7 +377,7 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
       otpCookieOptions(),
     );
   } catch (err) {
-    console.error('[auth:register-password] otp cookie failed (check JWT_SECRET)', err);
+    logDbError('[auth:register-password] otp cookie failed (check JWT_SECRET)', err);
     return NextResponse.json(
       { message: 'Sign-up is temporarily unavailable. Please try again shortly.', code: 'TOKEN_CONFIG' },
       { status: 503 },
@@ -349,14 +417,14 @@ async function handleLoginPassword(req: NextRequest): Promise<NextResponse> {
     try {
       return NextResponse.json(issueTokens(user as never));
     } catch (err) {
-      console.error('[auth:login-password] token issue failed (check JWT_SECRET)', err);
+      logDbError('[auth:login-password] token issue failed (check JWT_SECRET)', err);
       return NextResponse.json(
         { message: 'Sign-in is temporarily unavailable. Please try again shortly.', code: 'TOKEN_CONFIG' },
         { status: 503 },
       );
     }
   } catch (err) {
-    console.error('[auth:login-password] sign-in failed', err);
+    logDbError('[auth:login-password] sign-in failed', err);
     return NextResponse.json({ message: 'Could not sign you in. Please try again.', code: 'DB_FAILED' }, { status: 500 });
   }
 }
@@ -770,32 +838,43 @@ async function handleRefresh(req: NextRequest): Promise<NextResponse> {
 
 export async function POST(req: NextRequest, ctx: { params: { action: string } }) {
   const action = ctx.params.action;
-  switch (action) {
-    case 'register':
-      return handleRegister(req);
-    case 'register-password':
-      return handleRegisterPassword(req);
-    case 'login-password':
-      return handleLoginPassword(req);
-    case 'forgot-password':
-      return handleForgotPassword(req);
-    case 'reset-password':
-      return handleResetPassword(req);
-    case 'login':
-      return handleLogin(req);
-    case 'verify-otp':
-      return handleVerifyOtp(req);
-    case 'complete-profile':
-      return handleCompleteProfile(req);
-    case 'google':
-      return handleGoogle(req);
-    case 'supabase':
-      return handleSupabase(req);
-    case 'logout':
-      return handleLogout(req);
-    case 'refresh':
-      return handleRefresh(req);
-    default:
-      return NextResponse.json({ message: 'Not found' }, { status: 404 });
+  // Outer guard: no auth action may ever surface an opaque HTML 500. Any
+  // unexpected throw becomes structured JSON with a code the client can
+  // display and ops can grep in Vercel logs.
+  try {
+    switch (action) {
+      case 'register':
+        return handleRegister(req);
+      case 'register-password':
+        return handleRegisterPassword(req);
+      case 'login-password':
+        return handleLoginPassword(req);
+      case 'forgot-password':
+        return handleForgotPassword(req);
+      case 'reset-password':
+        return handleResetPassword(req);
+      case 'login':
+        return handleLogin(req);
+      case 'verify-otp':
+        return handleVerifyOtp(req);
+      case 'complete-profile':
+        return handleCompleteProfile(req);
+      case 'google':
+        return handleGoogle(req);
+      case 'supabase':
+        return handleSupabase(req);
+      case 'logout':
+        return handleLogout(req);
+      case 'refresh':
+        return handleRefresh(req);
+      default:
+        return NextResponse.json({ message: 'Not found' }, { status: 404 });
+    }
+  } catch (err) {
+    logDbError(`[auth:${action}] unexpected failure`, err);
+    return NextResponse.json(
+      { message: 'Something went wrong. Please try again.', code: 'UNEXPECTED' },
+      { status: 500 },
+    );
   }
 }

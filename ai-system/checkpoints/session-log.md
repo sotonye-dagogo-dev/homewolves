@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-19
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: fix-build-session-20d
+> - last-verified-against-code: 2026-10-15
 > - staleness-policy: append-only — never modify past entries
 
 > **Overview:** Append-only running log of development sessions. Each entry records what was completed, what comes next, and which files were modified. Agents write here at the end of every session so work can be resumed without re-reading the entire codebase. This file is the **append-only historical record** — use `checkpoints/in-progress.md` for current in-progress work.
@@ -669,6 +669,31 @@ Run `drizzle-kit migrate` (picks up 0004) on production DB, then verify live reg
 **Assumptions Made:**
 - Drizzle `migrate` consumes SQL + journal only (snapshot is for `generate`); hand-writing the 0004 snapshot to mirror `generate` output is safe and additive.
 - Element-selector `background-color` in the baseline loses to utility classes, so explicit field classes still win (non-breaking).
+
+**Notes / Blockers:**
+- None blocking.
+
+## Session 20d — 2026-10-15 (fix-build: register-password 500 round 3 + seed NULL password hashes)
+
+**Completed:**
+- Diagnosed the recurring `POST /api/v1/auth/register-password → 500`: seed NULL `passwordHash` values were ruled out as the 500 cause (login-password already maps missing hashes to clean 401; register-password only touches new emails). Prime suspect is the `postgres()` client defaulting to prepared statements with no TLS handling — Supabase/pgbouncer poolers reject prepared statements, failing every query from the email lookup on (`DB_LOOKUP_FAILED` 500), with raw driver objects logged opaquely.
+- Hardened `apps/web/app/api/v1/auth/[action]/route.ts`: new `pgOptionsFor()` (pooler-safe `prepare: false` by default, opt-in `PG_PREPARE=true`; `ssl: 'require'` for non-local hosts, opt-out `PG_SSL=disable`), sanitized `logDbError()` on all auth DB paths, outer try/catch on the `POST` router returning coded JSON (no more opaque HTML 500s), and `isUniqueViolationError()` (PG 23505) mapping duplicate races to 409 `EMAIL_CONFLICT` instead of the misleading 503.
+- Seed password auth end-to-end: `SEED_USER_PASSWORD_HASH` (verified scrypt roundtrip for demo password `Homewolves123!`) added to `SEED_USERS`; `seed.ts` backfills NULL hashes only (never overwrites); migration `0005_wild_hellion.sql` (+ snapshot with chained prevId + journal idx 5) backfills existing DBs. Seed accounts can now sign in with password; other NULL-hash accounts still get the friendly 401 email-code guidance.
+- QA: `npm install` clean; web `tsc --noEmit` 0 errors; api `tsc --noEmit` 0 errors; web vitest 155/155 (21 files); api vitest 159/159 (17 files).
+
+**Files Modified:**
+- `apps/web/app/api/v1/auth/[action]/route.ts` — pgOptionsFor + logDbError + outer guard + unique-violation 409
+- `packages/api/drizzle/seed.data.ts` — SEED_USER_PASSWORD_HASH + passwordHash on SEED_USERS
+- `packages/api/drizzle/seed.ts` — NULL-only passwordHash backfill
+- `packages/api/drizzle/migrations/0005_wild_hellion.sql` (new), `meta/0005_snapshot.json` (new), `meta/_journal.json`
+- `ai-system/{repair-system.md,checkpoints/session-log.md,summaries/dev-history.md,memory/lessons-learned.md,testing/test-results.md,memory/project-decisions.md}`
+
+**Next Task:**
+Run `drizzle-kit migrate` (picks up 0005) on production DB, confirm `DATABASE_URL`/`JWT_SECRET` envs on Vercel, then verify live register-password + seed-account password login; watch Vercel logs for the new `[auth:*]` coded lines if any failure recurs.
+
+**Assumptions Made:**
+- Production Postgres is Supabase (pooler or direct); `prepare: false` is safe on direct connections too (minor perf cost, correctness first).
+- Demo password `Homewolves123!` for seed accounts is acceptable as documented dev/demo convenience; rotate for real environments.
 
 **Notes / Blockers:**
 - None blocking.
