@@ -1,7 +1,7 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: fix-build-session-20d
+> - last-updated-by: execute-feature-session-21
 > - last-verified-against-code: 2026-10-15
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
@@ -821,6 +821,27 @@ Production auth had no entry point while the DB lagged behind schema (missing `p
 
 **Implications:**
 - Build-time `DATABASE_URL` must equal runtime DB. Revert `vercel.json` buildCommand and delete the script once an external DB workflow stabilises.
+
+---
+
+## Vercel build migrate hardening (amendment, fail-soft timeout + skip)
+
+**Decision:** `scripts/vercel-build.mjs` bounds the migrate step with a 60s timeout (`VERCEL_MIGRATE_TIMEOUT_MS`), a `SKIP_DB_MIGRATE`/`SKIP_MIGRATIONS` escape hatch, postgres-URL validation, repo-local binaries, and a post-build `apps/web/.next` check. Migrate timeout/hang never stalls or fails the build.
+**Date:** 2026-10-15
+**Made by:** execute-feature session 21
+**Supersedes:** None (refines "Vercel build runs Drizzle migrations")
+**Superseded by:** None
+
+**Reason:**
+The Vercel CLI 62.7.0 build log truncated right after `Running "npm run vercel-build"` — blocking `spawnSync` with no timeout meant an unreachable DB hung the build with zero diagnostics. Local builds were green (38 pages), proving the stall was environmental.
+
+**Alternatives Considered:**
+- Explicit `outputDirectory` in `vercel.json` — rejected: dashboard Root is the repo root (build starts), so Turbo auto-detection already resolves `apps/web/.next`; an explicit override risks re-introducing the old doubled-path failure.
+- `npm ci` install command — rejected as a non-breaking-change violation for this fix; `npm install` already succeeds.
+
+**Implications:**
+- Set `SKIP_DB_MIGRATE=1` in preview/emergency builds to skip migrate entirely; tune hangs via `VERCEL_MIGRATE_TIMEOUT_MS`.
+- Dashboard Root Directory must stay the repo root (empty); the script now logs a warning if output lands elsewhere.
 
 ---
 

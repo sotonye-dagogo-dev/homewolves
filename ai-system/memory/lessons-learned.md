@@ -1,7 +1,7 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: fix-build-session-20d
+> - last-updated-by: execute-feature-session-21
 > - last-verified-against-code: 2026-10-15
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
@@ -374,3 +374,20 @@ Default `postgres()` options are wrong for poolers. Set `prepare: false` + `ssl:
 In single-service Vercel deploys, running `drizzle-kit migrate` at build time (gated on `DATABASE_URL`, non-failing) is the cheapest way to guarantee the runtime schema matches code. Pair it with request-time self-heal (`ALTER TABLE IF NOT EXISTS`) and coded 503s (`DB_NOT_MIGRATED`, `MISSING_PASSWORD_COLUMN`) so any residual gap is actionable in Vercel logs instead of an opaque 500.
 
 **Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Build-time migrate must be timeout-bounded
+
+**Context:**
+2026-10-15 execute-feature — `vercel build` log truncated right after `Running "npm run vercel-build"` (Vercel CLI 62.7.0, Turbo detected, install ok). Local `npm run vercel-build` was green (38 pages). Root cause: blocking `spawnSync` migrate with no timeout; an unreachable `DATABASE_URL` hangs the step with zero further log output.
+
+**What We Learned:**
+Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeout plus a skip flag (`SKIP_DB_MIGRATE`, `VERCEL_MIGRATE_TIMEOUT_MS`), repo-local binaries instead of `npx --yes` fetches, and a post-build output check that names the expected directory and the dashboard setting that controls it. A truncated log with no error almost always means a hung child process, not a crash.
+
+**Apply When:**
+- Any script Vercel executes that touches the network — bound it, log the bound, and continue to the main build on failure.
+
+**Supersedes:** None
+**Superseded by:** None

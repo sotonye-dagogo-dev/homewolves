@@ -1,7 +1,7 @@
 # Repair System — Error Knowledge Base
 
 > **Metadata**
-> - last-updated-by: fix-build-session-20d
+> - last-updated-by: execute-feature-session-21
 > - last-verified-against-code: 2026-10-15
 > - staleness-policy: individual entries may be stale if the code has changed around them — verify fix still applies before reusing
 
@@ -290,4 +290,27 @@ Never hardcode `#FFFFFF`/`bg-white` on a form surface — use `FORM_FIELD_SURFAC
 **Files Affected:**
 `apps/web/components/ui/form-field-config.ts`, `apps/web/components/ui/hw-input.tsx`, `hw-select.tsx`, `hw-textarea.tsx`, `apps/web/app/globals.css`, `apps/web/app/(public)/auth/page.tsx`, `apps/web/app/(public)/advertise/page.tsx`, `apps/web/app/(public)/products/page.tsx`, `apps/web/app/(public)/services/page.tsx`
 **Date:** 2026-10-14
+**Status:** Active
+
+### Vercel build log truncates after `Running "npm run vercel-build"` — migrate hang (Session 21, 2026-10-15)
+
+**Symptom:**
+`vercel build` (CLI 62.7.0, Turbo detected, `npm install` ok, Next 14.2.35 detected) prints `Running "npm run vercel-build"` then nothing — no error, no further lines. Local `npm run vercel-build` is green (38 pages).
+
+**Root Cause:**
+`scripts/vercel-build.mjs` ran `drizzle-kit migrate` via blocking `spawnSync` with no timeout. When build-time `DATABASE_URL` points at an unreachable DB (Supabase pooler/DNS hang rather than fast DNS fail), the child hangs indefinitely and the Vercel log stalls. Each build also paid an `npx --yes` registry fetch for `drizzle-kit`/`turbo` (`turbo@x will be installed` in logs).
+
+**Fix Applied:**
+- 60s migrate timeout (`VERCEL_MIGRATE_TIMEOUT_MS`, `SIGKILL`) with fail-soft continue to the web build (auth routes self-heal at request time).
+- `SKIP_DB_MIGRATE`/`SKIP_MIGRATIONS` escape hatch; skip when `DATABASE_URL` is empty or not a postgres URL.
+- Prefer repo-local `node_modules/.bin/drizzle-kit` and `node_modules/.bin/turbo` over `npx --yes`.
+- Post-build check verifies `apps/web/.next` and logs Root-Directory guidance (repo root/empty) so the old doubled-path `apps/web/apps/web/.next` misconfiguration surfaces explicitly.
+- Documented `SKIP_DB_MIGRATE`/`VERCEL_MIGRATE_TIMEOUT_MS` in `.env.example`.
+
+**Prevention:**
+Never add an unbounded network call to the build path — every build-time network step gets a timeout, a skip flag, and a log line stating both.
+
+**Files Affected:**
+`scripts/vercel-build.mjs`, `.env.example`
+**Date:** 2026-10-15
 **Status:** Active
