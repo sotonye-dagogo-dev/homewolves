@@ -1,8 +1,8 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-19
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: execute-feature-session-21
+> - last-verified-against-code: 2026-10-15
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Log of significant architectural, technical, and product decisions. Agents consult this before proposing changes to avoid contradicting prior reasoning. Uses supersedes/superseded-by links so contradictory entries are explicitly resolved rather than both appearing equally valid.
@@ -783,3 +783,83 @@ No NestJS API is deployed; `backendOrigin()` is null in production, so register/
 - `postgres` is a direct `@hw/web` dependency (not only root/api) so Vercel webpack resolves the auth route import; listed in `experimental.serverComponentsExternalPackages`.
 
 ---
+**Decision:** Serverless Postgres clients default to `prepare: false` + TLS (`pgOptionsFor()` in the web auth route; overridable via `PG_PREPARE=true` / `PG_SSL=disable`). Seed/demo accounts carry `SEED_USER_PASSWORD_HASH` (scrypt hash of documented demo password `Homewolves123!`); seeding and migration 0005 backfill NULL hashes only, never overwriting existing passwords.
+**Date:** 2026-10-15
+**Made by:** Implementer (fix-build Session 20d)
+**Supersedes:** Default `postgres()` options in serverless routes; NULL `passwordHash` on seed rows.
+**Superseded by:** None
+
+**Reason:**
+Supabase/pgbouncer poolers reject prepared statements, which made every auth query fail with an opaque 500; TLS is mandatory off-localhost. Seed accounts could not use password sign-in at all with NULL hashes.
+
+**Alternatives Considered:**
+- Detect pooler by port/host and only then disable prepare — rejected: fragile sniffing; `prepare: false` is safe on direct connections too.
+- Overwrite seed passwords on every seed run — rejected: would clobber changed passwords; NULL-only backfill is non-breaking.
+
+**Implications:**
+- New serverless DB clients must reuse the `pgOptionsFor()` pattern.
+- Demo password is documented in `seed.data.ts`; rotate for any non-demo environment.
+
+---
+
+---
+
+## Vercel build runs Drizzle migrations (temporary, removable)
+
+**Decision:** Vercel `buildCommand` runs `scripts/vercel-build.mjs`, which applies `drizzle-kit migrate` when `DATABASE_URL` is present, then builds `@hw/web`. Migrate failures never fail the build.
+**Date:** 2026-10-15
+**Made by:** execute-feature session 20e
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+Production auth had no entry point while the DB lagged behind schema (missing `passwordHash`) and the external backend was unreachable. Running migrations at build time closes that gap without operator intervention.
+
+**Alternatives Considered:**
+- Manual `drizzle-kit migrate` from a workstation — rejected: operator is currently unable to reach the system.
+- Runtime auto-migrate on boot — rejected: riskier in serverless (concurrent instances, cold starts); build time is single-shot and logged.
+
+**Implications:**
+- Build-time `DATABASE_URL` must equal runtime DB. Revert `vercel.json` buildCommand and delete the script once an external DB workflow stabilises.
+
+---
+
+## Vercel build migrate hardening (amendment, fail-soft timeout + skip)
+
+**Decision:** `scripts/vercel-build.mjs` bounds the migrate step with a 60s timeout (`VERCEL_MIGRATE_TIMEOUT_MS`), a `SKIP_DB_MIGRATE`/`SKIP_MIGRATIONS` escape hatch, postgres-URL validation, repo-local binaries, and a post-build `apps/web/.next` check. Migrate timeout/hang never stalls or fails the build.
+**Date:** 2026-10-15
+**Made by:** execute-feature session 21
+**Supersedes:** None (refines "Vercel build runs Drizzle migrations")
+**Superseded by:** None
+
+**Reason:**
+The Vercel CLI 62.7.0 build log truncated right after `Running "npm run vercel-build"` — blocking `spawnSync` with no timeout meant an unreachable DB hung the build with zero diagnostics. Local builds were green (38 pages), proving the stall was environmental.
+
+**Alternatives Considered:**
+- Explicit `outputDirectory` in `vercel.json` — rejected: dashboard Root is the repo root (build starts), so Turbo auto-detection already resolves `apps/web/.next`; an explicit override risks re-introducing the old doubled-path failure.
+- `npm ci` install command — rejected as a non-breaking-change violation for this fix; `npm install` already succeeds.
+
+**Implications:**
+- Set `SKIP_DB_MIGRATE=1` in preview/emergency builds to skip migrate entirely; tune hangs via `VERCEL_MIGRATE_TIMEOUT_MS`.
+- Dashboard Root Directory must stay the repo root (empty); the script now logs a warning if output lands elsewhere.
+
+**Session 22 amendment (2026-10-15, fix-build):** the "Root is repo root" premise above is SUPERSEDED — the `Missing script: "vercel-build"` failure at `location /vercel/path0/apps/web` proves the dashboard Root is actually `apps/web`. The build now supports EITHER Root with no dashboard change: repo-root Root runs `scripts/vercel-build.mjs` (migrate + turbo, repo-root-aware via `findRepoRoot()`); `apps/web` Root runs `apps/web`'s own `vercel-build` (`next build` directly). Implication updated: prefer repo-root Root when build-time migration is wanted; `apps/web` Root remains supported (no build-time migrate — runtime auth self-heals columns).
+
+---
+
+## Apex and www are the same site (no self-proxy)
+
+**Decision:** All web API proxy decisions (`[action]/route.ts`, `[...path]/route.ts`, `next.config.js` rewrites) treat apex ↔ www as same-site and handle requests locally instead of proxying.
+**Date:** 2026-10-15
+**Made by:** execute-feature session 20e
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+Proxying same-site origins loops back into the same route (opaque 500s) and reintroduces the Vercel apex→www 308/CORS failure. External proxying is reserved for truly off-site origins.
+
+**Alternatives Considered:**
+- Keep explicit-proxy-always-wins — rejected: it caused self-loops on single-service deploys.
+
+**Implications:**
+- Setting `API_PROXY_URL` to a same-site origin is now a no-op (local handling wins); point it at a real off-site API to re-enable proxying.

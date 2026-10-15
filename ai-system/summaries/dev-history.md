@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-20
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: execute-feature-session-21
+> - last-verified-against-code: 2026-10-15
 > - staleness-policy: historical entries do not go stale
 
 > **Overview:** Chronological log of completed development work. Each sprint ends with a summary entry. Agents add entries after completing tasks. Useful for understanding what has been built, when decisions were made, and what patterns have emerged.
@@ -421,3 +421,56 @@ Follow-up to Session 20b: the register-password 500 persisted because `passwordH
 
 **Next Sprint Focus:**
 Run migrate for 0004 in production and verify live register-password; dark-theme visual pass.
+
+## 2026-10-15 — fix-build: register-password 500 Round 3 + Seed NULL Password Hashes (Session 20d)
+
+**Summary:**
+Third pass on the production `register-password → 500`: ruled out seed NULL hashes as the 500 cause (they produce 401s, not 500s), hardened the Postgres client for Supabase poolers (the likely real cause), made all auth failures coded + greppable, and gave seed accounts working password auth end-to-end.
+
+**Completed:**
+- `pgOptionsFor()`: pooler-safe `prepare: false` default (`PG_PREPARE=true` opt-in), `ssl: 'require'` for non-local hosts (`PG_SSL=disable` opt-out)
+- `logDbError()` sanitized logging; outer `POST` guard returning coded JSON; `isUniqueViolationError()` → 409 instead of misleading 503
+- `SEED_USER_PASSWORD_HASH` (verified scrypt roundtrip) on `SEED_USERS`; `seed.ts` NULL-only backfill; migration `0005_wild_hellion.sql` + snapshot + journal
+- QA: npm install clean; web/api tsc 0 errors; web 155/155; api 159/159
+
+**Key Changes:**
+- New: `packages/api/drizzle/migrations/0005_wild_hellion.sql`, `meta/0005_snapshot.json`
+- Rule: serverless Postgres clients default to `prepare: false` + TLS; auth routes never return uncoded 500s
+
+**Next Sprint Focus:**
+Run migrate for 0005 in production, confirm Vercel `DATABASE_URL`/`JWT_SECRET`, verify live register-password + seed password login.
+
+## 2026-10-15 — execute-feature: Vercel build drizzle migrate + auth entry unblocked (Session 20e)
+
+**Summary:**
+Unblocked platform entry: Vercel builds now apply Drizzle migrations automatically, and auth no longer depends on reaching an external system — same-site (apex ↔ www) requests are handled locally with fallback, and missing-schema states return actionable 503s instead of opaque 500s.
+
+**Completed:**
+- `scripts/vercel-build.mjs` + `npm run vercel-build` + `vercel.json` buildCommand (migrate-then-build, skips gracefully without DATABASE_URL, never fails build on migrate error)
+- Same-site proxy fix across web auth route, catch-all route, and next.config rewrites
+- `tryProxy()` fallback (5xx → local handling) + 503 `DB_NOT_MIGRATED` for missing tables
+- NestJS `DrizzleService` pooler-safe options + `GlobalExceptionFilter` 42703/42P01 → 503
+- QA: web/api tsc 0 errors; web 155/155; api 159/159
+
+**Key Changes:**
+- New: `scripts/vercel-build.mjs`
+- Rule: Vercel build applies `drizzle-kit migrate` when DATABASE_URL is present; auth routes treat apex/www as same-site and never self-proxy
+
+**Next Sprint Focus:**
+Verify live register-password after redeploy; remove build-time migrate later if an external DB workflow replaces it.
+
+## 2026-10-15 — execute-feature: Vercel build stall hardened (Session 21)
+
+**Summary:**
+The `vercel build` log truncated right after `Running "npm run vercel-build"` with no error — the migrate step could hang indefinitely on an unreachable DB. Hardened the entrypoint so the build always progresses to the web build with actionable logs.
+
+**Completed:**
+- `scripts/vercel-build.mjs`: 60s migrate timeout (fail-soft), `SKIP_DB_MIGRATE` escape hatch, postgres-URL validation, repo-local binaries, post-build `apps/web/.next` verification
+- `.env.example`: documented `SKIP_DB_MIGRATE`, `VERCEL_MIGRATE_TIMEOUT_MS`
+- QA: vercel-build green (skip/no-DB/unreachable-DB modes, 38 pages), typecheck 4/4, tests green
+
+**Key Changes:**
+- Rule: build-time migrate is timeout-bounded and never stalls or fails the build; dashboard Root Directory must be the repo root (empty)
+
+**Next Sprint Focus:**
+Redeploy on Vercel and confirm `[vercel-build] ... Web build completed.` in the log; use `SKIP_DB_MIGRATE=1` as the emergency unblock while DB reachability is investigated.

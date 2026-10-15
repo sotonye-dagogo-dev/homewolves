@@ -1,8 +1,8 @@
 # Repair System — Error Knowledge Base
 
 > **Metadata**
-> - last-updated-by: fix-build
-> - last-verified-against-code: 2026-09-23
+> - last-updated-by: execute-feature-session-21
+> - last-verified-against-code: 2026-10-15
 > - staleness-policy: individual entries may be stale if the code has changed around them — verify fix still applies before reusing
 
 > **Overview:** Living knowledge base of errors encountered during development, their root causes, and how they were fixed. Agents must search this before diagnosing new errors and log every fixed bug to prevent recurrence.
@@ -246,6 +246,30 @@ Every schema.ts change must ship with a generated migration (`drizzle-kit genera
 **Date:** 2026-10-14
 **Status:** Active
 
+### Register-password 500, round 3 — pooler prepared-statements + seed NULL hashes + opaque errors (fix-build Session 20d, 2026-10-15)
+
+**Symptom:**
+`POST /api/v1/auth/register-password → 500` still reported in production after migrations 0000–0004 were confirmed applied; reporter also asked whether seed rows' NULL `passwordHash` values were the cause.
+
+**Root Cause (three findings):**
+1. Seed NULL hashes were a red herring for the 500: `login-password` already maps a missing hash to a clean 401 ("uses email-code sign-in…"), and `register-password` only touches new emails. Seed logins failed, but with 401s, not 500s.
+2. Likely 500 source: the web fallback's `postgres()` client used default prepared statements with no TLS handling — Supabase poolers (port 6543, pgbouncer transaction mode) reject prepared statements, so every query (starting with the email lookup → `DB_LOOKUP_FAILED` 500) fails. Prior logging printed raw driver objects with no code/message extraction, making this invisible in Vercel logs.
+3. Unique-violation races (duplicate phone/identifier) and any unexpected throw surfaced as misleading codes (503 `MISSING_PASSWORD_COLUMN`) or opaque HTML 500s outside the JSON envelope.
+
+**Fix Applied:**
+- `pgOptionsFor()` in `apps/web/app/api/v1/auth/[action]/route.ts`: `prepare: false` by default (opt back in via `PG_PREPARE=true`), `ssl: 'require'` for non-local hosts (opt out via `PG_SSL=disable`/`?sslmode=disable`). Serverless/pooler-safe, config-driven.
+- `logDbError()` sanitized logger (driver code + message, never secrets) on all auth DB paths; `POST` router wrapped in an outer try/catch returning structured `{ message, code: 'UNEXPECTED' }` JSON — no more opaque HTML 500s.
+- `isUniqueViolationError()` (PG `23505`): duplicate registration races now return 409 `EMAIL_CONFLICT`, never the misleading 503.
+- Seed accounts gain `passwordHash` (`SEED_USER_PASSWORD_HASH`, scrypt hash of demo password `Homewolves123!`): `seed.data.ts` sets it on `SEED_USERS`, `seed.ts` backfills NULLs only (never overwrites), migration `0005_wild_hellion.sql` backfills existing DBs (+ snapshot + journal).
+
+**Prevention:**
+Pooler-hosted Postgres must use `prepare: false` + TLS in serverless routes; every auth failure path must return a coded JSON response and a greppable log line. Seed/demo credentials stay in `seed.data.ts` with rotation notes, never for real users.
+
+**Files Affected:**
+`apps/web/app/api/v1/auth/[action]/route.ts`, `packages/api/drizzle/seed.data.ts`, `packages/api/drizzle/seed.ts`, `packages/api/drizzle/migrations/0005_wild_hellion.sql` (new), `packages/api/drizzle/migrations/meta/0005_snapshot.json` (new), `packages/api/drizzle/migrations/meta/_journal.json`
+**Date:** 2026-10-15
+**Status:** Active
+
 ### White-on-white input/select text in dark theme — hardcoded #FFFFFF backgrounds (Session 20c, 2026-10-14)
 
 **Symptom:**
@@ -266,4 +290,49 @@ Never hardcode `#FFFFFF`/`bg-white` on a form surface — use `FORM_FIELD_SURFAC
 **Files Affected:**
 `apps/web/components/ui/form-field-config.ts`, `apps/web/components/ui/hw-input.tsx`, `hw-select.tsx`, `hw-textarea.tsx`, `apps/web/app/globals.css`, `apps/web/app/(public)/auth/page.tsx`, `apps/web/app/(public)/advertise/page.tsx`, `apps/web/app/(public)/products/page.tsx`, `apps/web/app/(public)/services/page.tsx`
 **Date:** 2026-10-14
+**Status:** Active
+
+### Vercel build log truncates after `Running "npm run vercel-build"` — migrate hang (Session 21, 2026-10-15)
+
+**Symptom:**
+`vercel build` (CLI 62.7.0, Turbo detected, `npm install` ok, Next 14.2.35 detected) prints `Running "npm run vercel-build"` then nothing — no error, no further lines. Local `npm run vercel-build` is green (38 pages).
+
+**Root Cause:**
+`scripts/vercel-build.mjs` ran `drizzle-kit migrate` via blocking `spawnSync` with no timeout. When build-time `DATABASE_URL` points at an unreachable DB (Supabase pooler/DNS hang rather than fast DNS fail), the child hangs indefinitely and the Vercel log stalls. Each build also paid an `npx --yes` registry fetch for `drizzle-kit`/`turbo` (`turbo@x will be installed` in logs).
+
+**Fix Applied:**
+- 60s migrate timeout (`VERCEL_MIGRATE_TIMEOUT_MS`, `SIGKILL`) with fail-soft continue to the web build (auth routes self-heal at request time).
+- `SKIP_DB_MIGRATE`/`SKIP_MIGRATIONS` escape hatch; skip when `DATABASE_URL` is empty or not a postgres URL.
+- Prefer repo-local `node_modules/.bin/drizzle-kit` and `node_modules/.bin/turbo` over `npx --yes`.
+- Post-build check verifies `apps/web/.next` and logs Root-Directory guidance (repo root/empty) so the old doubled-path `apps/web/apps/web/.next` misconfiguration surfaces explicitly.
+- Documented `SKIP_DB_MIGRATE`/`VERCEL_MIGRATE_TIMEOUT_MS` in `.env.example`.
+
+**Prevention:**
+Never add an unbounded network call to the build path — every build-time network step gets a timeout, a skip flag, and a log line stating both.
+
+**Files Affected:**
+`scripts/vercel-build.mjs`, `.env.example`
+**Date:** 2026-10-15
+**Status:** Active
+
+### Vercel `Missing script: "vercel-build"` in @hw/web — dashboard Root is apps/web (Session 22, 2026-10-15)
+
+**Symptom:**
+`vercel build` prints `Running "npm run vercel-build"` then fails immediately:
+`npm error workspace @hw/web@1.0.0 / location /vercel/path0/apps/web / Missing script: "vercel-build"`.
+(Session 21 had assumed Root = repo root because the command *started*; this error proves the dashboard Root Directory is `apps/web`, so npm resolves scripts from `apps/web/package.json`, where `vercel-build` did not exist.)
+
+**Root Cause:**
+`vercel-build` existed only at the repo root (`node scripts/vercel-build.mjs`), but Vercel runs the `vercel.json` buildCommand with cwd = dashboard Root (`apps/web`). Additionally `scripts/vercel-build.mjs` assumed `process.cwd()` is the repo root for binary resolution, drizzle config path, turbo invocation, and the `.next` output check (which would have produced the doubled `apps/web/apps/web/.next` path from cwd `apps/web`).
+
+**Fix Applied:**
+- Added `"vercel-build": "next build"` to `apps/web/package.json` — the build now succeeds regardless of Root Directory (repo root → root script with migrate + turbo; `apps/web` → direct `next build`).
+- Hardened `scripts/vercel-build.mjs` with `findRepoRoot()` (walks up to `turbo.json`, falls back to script-relative path); all binary resolution, drizzle `cwd`, turbo `cwd`, and the `.next` output check use `REPO_ROOT` instead of `process.cwd()`.
+
+**Prevention:**
+Every root-level build/deploy script referenced by `vercel.json` must also exist on the workspace package Vercel may use as Root — verify with `npm run --workspace=@hw/web <script>`. Build scripts must never assume `process.cwd()` is the repo root; resolve it by walking up to a marker file (`turbo.json`).
+
+**Files Affected:**
+`apps/web/package.json`, `scripts/vercel-build.mjs`
+**Date:** 2026-10-15
 **Status:** Active

@@ -1,8 +1,8 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-20
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: execute-feature-session-21
+> - last-verified-against-code: 2026-10-15
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Practical knowledge accumulated during Homewolves development — things that worked well, things that didn't, and patterns worth repeating. Different from `repair-system.md` (tracks errors); this file tracks development process insights and architectural wisdom. Uses supersedes/superseded-by links for evolving practices.
@@ -342,6 +342,52 @@ Pair tokens: theme-aware foreground ⇒ theme-aware background (`FORM_FIELD_SURF
 **Apply When:**
 - Styling any form surface — no `#FFFFFF`/`bg-white` on fields; use the shared surface style.
 - Building wrappers — never force `colorScheme`; pass caller `style` through untouched.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Serverless Postgres Needs prepare:false + TLS Against Poolers
+
+**Context:**
+Session 20d: `register-password → 500` survived confirmed migrations. The `postgres()` client used default prepared statements with no TLS config — Supabase/pgbouncer poolers (transaction mode) reject prepared statements, so every query failed from the first lookup, logged as an opaque driver object.
+
+**What We Learned:**
+Default `postgres()` options are wrong for poolers. Set `prepare: false` + `ssl: 'require'` (both env-overridable) in serverless routes, and log `{ code, message }` (never secrets) so Vercel logs are greppable. Also: NULL `passwordHash` on seed rows causes 401s, never 500s — verify the status-code path before chasing a hypothesis.
+
+**Apply When:**
+- Any new serverless route opening a Postgres client — use the shared `pgOptionsFor()` pattern.
+- Any auth/DB failure path — return `{ message, code }` JSON and a tagged log line.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Build-time migrations unblock serverless auth
+
+**Context:**
+2026-10-15 execute-feature — `register-password → 500` with no platform entry point while the DB lagged schema and the external backend was unreachable.
+
+**What We Learned:**
+In single-service Vercel deploys, running `drizzle-kit migrate` at build time (gated on `DATABASE_URL`, non-failing) is the cheapest way to guarantee the runtime schema matches code. Pair it with request-time self-heal (`ALTER TABLE IF NOT EXISTS`) and coded 503s (`DB_NOT_MIGRATED`, `MISSING_PASSWORD_COLUMN`) so any residual gap is actionable in Vercel logs instead of an opaque 500.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Build-time migrate must be timeout-bounded
+
+**Context:**
+2026-10-15 execute-feature — `vercel build` log truncated right after `Running "npm run vercel-build"` (Vercel CLI 62.7.0, Turbo detected, install ok). Local `npm run vercel-build` was green (38 pages). Root cause: blocking `spawnSync` migrate with no timeout; an unreachable `DATABASE_URL` hangs the step with zero further log output.
+
+**What We Learned:**
+Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeout plus a skip flag (`SKIP_DB_MIGRATE`, `VERCEL_MIGRATE_TIMEOUT_MS`), repo-local binaries instead of `npx --yes` fetches, and a post-build output check that names the expected directory and the dashboard setting that controls it. A truncated log with no error almost always means a hung child process, not a crash.
+
+**Apply When:**
+- Any script Vercel executes that touches the network — bound it, log the bound, and continue to the main build on failure.
 
 **Supersedes:** None
 **Superseded by:** None

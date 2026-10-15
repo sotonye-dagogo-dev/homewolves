@@ -28,13 +28,35 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-function backendOrigin(): string | null {
+function normalizeHost(host: string): string {
+  return host.trim().toLowerCase().replace(/^www\./, '');
+}
+
+function isSameSite(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  return normalizeHost(a) === normalizeHost(b);
+}
+
+function siteHost(): string {
+  const siteRaw = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
+  try {
+    return new URL(siteRaw).host;
+  } catch {
+    return '';
+  }
+}
+
+function backendOrigin(reqHost?: string): string | null {
   // Priority: server-only explicit proxy envs
   const explicit = process.env.API_PROXY_URL?.trim() || process.env.API_URL?.trim();
   if (explicit && explicit.length > 0) {
     try {
       // Allow origin with or without path; we only need origin
       const u = new URL(explicit);
+      // Same-site (apex ↔ www) explicit targets would loop back into this
+      // same route — treat as no external backend and serve locally.
+      if (siteHost() && isSameSite(u.host, siteHost())) return null;
+      if (reqHost && isSameSite(u.host, reqHost)) return null;
       return u.origin;
     } catch {
       return null;
@@ -45,11 +67,11 @@ function backendOrigin(): string | null {
   if (!pub || pub.startsWith('/')) return null;
   try {
     const u = new URL(pub);
-    const siteRaw = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
-    let siteHost = '';
-    try { siteHost = new URL(siteRaw).host; } catch { siteHost = ''; }
-    // If public URL is same host as site, there is no external backend to proxy to
-    if (siteHost && u.host === siteHost) return null;
+    const sh = siteHost();
+    // If public URL is same-site with the site (apex ↔ www), there is no
+    // external backend to proxy to
+    if (sh && isSameSite(u.host, sh)) return null;
+    if (reqHost && isSameSite(u.host, reqHost)) return null;
     return u.origin;
   } catch {
     return null;
@@ -188,7 +210,7 @@ async function proxyOrFallback(req: NextRequest, params: { path?: string[] }) {
   const search = req.nextUrl.search; // includes ?
   const method = req.method;
 
-  const origin = backendOrigin();
+  const origin = backendOrigin(req.nextUrl.host);
 
   // Attempt to proxy to real backend if we have an external origin
   if (origin) {

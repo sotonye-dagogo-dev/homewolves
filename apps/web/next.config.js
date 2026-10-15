@@ -70,6 +70,8 @@ const nextConfig = {
     const explicit = process.env.API_PROXY_URL ?? process.env.API_URL ?? '';
     const publicUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
     const raw = explicit || publicUrl;
+    const normalizeHost = (h) => String(h ?? '').trim().toLowerCase().replace(/^www\./, '');
+    const isSameSite = (a, b) => !!a && !!b && normalizeHost(a) === normalizeHost(b);
     try {
       if (!raw || raw.startsWith('/')) return [];
       const target = new URL(raw);
@@ -77,19 +79,24 @@ const nextConfig = {
       let siteHost = '';
       try { siteHost = new URL(siteRaw).host; } catch { siteHost = ''; }
 
-      // When an explicit server-only proxy is set, always use it — even if
-      // NEXT_PUBLIC_API_URL equals the site host. This is the intended path
-      // for MVP where web and API share www but API lives elsewhere.
+      // When an explicit server-only proxy is set, use it ONLY when it points
+      // off-site. Same-site (apex ↔ www) explicit targets would rewrite
+      // /api/v1/* back into this same deployment (loop → opaque 500s), so
+      // fall through to the local /api/v1 app routes instead. This is the
+      // single-service Vercel path while the external system is unreachable
+      // (removable later by pointing API_PROXY_URL at a real off-site API).
       if (explicit) {
         if (!explicit.startsWith('/')) {
           const expTarget = new URL(explicit);
+          if (siteHost && isSameSite(expTarget.host, siteHost)) return [];
           return [{ source: '/api/v1/:path*', destination: `${expTarget.origin}/api/v1/:path*` }];
         }
         return [];
       }
 
-      // No explicit proxy: only rewrite when public URL points off-site.
-      if (target.host === siteHost) return [];
+      // No explicit proxy: only rewrite when public URL points off-site
+      // (apex ↔ www counts as same-site — no rewrite).
+      if (siteHost && isSameSite(target.host, siteHost)) return [];
       if (target.host.startsWith('localhost') || target.host.startsWith('127.0.0.1')) {
         return [{ source: '/api/v1/:path*', destination: `${target.origin}/api/v1/:path*` }];
       }

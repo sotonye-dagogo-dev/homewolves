@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-19
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: execute-feature-session-21
+> - last-verified-against-code: 2026-10-15
 > - staleness-policy: append-only — never modify past entries
 
 > **Overview:** Append-only running log of development sessions. Each entry records what was completed, what comes next, and which files were modified. Agents write here at the end of every session so work can be resumed without re-reading the entire codebase. This file is the **append-only historical record** — use `checkpoints/in-progress.md` for current in-progress work.
@@ -669,6 +669,102 @@ Run `drizzle-kit migrate` (picks up 0004) on production DB, then verify live reg
 **Assumptions Made:**
 - Drizzle `migrate` consumes SQL + journal only (snapshot is for `generate`); hand-writing the 0004 snapshot to mirror `generate` output is safe and additive.
 - Element-selector `background-color` in the baseline loses to utility classes, so explicit field classes still win (non-breaking).
+
+**Notes / Blockers:**
+- None blocking.
+
+## Session 20d — 2026-10-15 (fix-build: register-password 500 round 3 + seed NULL password hashes)
+
+**Completed:**
+- Diagnosed the recurring `POST /api/v1/auth/register-password → 500`: seed NULL `passwordHash` values were ruled out as the 500 cause (login-password already maps missing hashes to clean 401; register-password only touches new emails). Prime suspect is the `postgres()` client defaulting to prepared statements with no TLS handling — Supabase/pgbouncer poolers reject prepared statements, failing every query from the email lookup on (`DB_LOOKUP_FAILED` 500), with raw driver objects logged opaquely.
+- Hardened `apps/web/app/api/v1/auth/[action]/route.ts`: new `pgOptionsFor()` (pooler-safe `prepare: false` by default, opt-in `PG_PREPARE=true`; `ssl: 'require'` for non-local hosts, opt-out `PG_SSL=disable`), sanitized `logDbError()` on all auth DB paths, outer try/catch on the `POST` router returning coded JSON (no more opaque HTML 500s), and `isUniqueViolationError()` (PG 23505) mapping duplicate races to 409 `EMAIL_CONFLICT` instead of the misleading 503.
+- Seed password auth end-to-end: `SEED_USER_PASSWORD_HASH` (verified scrypt roundtrip for demo password `Homewolves123!`) added to `SEED_USERS`; `seed.ts` backfills NULL hashes only (never overwrites); migration `0005_wild_hellion.sql` (+ snapshot with chained prevId + journal idx 5) backfills existing DBs. Seed accounts can now sign in with password; other NULL-hash accounts still get the friendly 401 email-code guidance.
+- QA: `npm install` clean; web `tsc --noEmit` 0 errors; api `tsc --noEmit` 0 errors; web vitest 155/155 (21 files); api vitest 159/159 (17 files).
+
+**Files Modified:**
+- `apps/web/app/api/v1/auth/[action]/route.ts` — pgOptionsFor + logDbError + outer guard + unique-violation 409
+- `packages/api/drizzle/seed.data.ts` — SEED_USER_PASSWORD_HASH + passwordHash on SEED_USERS
+- `packages/api/drizzle/seed.ts` — NULL-only passwordHash backfill
+- `packages/api/drizzle/migrations/0005_wild_hellion.sql` (new), `meta/0005_snapshot.json` (new), `meta/_journal.json`
+- `ai-system/{repair-system.md,checkpoints/session-log.md,summaries/dev-history.md,memory/lessons-learned.md,testing/test-results.md,memory/project-decisions.md}`
+
+**Next Task:**
+Run `drizzle-kit migrate` (picks up 0005) on production DB, confirm `DATABASE_URL`/`JWT_SECRET` envs on Vercel, then verify live register-password + seed-account password login; watch Vercel logs for the new `[auth:*]` coded lines if any failure recurs.
+
+**Assumptions Made:**
+- Production Postgres is Supabase (pooler or direct); `prepare: false` is safe on direct connections too (minor perf cost, correctness first).
+- Demo password `Homewolves123!` for seed accounts is acceptable as documented dev/demo convenience; rotate for real environments.
+
+**Notes / Blockers:**
+- None blocking.
+
+## Session 20e — 2026-10-15 (execute-feature: Vercel build drizzle migrate + auth entry unblocked)
+
+**Completed:**
+- Vercel build now runs Drizzle migrations: new `scripts/vercel-build.mjs` (DATABASE_URL-gated `drizzle-kit migrate --config=packages/api/drizzle.config.ts`, never fails the build on migrate error) + root `vercel-build` npm script + `vercel.json` buildCommand `npm run vercel-build`. Removable later by reverting buildCommand and deleting the script.
+- Same-site fix (apex ↔ www): `normalizeHost`/`isSameSite` in web `[action]/route.ts`, `[...path]/route.ts`, and `next.config.js` rewrites. Same-site explicit/public targets no longer proxy (avoids self-loop → opaque 500s); request-host check added.
+- Auth resilience: new `tryProxy()` — upstream 5xx/network falls back to local Postgres handling instead of surfacing 500; `isMissingTableError()` (42P01) returns 503 `DB_NOT_MIGRATED` on register/login-password lookups.
+- NestJS hardening: `DrizzleService` pooler-safe `prepare:false` + TLS-require for non-local hosts; `GlobalExceptionFilter` maps 42703 → 503 `MISSING_PASSWORD_COLUMN`, 42P01 → 503 `DB_NOT_MIGRATED` (was opaque 500).
+- QA: `npm install` clean; web/api `tsc --noEmit` 0 errors; web vitest 155/155 (21 files); api vitest 159/159 (17 files); eslint on touched files clean.
+
+**Files Modified:**
+- `scripts/vercel-build.mjs` (new), `package.json`, `vercel.json`
+- `apps/web/app/api/v1/auth/[action]/route.ts` — same-site + tryProxy + DB_NOT_MIGRATED
+- `apps/web/app/api/v1/[...path]/route.ts` — same-site
+- `apps/web/next.config.js` — same-site rewrites
+- `packages/api/src/drizzle/drizzle.service.ts` — pooler-safe options
+- `packages/api/src/common/filters/global-exception.filter.ts` — 42703/42P01 → 503
+
+**Next Task:**
+Redeploy on Vercel (build log should show `[vercel-build] drizzle-kit migrate completed`), then verify live `POST /api/v1/auth/register-password` creates a user; if 503 `DB_NOT_MIGRATED`/`MISSING_PASSWORD_COLUMN` appears, check build-time DATABASE_URL and Vercel logs.
+
+**Assumptions Made:**
+- Build-time DATABASE_URL is the same Supabase DB the runtime uses; migrate is idempotent so re-running each build is safe.
+- Single-service Vercel deploy (no external NestJS) is the current target; external-backend proxy remains for truly off-site origins.
+
+**Notes / Blockers:**
+- None blocking. Remove build-time migrate later once external DB workflow stabilises (see script header).
+
+## Session 21 — 2026-10-15 (execute-feature: Vercel build stall after `npm run vercel-build`)
+
+**Completed:**
+- Hardened `scripts/vercel-build.mjs`: migrate step was blocking `spawnSync` with no timeout — an unreachable `DATABASE_URL` (pooler/DNS hang) stalled `vercel build` with a log truncated right after `Running "npm run vercel-build"` (Vercel CLI 62.7.0). Now: `SKIP_DB_MIGRATE`/`SKIP_MIGRATIONS` escape hatch, postgres-URL validation, repo-local `drizzle-kit`/`turbo` binaries (no per-build `npx --yes` fetch), 60s migrate timeout (`VERCEL_MIGRATE_TIMEOUT_MS`) with fail-soft continue, post-build output check (`apps/web/.next` present + Root-Directory guidance).
+- Documented new knobs in `.env.example` (`SKIP_DB_MIGRATE`, `VERCEL_MIGRATE_TIMEOUT_MS`).
+- QA: `npm run vercel-build` green in 3 modes (no DB skip, `SKIP_DB_MIGRATE=1`, unreachable-DB fail-soft → web build 38 pages + `Verified Next.js output at apps/web/.next`); `npm run typecheck` 4/4; `npm test` green (web 155/155, api suite green).
+
+**Files Modified:**
+- `scripts/vercel-build.mjs` — timeout/skip/local-binary/output-check hardening
+- `.env.example` — `SKIP_DB_MIGRATE`, `VERCEL_MIGRATE_TIMEOUT_MS`
+
+**Next Task:**
+Redeploy on Vercel; expect `[vercel-build]` lines for migrate-skip/timeout + `Verified Next.js output at apps/web/.next` + `Web build completed`. If the log still truncates after `Running "npm run vercel-build"`, check dashboard Root Directory (must be repo root/empty) and build-time `DATABASE_URL` reachability; `SKIP_DB_MIGRATE=1` unblocks the build while the DB is investigated.
+
+**Assumptions Made:**
+- Vercel dashboard Root Directory is the repo root (empty) — verified by `npm run vercel-build` starting (a Root of `apps/web` would fail to find the root script). No `outputDirectory` override added; Turbo auto-detection handles `apps/web/.next`.
+
+**Notes / Blockers:**
+- None blocking. [SUPERSEDED by Session 22: Root is actually `apps/web` — proven by the `Missing script: "vercel-build"` failure at `location /vercel/path0/apps/web`.]
+
+## Session 22 — 2026-10-15 (fix-build: `Missing script: "vercel-build"` in @hw/web)
+
+**Completed:**
+- Root-caused the `npm run vercel-build → Missing script: "vercel-build"` failure (`workspace @hw/web`, `location /vercel/path0/apps/web`): the Vercel dashboard Root Directory is `apps/web`, so the `vercel.json` buildCommand runs with cwd `apps/web`, where the script did not exist. This supersedes Session 21's assumption that Root was the repo root.
+- Added `"vercel-build": "next build"` to `apps/web/package.json` — build succeeds from either Root setting (repo root → migrate + turbo path; `apps/web` → direct `next build`).
+- Hardened `scripts/vercel-build.mjs` with `findRepoRoot()` (walk up to `turbo.json`, script-relative fallback); binary resolution, drizzle/turbo `cwd`, and the `.next` output check now use `REPO_ROOT`, eliminating the doubled `apps/web/apps/web/.next` failure mode from an `apps/web` cwd.
+- QA: `npm install` clean; full `next build` green from `apps/web` cwd (all routes incl. products/services); root `npm run vercel-build` green (migrate-skip + turbo + output verified); `findRepoRoot()` unit-checked from both cwds; `npm run --workspace=@hw/web vercel-build` resolves.
+
+**Files Modified:**
+- `apps/web/package.json` — added `vercel-build: next build`
+- `scripts/vercel-build.mjs` — `findRepoRoot()`, `REPO_ROOT`-based bins/cwds/output check
+- `ai-system/repair-system.md` — new Session 22 entry
+- `ai-system/testing/test-results.md`, `ai-system/checkpoints/session-log.md` — updated
+
+**Next Task:**
+Redeploy on Vercel — the `Missing script` error is resolved for Root `apps/web` with no dashboard change required. Optional later cleanup: set dashboard Root to repo root (empty) so builds also run Drizzle migrations, or keep Root `apps/web` (direct `next build`, no build-time migrate — runtime auth self-heals columns).
+
+**Assumptions Made:**
+- Vercel dashboard Root Directory is `apps/web` (proven by the error's `location /vercel/path0/apps/web` + `workspace @hw/web`). Fix works under either setting, so no dashboard access was needed.
+- `next build` from `apps/web` with hoisted root `node_modules` matches Vercel's `npm install` behaviour closely enough for verification.
 
 **Notes / Blockers:**
 - None blocking.

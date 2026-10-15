@@ -33,10 +33,43 @@ export const dynamic = 'force-dynamic';
 type Row = Record<string, unknown>;
 
 // ─── Backend proxy detection (mirrors catch-all route.ts) ───────────────────
-function backendOrigin(): string | null {
+function normalizeHost(host: string): string {
+  return host.trim().toLowerCase().replace(/^www\./, '');
+}
+
+function isSameSite(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const na = normalizeHost(a);
+  const nb = normalizeHost(b);
+  return na === nb;
+}
+
+function siteHost(): string {
+  const siteRaw = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
+  try {
+    return new URL(siteRaw).host;
+  } catch {
+    return '';
+  }
+}
+
+function backendOrigin(req?: NextRequest): string | null {
   const explicit = process.env.API_PROXY_URL?.trim() || process.env.API_URL?.trim();
   if (explicit && explicit.length > 0) {
     try {
+      const expHost = new URL(explicit).host;
+      // Single-service Vercel deploys share apex/www between web + API.
+      // Proxying to a same-site origin would loop back into this same
+      // route (opaque 500s) — handle locally instead. Only proxy when the
+      // explicit target is truly off-site.
+      if (siteHost() && isSameSite(expHost, siteHost())) return null;
+      if (req) {
+        try {
+          if (isSameSite(expHost, req.nextUrl.host)) return null;
+        } catch {
+          // ignore — fall through to proxy
+        }
+      }
       return new URL(explicit).origin;
     } catch {
       return null;
@@ -46,14 +79,18 @@ function backendOrigin(): string | null {
   if (!pub || pub.startsWith('/')) return null;
   try {
     const u = new URL(pub);
-    const siteRaw = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
-    let siteHost = '';
-    try {
-      siteHost = new URL(siteRaw).host;
-    } catch {
-      siteHost = '';
+    const sh = siteHost();
+    // Treat apex ↔ www as the same site (Vercel 308s apex → www; fetching
+    // the apex from a www page fails CORS with no ACAO header). Same-site
+    // means: handle locally via Postgres, never proxy.
+    if (sh && isSameSite(u.host, sh)) return null;
+    if (req) {
+      try {
+        if (isSameSite(u.host, req.nextUrl.host)) return null;
+      } catch {
+        // ignore
+      }
     }
-    if (siteHost && u.host === siteHost) return null;
     return u.origin;
   } catch {
     return null;
@@ -61,7 +98,7 @@ function backendOrigin(): string | null {
 }
 
 async function proxyToBackend(req: NextRequest, action: string): Promise<NextResponse> {
-  const origin = backendOrigin();
+  const origin = backendOrigin(req);
   if (!origin) return notConfigured();
   try {
     const headers: Record<string, string> = {};
@@ -92,6 +129,25 @@ async function proxyToBackend(req: NextRequest, action: string): Promise<NextRes
   }
 }
 
+/**
+ * Attempts the external-backend proxy; returns a response to send directly,
+ * or `null` when the caller should fall through to local Postgres handling.
+ *
+ * Fallback rule (resilience while the external system is unreachable —
+ * removable later): no configured origin → null; network/502 → null;
+ * upstream 5xx → null (local DB path is tried instead of surfacing an opaque
+ * 500). Upstream 2xx/4xx are returned as-is to preserve backend semantics.
+ */
+async function tryProxy(req: NextRequest, action: string): Promise<NextResponse | null> {
+  if (!backendOrigin(req)) return null;
+  const proxied = await proxyToBackend(req, action);
+  if (proxied.status >= 500) {
+    console.error(`[auth:${action}] backend ${proxied.status} — falling back to local handling`);
+    return null;
+  }
+  return proxied;
+}
+
 function notConfigured() {
   return NextResponse.json(
     {
@@ -110,13 +166,42 @@ type SqlClient = {
 
 let sqlPromise: Promise<SqlClient> | null = null;
 
+function pgOptionsFor(url: string): Record<string, unknown> {
+  // Config-driven postgres.js options (serverless-safe defaults):
+  // - `prepare: false` by default. Supabase/pgbouncer poolers (port 6543,
+  //   transaction mode) do NOT support prepared statements — every query
+  //   fails otherwise, surfacing as opaque 500s on auth. Opt back in with
+  //   PG_PREPARE=true (direct connections only).
+  // - `ssl: 'require'` for non-local hosts (Supabase mandates TLS). Opt out
+  //   with PG_SSL=disable or ?sslmode=disable.
+  const prepare = process.env.PG_PREPARE?.trim().toLowerCase() === 'true';
+  let ssl: unknown;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    const sslParam = (u.searchParams.get('sslmode') ?? '').toLowerCase();
+    const sslEnv = (process.env.PG_SSL ?? '').trim().toLowerCase();
+    if (sslEnv === 'disable' || sslParam === 'disable') {
+      ssl = false;
+    } else if (!isLocal) {
+      ssl = 'require';
+    }
+  } catch {
+    // Unparseable URL — let postgres throw its own descriptive error.
+  }
+  const opts: Record<string, unknown> = { max: 5, idle_timeout: 20, connect_timeout: 10, prepare };
+  if (ssl !== undefined) opts.ssl = ssl;
+  return opts;
+}
+
 async function getSql(): Promise<SqlClient | null> {
   const url = process.env.DATABASE_URL?.trim();
   if (!url) return null;
   if (!sqlPromise) {
     sqlPromise = (async () => {
       const postgres = (await import('postgres')).default;
-      return postgres(url, { max: 5, idle_timeout: 20, connect_timeout: 10 }) as unknown as SqlClient;
+      return postgres(url, pgOptionsFor(url)) as unknown as SqlClient;
     })();
   }
   try {
@@ -125,6 +210,24 @@ async function getSql(): Promise<SqlClient | null> {
     sqlPromise = null;
     return null;
   }
+}
+
+/**
+ * Sanitized DB-error detail for server logs. Includes driver message/code
+ * (needed to diagnose prod 500s) but never the connection string or query
+ * parameters.
+ */
+function dbErrorDetail(err: unknown): { message: string; code?: string } {
+  if (err instanceof Error) {
+    const code = (err as Error & { code?: unknown }).code;
+    return { message: err.message.slice(0, 300), code: typeof code === 'string' ? code : undefined };
+  }
+  return { message: String(err).slice(0, 300) };
+}
+
+function logDbError(tag: string, err: unknown): void {
+  const detail = dbErrorDetail(err);
+  console.error(tag, detail.code ? `${detail.code}: ${detail.message}` : detail.message);
 }
 
 async function findUserByEmail(sql: SqlClient, email: string): Promise<Row | null> {
@@ -169,7 +272,7 @@ async function ensureAuthColumns(sql: SqlClient): Promise<boolean> {
     // Table may not exist in fallback mode, or the connection role may lack
     // DDL permission — callers must handle a `false` result gracefully
     // instead of failing later with a cryptic insert error.
-    console.error('[auth] ensure passwordHash column failed', err);
+    logDbError('[auth] ensure passwordHash column failed', err);
     return false;
   }
 }
@@ -177,6 +280,23 @@ async function ensureAuthColumns(sql: SqlClient): Promise<boolean> {
 function isMissingColumnError(err: unknown): boolean {
   const detail = err instanceof Error ? err.message : String(err);
   return /passwordHash/i.test(detail) || /column.*does not exist/i.test(detail) || /undefined_column/i.test(detail);
+}
+
+function isUniqueViolationError(err: unknown): boolean {
+  const detail = err instanceof Error ? err.message : String(err);
+  const code = err instanceof Error ? (err as Error & { code?: unknown }).code : undefined;
+  return code === '23505' || /duplicate key|unique constraint|already exists/i.test(detail);
+}
+
+function isMissingTableError(err: unknown): boolean {
+  const detail = err instanceof Error ? err.message : String(err);
+  const code = err instanceof Error ? (err as Error & { code?: unknown }).code : undefined;
+  return (
+    code === '42P01' ||
+    /relation .* does not exist/i.test(detail) ||
+    /table .* does not exist/i.test(detail) ||
+    /undefined_table/i.test(detail)
+  );
 }
 
 async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
@@ -204,8 +324,8 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ message: 'Enter your first and last name.' }, { status: 400 });
   }
 
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'register-password');
+  const proxied_register_password = await tryProxy(req, 'register-password');
+  if (proxied_register_password) return proxied_register_password;
 
   const sql = await getSql();
   if (!sql) {
@@ -218,9 +338,18 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
   try {
     existing = await findUserByEmail(sql, email);
   } catch (err) {
-    console.error('[auth:register-password] lookup failed', err);
+    logDbError('[auth:register-password] lookup failed', err);
+    if (isMissingTableError(err)) {
+      return NextResponse.json(
+        {
+          message: 'Database tables are not set up yet. Migrations run automatically on the next Vercel build — please try again shortly.',
+          code: 'DB_NOT_MIGRATED',
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
-      { message: 'Could not create your account. Please try again.', code: 'DB_LOOKUP_FAILED' },
+      { message: 'Could not reach the database. Please try again.', code: 'DB_LOOKUP_FAILED' },
       { status: 500 },
     );
   }
@@ -231,7 +360,7 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
   try {
     passwordHash = await hashPassword(password);
   } catch (err) {
-    console.error('[auth:register-password] hash failed', err);
+    logDbError('[auth:register-password] hash failed', err);
     return NextResponse.json(
       { message: 'Could not create your account. Please try again.', code: 'HASH_FAILED' },
       { status: 500 },
@@ -241,7 +370,7 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
   try {
     newCode = await ensureReferralCode(sql);
   } catch (err) {
-    console.error('[auth:register-password] referral-code failed', err);
+    logDbError('[auth:register-password] referral-code failed', err);
     return NextResponse.json(
       { message: 'Could not create your account. Please try again.', code: 'REFERRAL_FAILED' },
       { status: 500 },
@@ -257,20 +386,35 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
     const rows = await insertUser();
     user = rows[0] ?? null;
   } catch (err) {
+    if (isUniqueViolationError(err)) {
+      // Race with another signup (or a duplicate phone/identifier): report a
+      // clean 409 instead of the misleading MISSING_PASSWORD_COLUMN 503.
+      logDbError('[auth:register-password] insert hit unique violation', err);
+      return NextResponse.json(
+        { message: 'An account with those details already exists. Try signing in instead.', code: 'EMAIL_CONFLICT' },
+        { status: 409 },
+      );
+    }
     // First insert failed — the passwordHash column may have been missing
     // (pre-migration DBs, or the earlier ALTER lacked DDL permission).
     // Re-run the ALTER once and retry before giving up.
     if (isMissingColumnError(err)) {
-      console.error('[auth:register-password] insert hit missing column, re-ensuring + retrying', err);
+      logDbError('[auth:register-password] insert hit missing column, re-ensuring + retrying', err);
       await ensureAuthColumns(sql);
       try {
         const rows = await insertUser();
         user = rows[0] ?? null;
       } catch (retryErr) {
-        console.error('[auth:register-password] insert retry failed', retryErr);
+        if (isUniqueViolationError(retryErr)) {
+          return NextResponse.json(
+            { message: 'An account with those details already exists. Try signing in instead.', code: 'EMAIL_CONFLICT' },
+            { status: 409 },
+          );
+        }
+        logDbError('[auth:register-password] insert retry failed', retryErr);
       }
     } else {
-      console.error('[auth:register-password] insert failed', err);
+      logDbError('[auth:register-password] insert failed', err);
     }
   }
   if (!user) {
@@ -296,7 +440,7 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
     res = NextResponse.json(issueTokens(user as never));
   } catch (err) {
     // JWT_SECRET missing in production throws here — surface as 503, not 500.
-    console.error('[auth:register-password] token issue failed (check JWT_SECRET)', err);
+    logDbError('[auth:register-password] token issue failed (check JWT_SECRET)', err);
     return NextResponse.json(
       { message: 'Sign-up is temporarily unavailable. Please try again shortly.', code: 'TOKEN_CONFIG' },
       { status: 503 },
@@ -309,7 +453,7 @@ async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
       otpCookieOptions(),
     );
   } catch (err) {
-    console.error('[auth:register-password] otp cookie failed (check JWT_SECRET)', err);
+    logDbError('[auth:register-password] otp cookie failed (check JWT_SECRET)', err);
     return NextResponse.json(
       { message: 'Sign-up is temporarily unavailable. Please try again shortly.', code: 'TOKEN_CONFIG' },
       { status: 503 },
@@ -326,8 +470,8 @@ async function handleLoginPassword(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ message: 'Enter your email and password.' }, { status: 400 });
   }
 
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'login-password');
+  const proxied_login_password = await tryProxy(req, 'login-password');
+  if (proxied_login_password) return proxied_login_password;
 
   const sql = await getSql();
   if (!sql) return notConfigured();
@@ -349,14 +493,23 @@ async function handleLoginPassword(req: NextRequest): Promise<NextResponse> {
     try {
       return NextResponse.json(issueTokens(user as never));
     } catch (err) {
-      console.error('[auth:login-password] token issue failed (check JWT_SECRET)', err);
+      logDbError('[auth:login-password] token issue failed (check JWT_SECRET)', err);
       return NextResponse.json(
         { message: 'Sign-in is temporarily unavailable. Please try again shortly.', code: 'TOKEN_CONFIG' },
         { status: 503 },
       );
     }
   } catch (err) {
-    console.error('[auth:login-password] sign-in failed', err);
+    logDbError('[auth:login-password] sign-in failed', err);
+    if (isMissingTableError(err)) {
+      return NextResponse.json(
+        {
+          message: 'Database tables are not set up yet. Migrations run automatically on the next Vercel build — please try again shortly.',
+          code: 'DB_NOT_MIGRATED',
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ message: 'Could not sign you in. Please try again.', code: 'DB_FAILED' }, { status: 500 });
   }
 }
@@ -368,8 +521,8 @@ async function handleForgotPassword(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ message: 'Enter a valid email address.' }, { status: 400 });
   }
 
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'forgot-password');
+  const proxied_forgot_password = await tryProxy(req, 'forgot-password');
+  if (proxied_forgot_password) return proxied_forgot_password;
 
   const sql = await getSql();
   if (!sql) return notConfigured();
@@ -398,8 +551,8 @@ async function handleResetPassword(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ message: 'That reset link is invalid or expired. Request a new one.' }, { status: 400 });
   }
 
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'reset-password');
+  const proxied_reset_password = await tryProxy(req, 'reset-password');
+  if (proxied_reset_password) return proxied_reset_password;
 
   const sql = await getSql();
   if (!sql) return notConfigured();
@@ -436,8 +589,8 @@ async function handleRegister(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ message: 'Invalid email address' }, { status: 400 });
   }
 
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'register');
+  const proxied_register = await tryProxy(req, 'register');
+  if (proxied_register) return proxied_register;
 
   const sql = await getSql();
   if (!sql) return notConfigured();
@@ -468,8 +621,8 @@ async function handleLogin(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ message: 'Invalid email address' }, { status: 400 });
   }
 
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'login');
+  const proxied_login = await tryProxy(req, 'login');
+  if (proxied_login) return proxied_login;
 
   const sql = await getSql();
   if (!sql) return notConfigured();
@@ -501,8 +654,8 @@ async function handleVerifyOtp(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ message: 'Invalid request' }, { status: 400 });
   }
 
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'verify-otp');
+  const proxied_verify_otp = await tryProxy(req, 'verify-otp');
+  if (proxied_verify_otp) return proxied_verify_otp;
 
   const sql = await getSql();
   if (!sql) return notConfigured();
@@ -547,8 +700,8 @@ async function handleCompleteProfile(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ message: 'Invalid profile data' }, { status: 400 });
   }
 
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'complete-profile');
+  const proxied_complete_profile = await tryProxy(req, 'complete-profile');
+  if (proxied_complete_profile) return proxied_complete_profile;
 
   const sql = await getSql();
   if (!sql) return notConfigured();
@@ -591,8 +744,8 @@ async function handleGoogle(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ message: 'Missing Google credential' }, { status: 400 });
   }
 
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'google');
+  const proxied_google = await tryProxy(req, 'google');
+  if (proxied_google) return proxied_google;
 
   const sql = await getSql();
   if (!sql) return notConfigured();
@@ -665,8 +818,8 @@ async function handleSupabase(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ message: 'Missing access token' }, { status: 400 });
   }
 
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'supabase');
+  const proxied_supabase = await tryProxy(req, 'supabase');
+  if (proxied_supabase) return proxied_supabase;
 
   const secret = process.env.SUPABASE_JWT_SECRET;
   if (!secret) {
@@ -740,8 +893,8 @@ async function handleSupabase(req: NextRequest): Promise<NextResponse> {
 }
 
 async function handleLogout(req: NextRequest): Promise<NextResponse> {
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'logout');
+  const proxied_logout = await tryProxy(req, 'logout');
+  if (proxied_logout) return proxied_logout;
   // Local mode: stateless JWT — client drops the token; clear OTP cookie if any.
   const res = NextResponse.json({ message: 'Logged out' });
   res.cookies.set(OTP_COOKIE, '', { ...otpCookieOptions(), maxAge: 0 });
@@ -749,8 +902,8 @@ async function handleLogout(req: NextRequest): Promise<NextResponse> {
 }
 
 async function handleRefresh(req: NextRequest): Promise<NextResponse> {
-  const origin = backendOrigin();
-  if (origin) return proxyToBackend(req, 'refresh');
+  const proxied_refresh = await tryProxy(req, 'refresh');
+  if (proxied_refresh) return proxied_refresh;
 
   const body = await req.json().catch(() => ({}));
   const refreshToken = typeof body.refreshToken === 'string' ? body.refreshToken : '';
@@ -770,32 +923,43 @@ async function handleRefresh(req: NextRequest): Promise<NextResponse> {
 
 export async function POST(req: NextRequest, ctx: { params: { action: string } }) {
   const action = ctx.params.action;
-  switch (action) {
-    case 'register':
-      return handleRegister(req);
-    case 'register-password':
-      return handleRegisterPassword(req);
-    case 'login-password':
-      return handleLoginPassword(req);
-    case 'forgot-password':
-      return handleForgotPassword(req);
-    case 'reset-password':
-      return handleResetPassword(req);
-    case 'login':
-      return handleLogin(req);
-    case 'verify-otp':
-      return handleVerifyOtp(req);
-    case 'complete-profile':
-      return handleCompleteProfile(req);
-    case 'google':
-      return handleGoogle(req);
-    case 'supabase':
-      return handleSupabase(req);
-    case 'logout':
-      return handleLogout(req);
-    case 'refresh':
-      return handleRefresh(req);
-    default:
-      return NextResponse.json({ message: 'Not found' }, { status: 404 });
+  // Outer guard: no auth action may ever surface an opaque HTML 500. Any
+  // unexpected throw becomes structured JSON with a code the client can
+  // display and ops can grep in Vercel logs.
+  try {
+    switch (action) {
+      case 'register':
+        return handleRegister(req);
+      case 'register-password':
+        return handleRegisterPassword(req);
+      case 'login-password':
+        return handleLoginPassword(req);
+      case 'forgot-password':
+        return handleForgotPassword(req);
+      case 'reset-password':
+        return handleResetPassword(req);
+      case 'login':
+        return handleLogin(req);
+      case 'verify-otp':
+        return handleVerifyOtp(req);
+      case 'complete-profile':
+        return handleCompleteProfile(req);
+      case 'google':
+        return handleGoogle(req);
+      case 'supabase':
+        return handleSupabase(req);
+      case 'logout':
+        return handleLogout(req);
+      case 'refresh':
+        return handleRefresh(req);
+      default:
+        return NextResponse.json({ message: 'Not found' }, { status: 404 });
+    }
+  } catch (err) {
+    logDbError(`[auth:${action}] unexpected failure`, err);
+    return NextResponse.json(
+      { message: 'Something went wrong. Please try again.', code: 'UNEXPECTED' },
+      { status: 500 },
+    );
   }
 }

@@ -1,8 +1,8 @@
 # System Architecture
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-19
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: execute-feature-session-21
+> - last-verified-against-code: 2026-10-15
 > - staleness-policy: re-verify before trusting if any architecture-affecting commits have been made since last-verified-against-code
 
 > **Overview:** Homewolves is a multi-sided PropTech marketplace + Agent CRM + Transaction Management Platform targeting the Nigerian/African market. It uses a modular monolith architecture (Next.js 14 frontend + NestJS backend + PostgreSQL) designed to decompose into microservices as the platform scales. The system is metadata-driven — all configurable UI elements and business rules are stored in the database via `PlatformConfig`, with hardcoded fallbacks in `packages/config/src/fallbacks.ts`.
@@ -146,6 +146,8 @@ Business event (e.g. transaction created)
 | `transaction_step_templates` | Workflow step definitions | PlatformConfig table | FALLBACK_STEPS |
 | `property_types` | Property type categories and icons | PlatformConfig table | FALLBACK_TYPES |
 | `DATABASE_URL` | PostgreSQL connection string | .env | — |
+| `SKIP_DB_MIGRATE` / `SKIP_MIGRATIONS` | Skip build-time `drizzle-kit migrate` in `scripts/vercel-build.mjs` (preview/emergency unblock) | .env | unset (migrate runs when `DATABASE_URL` is a postgres URL) |
+| `VERCEL_MIGRATE_TIMEOUT_MS` | Cap on the build-time migrate step; fail-soft continue to web build on timeout | .env | 60000 |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Direct Google OAuth (server-only; web GSI reads server-serialized FALLBACK_GOOGLE_OAUTH / API config — no `NEXT_PUBLIC_GOOGLE_CLIENT_ID`) | .env | — |
 | `JWT_SECRET` | Local auth HS256 signing when NestJS API is unreachable (dev fallback `homewolves-dev-secret`) | .env | apps/web `lib/server/auth-local.ts` |
 | `RESEND_API_KEY` | OTP email delivery from local auth route when set | .env | apps/web `app/api/v1/auth/[action]` |
