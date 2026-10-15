@@ -743,4 +743,28 @@ Redeploy on Vercel; expect `[vercel-build]` lines for migrate-skip/timeout + `Ve
 - Vercel dashboard Root Directory is the repo root (empty) — verified by `npm run vercel-build` starting (a Root of `apps/web` would fail to find the root script). No `outputDirectory` override added; Turbo auto-detection handles `apps/web/.next`.
 
 **Notes / Blockers:**
+- None blocking. [SUPERSEDED by Session 22: Root is actually `apps/web` — proven by the `Missing script: "vercel-build"` failure at `location /vercel/path0/apps/web`.]
+
+## Session 22 — 2026-10-15 (fix-build: `Missing script: "vercel-build"` in @hw/web)
+
+**Completed:**
+- Root-caused the `npm run vercel-build → Missing script: "vercel-build"` failure (`workspace @hw/web`, `location /vercel/path0/apps/web`): the Vercel dashboard Root Directory is `apps/web`, so the `vercel.json` buildCommand runs with cwd `apps/web`, where the script did not exist. This supersedes Session 21's assumption that Root was the repo root.
+- Added `"vercel-build": "next build"` to `apps/web/package.json` — build succeeds from either Root setting (repo root → migrate + turbo path; `apps/web` → direct `next build`).
+- Hardened `scripts/vercel-build.mjs` with `findRepoRoot()` (walk up to `turbo.json`, script-relative fallback); binary resolution, drizzle/turbo `cwd`, and the `.next` output check now use `REPO_ROOT`, eliminating the doubled `apps/web/apps/web/.next` failure mode from an `apps/web` cwd.
+- QA: `npm install` clean; full `next build` green from `apps/web` cwd (all routes incl. products/services); root `npm run vercel-build` green (migrate-skip + turbo + output verified); `findRepoRoot()` unit-checked from both cwds; `npm run --workspace=@hw/web vercel-build` resolves.
+
+**Files Modified:**
+- `apps/web/package.json` — added `vercel-build: next build`
+- `scripts/vercel-build.mjs` — `findRepoRoot()`, `REPO_ROOT`-based bins/cwds/output check
+- `ai-system/repair-system.md` — new Session 22 entry
+- `ai-system/testing/test-results.md`, `ai-system/checkpoints/session-log.md` — updated
+
+**Next Task:**
+Redeploy on Vercel — the `Missing script` error is resolved for Root `apps/web` with no dashboard change required. Optional later cleanup: set dashboard Root to repo root (empty) so builds also run Drizzle migrations, or keep Root `apps/web` (direct `next build`, no build-time migrate — runtime auth self-heals columns).
+
+**Assumptions Made:**
+- Vercel dashboard Root Directory is `apps/web` (proven by the error's `location /vercel/path0/apps/web` + `workspace @hw/web`). Fix works under either setting, so no dashboard access was needed.
+- `next build` from `apps/web` with hoisted root `node_modules` matches Vercel's `npm install` behaviour closely enough for verification.
+
+**Notes / Blockers:**
 - None blocking.

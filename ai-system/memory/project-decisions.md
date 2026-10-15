@@ -843,6 +843,8 @@ The Vercel CLI 62.7.0 build log truncated right after `Running "npm run vercel-b
 - Set `SKIP_DB_MIGRATE=1` in preview/emergency builds to skip migrate entirely; tune hangs via `VERCEL_MIGRATE_TIMEOUT_MS`.
 - Dashboard Root Directory must stay the repo root (empty); the script now logs a warning if output lands elsewhere.
 
+**Session 22 amendment (2026-10-15, fix-build):** the "Root is repo root" premise above is SUPERSEDED — the `Missing script: "vercel-build"` failure at `location /vercel/path0/apps/web` proves the dashboard Root is actually `apps/web`. The build now supports EITHER Root with no dashboard change: repo-root Root runs `scripts/vercel-build.mjs` (migrate + turbo, repo-root-aware via `findRepoRoot()`); `apps/web` Root runs `apps/web`'s own `vercel-build` (`next build` directly). Implication updated: prefer repo-root Root when build-time migration is wanted; `apps/web` Root remains supported (no build-time migrate — runtime auth self-heals columns).
+
 ---
 
 ## Apex and www are the same site (no self-proxy)
