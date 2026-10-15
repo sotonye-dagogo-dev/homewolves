@@ -801,3 +801,42 @@ Supabase/pgbouncer poolers reject prepared statements, which made every auth que
 - Demo password is documented in `seed.data.ts`; rotate for any non-demo environment.
 
 ---
+
+---
+
+## Vercel build runs Drizzle migrations (temporary, removable)
+
+**Decision:** Vercel `buildCommand` runs `scripts/vercel-build.mjs`, which applies `drizzle-kit migrate` when `DATABASE_URL` is present, then builds `@hw/web`. Migrate failures never fail the build.
+**Date:** 2026-10-15
+**Made by:** execute-feature session 20e
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+Production auth had no entry point while the DB lagged behind schema (missing `passwordHash`) and the external backend was unreachable. Running migrations at build time closes that gap without operator intervention.
+
+**Alternatives Considered:**
+- Manual `drizzle-kit migrate` from a workstation — rejected: operator is currently unable to reach the system.
+- Runtime auto-migrate on boot — rejected: riskier in serverless (concurrent instances, cold starts); build time is single-shot and logged.
+
+**Implications:**
+- Build-time `DATABASE_URL` must equal runtime DB. Revert `vercel.json` buildCommand and delete the script once an external DB workflow stabilises.
+
+---
+
+## Apex and www are the same site (no self-proxy)
+
+**Decision:** All web API proxy decisions (`[action]/route.ts`, `[...path]/route.ts`, `next.config.js` rewrites) treat apex ↔ www as same-site and handle requests locally instead of proxying.
+**Date:** 2026-10-15
+**Made by:** execute-feature session 20e
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+Proxying same-site origins loops back into the same route (opaque 500s) and reintroduces the Vercel apex→www 308/CORS failure. External proxying is reserved for truly off-site origins.
+
+**Alternatives Considered:**
+- Keep explicit-proxy-always-wins — rejected: it caused self-loops on single-service deploys.
+
+**Implications:**
+- Setting `API_PROXY_URL` to a same-site origin is now a no-op (local handling wins); point it at a real off-site API to re-enable proxying.

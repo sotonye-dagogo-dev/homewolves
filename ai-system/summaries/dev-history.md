@@ -439,3 +439,22 @@ Third pass on the production `register-password → 500`: ruled out seed NULL ha
 
 **Next Sprint Focus:**
 Run migrate for 0005 in production, confirm Vercel `DATABASE_URL`/`JWT_SECRET`, verify live register-password + seed password login.
+
+## 2026-10-15 — execute-feature: Vercel build drizzle migrate + auth entry unblocked (Session 20e)
+
+**Summary:**
+Unblocked platform entry: Vercel builds now apply Drizzle migrations automatically, and auth no longer depends on reaching an external system — same-site (apex ↔ www) requests are handled locally with fallback, and missing-schema states return actionable 503s instead of opaque 500s.
+
+**Completed:**
+- `scripts/vercel-build.mjs` + `npm run vercel-build` + `vercel.json` buildCommand (migrate-then-build, skips gracefully without DATABASE_URL, never fails build on migrate error)
+- Same-site proxy fix across web auth route, catch-all route, and next.config rewrites
+- `tryProxy()` fallback (5xx → local handling) + 503 `DB_NOT_MIGRATED` for missing tables
+- NestJS `DrizzleService` pooler-safe options + `GlobalExceptionFilter` 42703/42P01 → 503
+- QA: web/api tsc 0 errors; web 155/155; api 159/159
+
+**Key Changes:**
+- New: `scripts/vercel-build.mjs`
+- Rule: Vercel build applies `drizzle-kit migrate` when DATABASE_URL is present; auth routes treat apex/www as same-site and never self-proxy
+
+**Next Sprint Focus:**
+Verify live register-password after redeploy; remove build-time migrate later if an external DB workflow replaces it.

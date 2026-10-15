@@ -697,3 +697,30 @@ Run `drizzle-kit migrate` (picks up 0005) on production DB, confirm `DATABASE_UR
 
 **Notes / Blockers:**
 - None blocking.
+
+## Session 20e — 2026-10-15 (execute-feature: Vercel build drizzle migrate + auth entry unblocked)
+
+**Completed:**
+- Vercel build now runs Drizzle migrations: new `scripts/vercel-build.mjs` (DATABASE_URL-gated `drizzle-kit migrate --config=packages/api/drizzle.config.ts`, never fails the build on migrate error) + root `vercel-build` npm script + `vercel.json` buildCommand `npm run vercel-build`. Removable later by reverting buildCommand and deleting the script.
+- Same-site fix (apex ↔ www): `normalizeHost`/`isSameSite` in web `[action]/route.ts`, `[...path]/route.ts`, and `next.config.js` rewrites. Same-site explicit/public targets no longer proxy (avoids self-loop → opaque 500s); request-host check added.
+- Auth resilience: new `tryProxy()` — upstream 5xx/network falls back to local Postgres handling instead of surfacing 500; `isMissingTableError()` (42P01) returns 503 `DB_NOT_MIGRATED` on register/login-password lookups.
+- NestJS hardening: `DrizzleService` pooler-safe `prepare:false` + TLS-require for non-local hosts; `GlobalExceptionFilter` maps 42703 → 503 `MISSING_PASSWORD_COLUMN`, 42P01 → 503 `DB_NOT_MIGRATED` (was opaque 500).
+- QA: `npm install` clean; web/api `tsc --noEmit` 0 errors; web vitest 155/155 (21 files); api vitest 159/159 (17 files); eslint on touched files clean.
+
+**Files Modified:**
+- `scripts/vercel-build.mjs` (new), `package.json`, `vercel.json`
+- `apps/web/app/api/v1/auth/[action]/route.ts` — same-site + tryProxy + DB_NOT_MIGRATED
+- `apps/web/app/api/v1/[...path]/route.ts` — same-site
+- `apps/web/next.config.js` — same-site rewrites
+- `packages/api/src/drizzle/drizzle.service.ts` — pooler-safe options
+- `packages/api/src/common/filters/global-exception.filter.ts` — 42703/42P01 → 503
+
+**Next Task:**
+Redeploy on Vercel (build log should show `[vercel-build] drizzle-kit migrate completed`), then verify live `POST /api/v1/auth/register-password` creates a user; if 503 `DB_NOT_MIGRATED`/`MISSING_PASSWORD_COLUMN` appears, check build-time DATABASE_URL and Vercel logs.
+
+**Assumptions Made:**
+- Build-time DATABASE_URL is the same Supabase DB the runtime uses; migrate is idempotent so re-running each build is safe.
+- Single-service Vercel deploy (no external NestJS) is the current target; external-backend proxy remains for truly off-site origins.
+
+**Notes / Blockers:**
+- None blocking. Remove build-time migrate later once external DB workflow stabilises (see script header).

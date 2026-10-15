@@ -21,6 +21,7 @@
     "db:seed": "npm --prefix packages/api run db:seed",
     "db:seed:revert": "npm --prefix packages/api run db:seed:revert",
     "db:seed:revert:full": "npm --prefix packages/api run db:seed:revert:full",
+    "vercel-build": "node scripts/vercel-build.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,json,css,md}\"",
     "clean": "turbo run clean --filter=./apps/* --filter=./packages/*"
   },
