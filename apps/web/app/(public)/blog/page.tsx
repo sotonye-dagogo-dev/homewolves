@@ -5,16 +5,8 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { fetchBlogPosts, fetchBlogCategories } from '@/lib/blog';
 import { Home } from 'lucide-react';
-
-const CATEGORY_COLORS: Record<string, string> = {
-  'Market News': 'bg-blue-500/10 text-blue-400',
-  'Buying Guide': 'bg-emerald-500/10 text-emerald-400',
-  'Selling Tips': 'bg-amber-500/10 text-amber-400',
-  'Investment': 'bg-purple-500/10 text-purple-400',
-  'Lifestyle': 'bg-pink-500/10 text-pink-400',
-  'Legal': 'bg-red-500/10 text-red-400',
-  default: 'bg-white/10 text-white/60',
-};
+import { EmptyState } from '@/components/shared/empty-state';
+import { formatDate, safeText } from '@/lib/format';
 
 export default function BlogPage() {
   const [activeCategory, setActiveCategory] = useState<string>('');
@@ -54,9 +46,12 @@ export default function BlogPage() {
         <div className="flex gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none justify-center flex-wrap">
           <button
             onClick={() => { setActiveCategory(''); setPage(1); }}
-            className={`px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
-              !activeCategory ? 'bg-white/10 text-white border border-white/20' : 'text-white/50 hover:text-white/80 border border-transparent'
-            }`}
+            className="px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-all"
+            style={{
+              background: !activeCategory ? 'var(--color-brand-accent)' : 'var(--color-bg-elevated)',
+              color: !activeCategory ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
+              border: `1px solid ${!activeCategory ? 'var(--color-brand-accent)' : 'var(--color-border-default)'}`,
+            }}
           >
             All
           </button>
@@ -64,9 +59,12 @@ export default function BlogPage() {
             <button
               key={cat}
               onClick={() => { setActiveCategory(cat); setPage(1); }}
-              className={`px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
-                activeCategory === cat ? 'bg-white/10 text-white border border-white/20' : 'text-white/50 hover:text-white/80 border border-transparent'
-              }`}
+              className="px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-all"
+              style={{
+                background: activeCategory === cat ? 'var(--color-brand-accent)' : 'var(--color-bg-elevated)',
+                color: activeCategory === cat ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
+                border: `1px solid ${activeCategory === cat ? 'var(--color-brand-accent)' : 'var(--color-border-default)'}`,
+              }}
             >
               {cat}
             </button>
@@ -88,10 +86,11 @@ export default function BlogPage() {
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-lg" style={{ color: 'var(--color-text-muted)' }}>No posts yet</p>
-            <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>Check back soon for new articles</p>
-          </div>
+          <EmptyState
+            icon={Home}
+            title="No posts yet"
+            description="Check back soon for new articles and market insights."
+          />
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -113,14 +112,17 @@ export default function BlogPage() {
                       </div>
                     )}
                     {post.categories?.[0] && (
-                      <span className={`absolute top-3 left-3 px-2.5 py-1 text-[10px] font-semibold rounded-full ${CATEGORY_COLORS[post.categories[0]] ?? CATEGORY_COLORS.default}`}>
-                        {post.categories[0]}
+                      <span
+                        className="absolute top-3 left-3 rounded-full px-2.5 py-1 text-[10px] font-semibold"
+                        style={{ background: 'var(--color-bg-elevated)', color: 'var(--color-brand-primary)', border: '1px solid var(--color-border-subtle)' }}
+                      >
+                        {safeText(post.categories[0], 'Article')}
                       </span>
                     )}
                   </div>
                   <div className="p-4">
                     <div className="flex items-center gap-2 text-xs mb-2" style={{ color: 'var(--color-text-muted)' }}>
-                      <span>{post.publishedAt ? new Date(post.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</span>
+                      <span>{formatDate(post.publishedAt, '')}</span>
                       {post.author && <span>&middot; {post.author.firstName} {post.author.lastName}</span>}
                     </div>
                     <h2 className="font-semibold line-clamp-2 group-hover:underline" style={{ color: 'var(--color-text-primary)' }}>
@@ -149,9 +151,12 @@ export default function BlogPage() {
                   <button
                     key={i}
                     onClick={() => setPage(i + 1)}
-                    className={`w-9 h-9 rounded-full text-sm font-medium transition-all ${
-                      page === i + 1 ? 'bg-white/10 text-white border border-white/20' : 'text-white/40 hover:text-white/60'
-                    }`}
+                    className="w-9 h-9 rounded-full text-sm font-medium transition-all"
+                    style={{
+                      background: page === i + 1 ? 'var(--color-brand-accent)' : 'transparent',
+                      color: page === i + 1 ? 'var(--color-text-inverse)' : 'var(--color-text-muted)',
+                      border: `1px solid ${page === i + 1 ? 'var(--color-brand-accent)' : 'var(--color-border-default)'}`,
+                    }}
                   >
                     {i + 1}
                   </button>

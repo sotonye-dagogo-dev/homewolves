@@ -1,8 +1,8 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-23
-> - last-verified-against-code: 2026-10-16
+> - last-updated-by: execute-feature-session-25
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Log of significant architectural, technical, and product decisions. Agents consult this before proposing changes to avoid contradicting prior reasoning. Uses supersedes/superseded-by links so contradictory entries are explicitly resolved rather than both appearing equally valid.
@@ -887,3 +887,38 @@ Proxying same-site origins loops back into the same route (opaque 500s) and rein
 
 **Implications:**
 - Setting `API_PROXY_URL` to a same-site origin is now a no-op (local handling wins); point it at a real off-site API to re-enable proxying.
+
+## Realtime is opt-in on serverless
+
+**Decision:** Browser realtime is gated by `NEXT_PUBLIC_REALTIME_ENABLED` and defaults to `false`. When disabled, messaging sends via REST (`POST /messaging/conversations/:id/messages`) and reads poll; notifications poll. Socket connections use the API-derived origin with the `/ws` namespace through a shared ref-counted layer (`lib/realtime.ts`).
+**Date:** 2026-10-20
+**Made by:** execute-feature (Session 25)
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+The web app deploys to Vercel serverless, which cannot host Socket.io connections. The previous hardcoded `wss://homewolves.com` connection failed on every page while the product needed to remain functional.
+
+**Alternatives Considered:**
+- Host a separate realtime service now (rejected: infrastructure cost/complexity not yet justified).
+- Keep sockets but silently retry (rejected: console noise and battery/network waste with no delivery guarantee).
+
+**Implications:**
+All realtime-dependent features must have a REST/polling path. Enable the flag only when the API runs on a long-lived WebSocket host. New hooks should reuse `lib/realtime.ts` instead of creating their own sockets.
+
+## Role-aware controls keep stable accessible names
+
+**Decision:** Navigation/profile/post controls keep stable accessible names (`Profile`, `Post property`) across roles; role differences are expressed through destination, visibility, and supporting copy rather than renaming the control.
+**Date:** 2026-10-20
+**Made by:** execute-feature (Session 25)
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+Role-aware labels (`Open dashboard`, `Sign in to post a property`) broke the Testing Library role/name contract and made tests depend on auth state. Stable names keep the user-facing API and tests consistent.
+
+**Alternatives Considered:**
+- Update tests to match per-role labels (rejected: duplicates selectors and hides accidental copy changes).
+
+**Implications:**
+When a control truly needs different copy, update its component test in the same change and document the exception.

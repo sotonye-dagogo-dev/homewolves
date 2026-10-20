@@ -138,7 +138,7 @@ export default function BugReportPage() {
                   <button
                     type="button"
                     onClick={() => removeScreenshot(i)}
-                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-[var(--color-error)] text-white grid place-items-center hover:opacity-80"
+                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-[var(--color-error)] text-[var(--color-text-inverse)] grid place-items-center hover:opacity-80"
                     aria-label={`Remove screenshot ${i + 1}`}
                   >
                     <X className="w-3 h-3" />

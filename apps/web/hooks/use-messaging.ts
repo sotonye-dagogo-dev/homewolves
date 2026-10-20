@@ -8,18 +8,24 @@ import {
   fetchMessages,
   fetchUnreadCount,
   connectSocket,
+  isSocketConnected,
   joinConversation,
   leaveConversation,
   sendMessage as wsSendMessage,
+  sendMessageRest,
   markRead as wsMarkRead,
+  disconnectSocket,
 } from '@/lib/messaging';
+import { isRealtimeEnabled } from '@/lib/realtime';
 import { useAuth } from './use-auth';
 
 export function useConversations() {
   return useQuery({
     queryKey: ['messaging', 'conversations'],
     queryFn: fetchConversations,
-    staleTime: 30_000,
+    staleTime: 15_000,
+    refetchInterval: isRealtimeEnabled() ? false : 20_000,
+    retry: 1,
   });
 }
 
@@ -28,6 +34,7 @@ export function useConversation(id: string) {
     queryKey: ['messaging', 'conversation', id],
     queryFn: () => fetchConversation(id),
     enabled: !!id,
+    retry: 1,
   });
 }
 
@@ -36,7 +43,9 @@ export function useMessages(conversationId: string) {
     queryKey: ['messaging', 'messages', conversationId],
     queryFn: () => fetchMessages(conversationId),
     enabled: !!conversationId,
-    refetchInterval: false,
+    // Poll when realtime is unavailable so received messages still appear.
+    refetchInterval: isRealtimeEnabled() ? false : 6_000,
+    retry: 1,
   });
 }
 
@@ -45,63 +54,80 @@ export function useUnreadCount() {
     queryKey: ['messaging', 'unread'],
     queryFn: fetchUnreadCount,
     staleTime: 15_000,
+    refetchInterval: isRealtimeEnabled() ? false : 20_000,
   });
 }
 
 export function useMessaging(conversationId?: string) {
   const { accessToken, user } = useAuth();
   const qc = useQueryClient();
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user?.id || !accessToken) return;
 
     const socket = connectSocket(user.id, accessToken);
+    if (!socket) return;
 
     if (conversationId) {
-      joinConversation(conversationId);
+      if (socket.connected) joinConversation(conversationId);
+      else socket.once('connect', () => joinConversation(conversationId));
     }
 
-    socket.on('message:new', (message: any) => {
-      qc.invalidateQueries({ queryKey: ['messaging', 'messages', message.conversationId] });
+    const onNewMessage = (message: { conversationId?: string }) => {
+      if (message?.conversationId) {
+        qc.invalidateQueries({ queryKey: ['messaging', 'messages', message.conversationId] });
+      }
       qc.invalidateQueries({ queryKey: ['messaging', 'conversations'] });
       qc.invalidateQueries({ queryKey: ['messaging', 'unread'] });
-    });
-
-    socket.on('message:read', () => {
+    };
+    const onRead = () => {
       qc.invalidateQueries({ queryKey: ['messaging'] });
-    });
-
-    socket.on('typing:update', ({ userId: typingUserId, typing }: { userId: string; typing: boolean }) => {
-      setOnlineUsers((prev) => {
+    };
+    const onTyping = ({ userId: typingUserId, typing }: { userId: string; typing: boolean }) => {
+      setTypingUsers((prev) => {
         const next = new Set(prev);
         if (typing) next.add(typingUserId);
         else next.delete(typingUserId);
         return next;
       });
-    });
+    };
+
+    socket.on('message:new', onNewMessage);
+    socket.on('message:read', onRead);
+    socket.on('typing:update', onTyping);
 
     return () => {
-      if (conversationId) {
-        leaveConversation(conversationId);
-      }
+      if (conversationId) leaveConversation(conversationId);
+      socket.off('message:new', onNewMessage);
+      socket.off('message:read', onRead);
+      socket.off('typing:update', onTyping);
+      disconnectSocket();
     };
   }, [user?.id, accessToken, conversationId, qc]);
 
   const sendMessage = useCallback(
-    (content: string, type = 'text', mediaUrl?: string) => {
-      if (conversationId) {
-        wsSendMessage(conversationId, content, type, mediaUrl);
+    async (content: string, type = 'text', mediaUrl?: string) => {
+      if (!conversationId) throw new Error('Select a conversation first.');
+      const trimmed = content.trim();
+      if (!trimmed) return;
+
+      if (isSocketConnected() && type === 'text') {
+        wsSendMessage(conversationId, trimmed, type, mediaUrl);
+        return;
       }
+
+      await sendMessageRest(conversationId, trimmed, type, mediaUrl);
+      qc.invalidateQueries({ queryKey: ['messaging', 'messages', conversationId] });
+      qc.invalidateQueries({ queryKey: ['messaging', 'conversations'] });
+      qc.invalidateQueries({ queryKey: ['messaging', 'unread'] });
     },
-    [conversationId],
+    [conversationId, qc],
   );
 
   const markRead = useCallback(() => {
-    if (conversationId) {
-      wsMarkRead(conversationId);
-    }
+    if (conversationId) wsMarkRead(conversationId);
   }, [conversationId]);
 
-  return { sendMessage, markRead, onlineUsers };
+  return { sendMessage, markRead, typingUsers };
 }

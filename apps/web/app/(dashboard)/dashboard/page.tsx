@@ -5,10 +5,14 @@ import { useDashboardStats, useRecentClients } from '@/hooks/use-crm';
 import { useListings } from '@/hooks/use-listings';
 import { useInspections } from '@/hooks/use-crm';
 import { useMyStats } from '@/hooks/use-activity';
+import { useMyAnalytics } from '@/hooks/use-analytics';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useAgentTransactions } from '@/hooks/use-transactions';
 import Link from 'next/link';
-import { Home, ClipboardList, Phone, BadgeCheck, Calendar, Link2, BarChart3, Plus, Wallet, Moon, Sun } from 'lucide-react';
-import { useTheme } from '@/components/shared/ThemeProvider';
+import { Bell, Calendar, Link2, BarChart3, Plus } from 'lucide-react';
 import { formatPrice } from '@/lib/format-price';
+import { formatCurrency, formatDate, safeText, toArray, toNumber } from '@/lib/format';
+import { statusToneStyle } from '@/lib/status';
 
 function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
   if (typeof window !== 'undefined') {
@@ -16,33 +20,39 @@ function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info')
   }
 }
 
-const chartData = [
-  { month: 'Jan', views: 45, inquiries: 30 },
-  { month: 'Feb', views: 55, inquiries: 35 },
-  { month: 'Mar', views: 40, inquiries: 25 },
-  { month: 'Apr', views: 60, inquiries: 40 },
-  { month: 'May', views: 70, inquiries: 50 },
-  { month: 'Jun', views: 65, inquiries: 55 },
-  { month: 'Jul', views: 80, inquiries: 60 },
-];
-
-const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
-  active: { bg: '#E8F7EE', color: '#1A7A4A', label: 'Active' },
-  pending: { bg: '#FEF3C7', color: '#B45309', label: 'Pending' },
-  documentation: { bg: '#DBEAFE', color: '#1D4ED8', label: 'Documentation' },
-  closed: { bg: '#F3E8FF', color: '#6B21A8', label: 'Closed' },
-  rejected: { bg: '#FEE2E2', color: '#991B1B', label: 'Rejected' },
-};
-
 export default function AgentDashboardPage() {
-  const { user } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { user, accessToken } = useAuth();
   const { data: stats } = useDashboardStats();
+  const { data: analytics } = useMyAnalytics(90);
+  const { notifications } = useNotifications(user?.id, accessToken ?? undefined);
+  const { data: transactionsData } = useAgentTransactions({ limit: 50 });
   const { data: activityStats } = useMyStats();
   const { data: recentClients } = useRecentClients();
   const { data: listingsData } = useListings({ ownerId: user?.id ?? '', take: '5' }, { enabled: Boolean(user?.id) });
   const today = new Date().toISOString().split('T')[0];
   const { data: inspections } = useInspections(today);
+
+  const eventCounts = (analytics?.events ?? {}) as Record<string, number>;
+  const listingPerformance = toArray<any>(analytics?.listings).slice(0, 7);
+  const maxPerformance = Math.max(
+    1,
+    ...listingPerformance.flatMap((l) => [toNumber(l.viewCount), toNumber(l.enquiryCount)]),
+  );
+  const agentTransactions = toArray<any>(transactionsData?.transactions);
+  const confirmedPayments = agentTransactions
+    .flatMap((tx) => toArray<any>(tx.payments))
+    .filter((payment) => payment.status === 'confirmed');
+  const confirmedTotal = confirmedPayments.reduce(
+    (sum, payment) => sum + toNumber(payment.amount),
+    0,
+  );
+  const funnel = [
+    { label: 'Views', count: eventCounts.listing_view ?? 0 },
+    { label: 'Enquiries', count: eventCounts.listing_enquiry ?? 0 },
+    { label: 'Saved', count: eventCounts.listing_saved ?? 0 },
+    { label: 'Started', count: eventCounts.transaction_started ?? 0 },
+    { label: 'Closed', count: eventCounts.transaction_completed ?? 0 },
+  ];
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
@@ -64,11 +74,11 @@ export default function AgentDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-secondary)' }} aria-label="Toggle theme">
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
+          <Link href="/messages" className="grid h-10 w-10 place-items-center rounded-full" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-secondary)' }} aria-label="Messages">
+            <Bell className="h-5 w-5" />
+          </Link>
           <div className="w-9 h-9 rounded-full grid place-items-center text-sm font-bold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
-            {user?.firstName?.[0]}{user?.lastName?.[0]}
+            {safeText(user?.firstName, '?').charAt(0)}{safeText(user?.lastName, '').charAt(0)}
           </div>
         </div>
       </header>
@@ -85,25 +95,22 @@ export default function AgentDashboardPage() {
             <div className="flex-1">
               <div className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-accent)' }}>{stats?.activeClients ?? 0}</div>
               <div className="text-xs uppercase tracking-wide mt-1" style={{ color: 'var(--color-text-muted)' }}>Active</div>
-              <div className="text-xs font-semibold mt-1" style={{ color: 'var(--color-success)' }}>↑ 12%</div>
             </div>
             <div className="flex-1">
               <div className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-accent)' }}>{stats?.newThisMonth ?? 0}</div>
               <div className="text-xs uppercase tracking-wide mt-1" style={{ color: 'var(--color-text-muted)' }}>New This Month</div>
-              <div className="text-xs font-semibold mt-1" style={{ color: 'var(--color-success)' }}>↑ 8%</div>
             </div>
             <div className="flex-1">
               <div className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-accent)' }}>{stats?.pendingClients ?? 0}</div>
               <div className="text-xs uppercase tracking-wide mt-1" style={{ color: 'var(--color-text-muted)' }}>Pending</div>
-              <div className="text-xs font-semibold mt-1" style={{ color: 'var(--color-error)' }}>↓ 3%</div>
             </div>
           </div>
           {recentClients && recentClients.length > 0 && (
             <div className="mt-3 space-y-2">
               {recentClients.slice(0, 3).map((client: any) => (
                 <div key={client.id} className="flex items-center gap-3 py-1.5 border-b" style={{ borderColor: 'var(--color-border-subtle)' }}>
-                  <div className="w-8 h-8 rounded-full grid place-items-center text-xs font-bold text-white shrink-0" style={{ background: 'var(--color-brand-secondary)' }}>
-                    {client.buyer?.firstName?.[0]}{client.buyer?.lastName?.[0]}
+                  <div className="w-8 h-8 rounded-full grid place-items-center text-xs font-bold shrink-0" style={{ background: 'var(--color-brand-secondary)', color: 'var(--color-text-inverse)' }}>
+                    {safeText(client.buyer?.firstName, '?').charAt(0)}{safeText(client.buyer?.lastName, '').charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
@@ -113,8 +120,8 @@ export default function AgentDashboardPage() {
                       {client.buyer?.email}
                     </div>
                   </div>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0" style={{ background: statusConfig[client.status]?.bg ?? '#E8F7EE', color: statusConfig[client.status]?.color ?? '#1A7A4A' }}>
-                    {statusConfig[client.status]?.label ?? client.status}
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0" style={statusToneStyle(client.status)}>
+                    {safeText(client.status, 'active').replace(/_/g, ' ')}
                   </span>
                 </div>
               ))}
@@ -194,15 +201,27 @@ export default function AgentDashboardPage() {
             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Listing Performance</span>
             <Link href="/dashboard/agent/listings" className="text-xs font-semibold hover:underline" style={{ color: 'var(--color-brand-accent)' }}>Full report</Link>
           </div>
-          <div className="flex items-end gap-2 h-[200px] pt-4">
-            {chartData.map((d) => (
-              <div key={d.month} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                <div className="w-full max-w-[40px] rounded-t-sm transition-all duration-500" style={{ height: `${d.views}%`, background: 'var(--color-brand-primary)', opacity: 0.6 }} />
-                <div className="w-full max-w-[40px] rounded-t-sm transition-all duration-500" style={{ height: `${d.inquiries}%`, background: 'var(--color-brand-accent)', opacity: 0.8 }} />
-                <span className="text-[9px] text-center" style={{ color: 'var(--color-text-muted)' }}>{d.month}</span>
-              </div>
-            ))}
-          </div>
+          {listingPerformance.length === 0 ? (
+            <div className="flex h-[200px] items-center justify-center text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              Performance data will appear as your listings receive views.
+            </div>
+          ) : (
+            <div className="flex items-end gap-2 h-[200px] pt-4">
+              {listingPerformance.map((listing, index) => {
+                const views = toNumber(listing.viewCount);
+                const enquiries = toNumber(listing.enquiryCount);
+                return (
+                  <div key={listing.id ?? index} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                    <div className="w-full max-w-[40px] rounded-t-sm transition-all duration-500" title={`${views} views`} style={{ height: `${Math.max((views / maxPerformance) * 100, views > 0 ? 4 : 1)}%`, background: 'var(--color-brand-primary)', opacity: 0.6 }} />
+                    <div className="w-full max-w-[40px] rounded-t-sm transition-all duration-500" title={`${enquiries} enquiries`} style={{ height: `${Math.max((enquiries / maxPerformance) * 100, enquiries > 0 ? 4 : 1)}%`, background: 'var(--color-brand-accent)', opacity: 0.8 }} />
+                    <span className="text-[9px] text-center line-clamp-1" style={{ color: 'var(--color-text-muted)' }}>
+                      {safeText(listing.title, `#${index + 1}`).slice(0, 8)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <div className="flex gap-5 justify-center pt-3">
             <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
               <span className="w-2 h-2 rounded-full" style={{ background: 'var(--color-brand-primary)', opacity: 0.6 }} />
@@ -222,60 +241,53 @@ export default function AgentDashboardPage() {
             <Link href="/dashboard/notifications" className="text-xs font-semibold hover:underline" style={{ color: 'var(--color-brand-accent)' }}>View all</Link>
           </div>
           <div className="space-y-1">
-            {[
-              { Icon: ClipboardList, title: 'New Listing', desc: '3-bedroom apartment in Ikoyi was published', time: '2 hours ago' },
-              { Icon: Phone, title: 'Client Call', desc: 'Chidi Okafor requested a viewing', time: '4 hours ago' },
-              { Icon: Wallet, title: 'Offer Received', desc: '₦85M offer on 5-bedroom in Lekki', time: 'Yesterday' },
-              { Icon: Home, title: 'Inspection Completed', desc: 'Property inspection at 12 Admiralty Way', time: 'Yesterday' },
-              { Icon: BadgeCheck, title: 'Deal Closed', desc: 'Sale completed for 3-bedroom in VI', time: '2 days ago' },
-            ].map((item, i) => {
-              const Icon = item.Icon;
-              return (
-              <div key={i} className="flex gap-3 py-3 border-b last:border-b-0" style={{ borderColor: 'var(--color-border-subtle)' }}>
-                <div className="w-9 h-9 rounded-full grid place-items-center shrink-0" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-brand-accent)' }}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
-                    <strong>{item.title}</strong> {item.desc}
+            {notifications.length === 0 ? (
+              <p className="py-8 text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                No recent activity yet.
+              </p>
+            ) : (
+              notifications.slice(0, 5).map((item: any) => (
+                <div key={item.id} className="flex gap-3 py-3 border-b last:border-b-0" style={{ borderColor: 'var(--color-border-subtle)' }}>
+                  <div className="w-9 h-9 rounded-full grid place-items-center shrink-0" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border-glass)', color: 'var(--color-brand-accent)' }}>
+                    <Bell className="w-4 h-4" />
                   </div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{item.time}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                      <strong>{safeText(item.title, 'Update')}</strong> {safeText(item.body, '')}
+                    </div>
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{formatDate(item.createdAt, '')}</div>
+                  </div>
                 </div>
-              </div>
-              );
-            })}
+              ))
+            )}
           </div>
         </div>
 
         {/* ─── Row 3: Commission Tracker (2x1) ─── */}
         <div className="lg:col-span-2 rounded-xl p-5 transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Commission Tracker</span>
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Confirmed Payments</span>
             <Link href="/dashboard/agent/transactions" className="text-xs font-semibold hover:underline" style={{ color: 'var(--color-brand-accent)' }}>Breakdown</Link>
           </div>
           <div className="flex items-center gap-6">
             <div className="shrink-0">
-              <div className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-accent)' }}>₦2.4M</div>
-              <div className="text-xs uppercase tracking-wide mt-1" style={{ color: 'var(--color-text-muted)' }}>This Quarter</div>
+              <div className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-accent)' }}>{formatCurrency(confirmedTotal)}</div>
+              <div className="text-xs uppercase tracking-wide mt-1" style={{ color: 'var(--color-text-muted)' }}>All confirmed</div>
             </div>
             <div className="flex-1 space-y-2">
-              {[
-                { prop: '3-Bed Ikoyi', amt: '₦850K' },
-                { prop: '5-Bed Lekki', amt: '₦1.2M' },
-                { prop: 'Studio VI', amt: '₦350K' },
-              ].map((c, i) => (
-                <div key={i} className="flex items-center justify-between text-sm">
-                  <span style={{ color: 'var(--color-text-secondary)' }}>{c.prop}</span>
-                  <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{c.amt}</span>
-                </div>
-              ))}
-              <div className="w-full h-1.5 rounded-full overflow-hidden mt-2" style={{ background: 'var(--color-border-subtle)' }}>
-                <div className="h-full rounded-full transition-all duration-500" style={{ width: '65%', background: 'var(--color-brand-accent)' }} />
-              </div>
-              <div className="flex justify-between text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                <span>Monthly target: ₦3.5M</span>
-                <span>65%</span>
-              </div>
+              {confirmedPayments.length === 0 ? (
+                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No confirmed payments yet.</p>
+              ) : (
+                confirmedPayments.slice(0, 3).map((payment: any) => {
+                  const tx = agentTransactions.find((t) => t.id === payment.transactionId);
+                  return (
+                    <div key={payment.id} className="flex items-center justify-between text-sm">
+                      <span className="truncate pr-3" style={{ color: 'var(--color-text-secondary)' }}>{safeText(tx?.listing?.title, 'Transaction')}</span>
+                      <span className="font-semibold shrink-0" style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(payment.amount)}</span>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -287,17 +299,11 @@ export default function AgentDashboardPage() {
             <Link href="/dashboard/agent/clients" className="text-xs font-semibold hover:underline" style={{ color: 'var(--color-brand-accent)' }}>Full funnel</Link>
           </div>
           <div className="flex gap-3">
-            {[
-              { count: '24', label: 'Leads' },
-              { count: '18', label: 'Contacted' },
-              { count: '12', label: 'Viewings' },
-              { count: '6', label: 'Offers' },
-              { count: '3', label: 'Closed' },
-            ].map((stage, i) => (
-              <div key={i} className="flex-1 text-center p-3 rounded-lg" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}>
+            {funnel.map((stage, i) => (
+              <div key={stage.label} className="flex-1 text-center p-3 rounded-lg" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border-glass)' }}>
                 <div className="text-xl font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-accent)' }}>{stage.count}</div>
                 <div className="text-xs uppercase tracking-wide mt-1" style={{ color: 'var(--color-text-muted)' }}>{stage.label}</div>
-                {i < 4 && <div className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>→</div>}
+                {i < funnel.length - 1 && <div className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>→</div>}
               </div>
             ))}
           </div>
@@ -353,11 +359,8 @@ export default function AgentDashboardPage() {
                     <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                       {formatPrice(listing.price, listing.currency ?? 'NGN')}
                     </p>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{
-                      background: listing.status === 'ACTIVE' ? '#E8F7EE' : listing.status === 'PENDING' ? '#FEF3C7' : '#F3F4F6',
-                      color: listing.status === 'ACTIVE' ? '#1A7A4A' : listing.status === 'PENDING' ? '#B45309' : '#6B7280',
-                    }}>
-                      {listing.status}
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={statusToneStyle(listing.status)}>
+                      {safeText(listing.status, 'UNKNOWN').replace(/_/g, ' ')}
                     </span>
                   </div>
                 </div>

@@ -104,7 +104,7 @@ function ProductsContent() {
                 </span>
               )}
               {!p.inStock && (
-                <span className="absolute top-3 right-3 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-black/70 text-white">
+                <span className="absolute top-3 right-3 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[var(--color-bg-glass-dark)] text-[var(--color-text-inverse)]">
                   Out of stock
                 </span>
               )}

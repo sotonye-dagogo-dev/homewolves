@@ -1,8 +1,8 @@
 # Project Context
 
 > **Metadata**
-> - last-updated-by: bootstrap-project
-> - last-verified-against-code: 2026-08-05
+> - last-updated-by: execute-feature-session-25
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: re-verify if >10 sessions old or after major scope changes
 
 > **Overview:** Homewolves is a multi-sided PropTech marketplace, agent CRM, and transaction management platform for the African real estate market. It connects property buyers, renters, agents, developers, and homeowners in a single operating system — from property discovery through to deal close. The platform is Nigeria-first with a pan-African expansion roadmap.
@@ -42,9 +42,9 @@ African real estate suffers from fragmentation, mistrust, and manual workflows. 
 
 Phase: Active Development
 
-Active sprint focus: Phase 1 (Marketplace MVP) is feature-complete through Sprint 3 — transactions, payments, activity points, moderation, and blog. Next focus is performance/SEO/security hardening, testing, and remaining Backlog items (WhatsApp, analytics, PWA).
+Active sprint focus: Phases 1–4 are feature-complete through Sprint 4 — marketplace, CRM/messaging, transactions/payments, client/admin portals, analytics, and design-system hardening. Next focus is remaining Backlog items (WhatsApp, PWA/offline, push notifications, referrals) and Phase 5 intelligence/search work.
 
-Current state: `apps/web` and `packages/api` fully scaffolded and building. All features typecheck clean (`tsc --noEmit`). Design HTML exports live in `ai-system/designs/`.
+Current state: `apps/web` and `packages/api` build clean; 173 API + 155 web unit tests green; typecheck/lint 4/4. Realtime is opt-in (`NEXT_PUBLIC_REALTIME_ENABLED`, default false) because the web app deploys to Vercel serverless; messaging and notifications fall back to REST + polling. Design HTML exports live in `ai-system/designs/`.
 
 ---
 

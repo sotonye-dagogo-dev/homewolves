@@ -323,7 +323,7 @@ function AuthPageInner() {
           <h1 className="font-display text-3xl font-bold text-[var(--color-text-inverse)] mb-3">
             Join Africa&apos;s Real Estate Revolution
           </h1>
-          <p className="text-white/80 text-lg leading-relaxed">
+          <p className="text-lg leading-relaxed" style={{ color: 'var(--color-text-inverse)', opacity: 0.85 }}>
             Connect with verified agents, discover premium properties, and transact with confidence across the continent.
           </p>
         </div>
@@ -341,7 +341,7 @@ function AuthPageInner() {
 
           {/* Mode tabs */}
           {['signin', 'signup', 'forgot', 'reset'].includes(mode) && (
-            <div className="grid grid-cols-2 gap-1 p-1 rounded-full border border-[var(--color-border-default)] mb-6 bg-white" role="tablist" aria-label="Sign in or create account">
+            <div className="mb-6 grid grid-cols-2 gap-1 rounded-full border border-[var(--color-border-default)] p-1" style={{ background: 'var(--color-bg-elevated)' }} role="tablist" aria-label="Sign in or create account">
               <button
                 role="tab"
                 aria-selected={mode === 'signin'}

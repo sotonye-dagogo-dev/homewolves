@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { DrizzleService } from '../../drizzle/drizzle.service';
 import { AnalyticsService } from '../analytics/analytics.service';
-import { savedCollections } from '../../drizzle/schema';
+import { savedCollections, listings, media } from '../../drizzle/schema';
 
 @Injectable()
 export class SavedService {
@@ -51,10 +51,27 @@ export class SavedService {
   }
 
   async getSaved(userId: string) {
-    return this.db.query.savedCollections.findMany({
+    const collections = await this.db.query.savedCollections.findMany({
       where: eq(savedCollections.userId, userId),
       orderBy: desc(savedCollections.updatedAt),
     });
+    if (collections.length === 0) return collections;
+
+    const ids = Array.from(new Set(collections.flatMap((c) => c.listingIds)));
+    if (ids.length === 0) return collections.map((c) => ({ ...c, listings: [] }));
+
+    const rows = await this.db.query.listings.findMany({
+      where: inArray(listings.id, ids),
+      with: { media: { where: eq(media.isPrimary, true), limit: 1 } },
+    });
+    const byId = new Map(rows.map((listing) => [listing.id, listing]));
+
+    return collections.map((collection) => ({
+      ...collection,
+      listings: collection.listingIds
+        .map((id) => byId.get(id))
+        .filter((listing): listing is (typeof rows)[number] => Boolean(listing)),
+    }));
   }
 
   async isSaved(userId: string, listingId: string) {

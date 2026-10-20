@@ -14,7 +14,7 @@ import {
 } from '@/lib/property-filters';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, LayoutGrid, List, Map, Heart, Share2, X, ChevronDown, Check } from 'lucide-react';
+import { Search, LayoutGrid, List, Map as MapIcon, MapPin, Heart, Share2, X, ChevronDown, Check } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BrandLogo } from '@/components/shared/brand-logo';
 import { priceToNumber, formatPrice } from '@/lib/format-price';
@@ -164,6 +164,19 @@ function PropertiesContent() {
 
   const filteredListings = sortedListings.filter((l) => matchesPillClientSide(l, activePill));
 
+  const locationGroups = (() => {
+    const groups = new Map<string, any[]>();
+    for (const listing of filteredListings) {
+      const location = listing.locationJson ?? {};
+      const label =
+        [location.city, location.state].filter(Boolean).join(', ') || 'Other locations';
+      const bucket = groups.get(label);
+      if (bucket) bucket.push(listing);
+      else groups.set(label, [listing]);
+    }
+    return Array.from(groups.entries()).sort((a, b) => b[1].length - a[1].length);
+  })();
+
   const activeFilters: { key: string; label: string }[] = [];
   if (activePill !== 'all') {
     const pill = dedupePills(filterPills).find((p: any) => p.id === activePill);
@@ -211,7 +224,7 @@ function PropertiesContent() {
             style={{ color: 'var(--color-text-secondary)' }}
             aria-label="Home"
           >
-            <Map className="w-5 h-5" />
+            <MapIcon className="w-5 h-5" />
           </Link>
         </div>
       </header>
@@ -267,7 +280,7 @@ function PropertiesContent() {
                     viewMode === mode ? 'var(--color-text-inverse)' : 'var(--color-text-muted)',
                 }}
               >
-                {mode === 'grid' ? <LayoutGrid className="w-4 h-4" /> : mode === 'list' ? <List className="w-4 h-4" /> : <Map className="w-4 h-4" />}
+                {mode === 'grid' ? <LayoutGrid className="w-4 h-4" /> : mode === 'list' ? <List className="w-4 h-4" /> : <MapIcon className="w-4 h-4" />}
               </button>
             ))}
           </div>
@@ -428,19 +441,93 @@ function PropertiesContent() {
           </div>
         )}
 
-        {/* Map view placeholder */}
+        {/* Location map view */}
         {viewMode === 'map' && (
-          <div
-            className="rounded-xl p-16 text-center"
-            style={{ background: 'var(--color-bg-elevated)' }}
-          >
-            <div className="flex justify-center mb-3" style={{ color: 'var(--color-text-muted)' }}><Map className="w-10 h-10" /></div>
-            <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-              Map view coming soon
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
-              Interactive property map
-            </p>
+          <div className="space-y-5">
+            <div
+              className="flex items-center gap-3 rounded-xl px-4 py-3"
+              style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-subtle)' }}
+            >
+              <MapIcon className="h-5 w-5" style={{ color: 'var(--color-brand-accent)' }} />
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                {filteredListings.length} propert{filteredListings.length === 1 ? 'y' : 'ies'} across{' '}
+                {locationGroups.length} location{locationGroups.length === 1 ? '' : 's'}
+              </p>
+            </div>
+
+            {locationGroups.map(([label, group]) => (
+              <section
+                key={label}
+                className="overflow-hidden rounded-xl"
+                style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-subtle)' }}
+              >
+                <header
+                  className="flex items-center justify-between px-4 py-3"
+                  style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" style={{ color: 'var(--color-brand-accent)' }} />
+                    <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      {label}
+                    </h3>
+                  </div>
+                  <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    {group.length} listing{group.length === 1 ? '' : 's'}
+                  </span>
+                </header>
+                <ul>
+                  {group.slice(0, 6).map((listing) => {
+                    const image = listing.media?.[0]?.url;
+                    return (
+                      <li key={listing.id}>
+                        <Link
+                          href={`/properties/${listing.id}`}
+                          className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-black/[0.02]"
+                          style={{ borderTop: '1px solid var(--color-border-subtle)' }}
+                        >
+                          <div
+                            className="h-12 w-16 shrink-0 overflow-hidden rounded-lg"
+                            style={{ background: 'var(--color-bg-base)' }}
+                          >
+                            {image ? (
+                              <Image src={image} alt="" width={64} height={48} className="h-full w-full object-cover" />
+                            ) : null}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                              {listing.title}
+                            </p>
+                            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                              {listing.propertyType} · {listing.category}
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-sm font-semibold" style={{ color: 'var(--color-text-accent)' }}>
+                            {formatPrice(listing.price)}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {group.length > 6 ? (
+                  <div className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    +{group.length - 6} more in this location
+                  </div>
+                ) : null}
+              </section>
+            ))}
+
+            {locationGroups.length === 0 ? (
+              <div
+                className="rounded-xl p-12 text-center"
+                style={{ background: 'var(--color-bg-elevated)' }}
+              >
+                <MapPin className="mx-auto mb-3 h-10 w-10" style={{ color: 'var(--color-text-muted)' }} />
+                <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                  No properties match these filters
+                </p>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -528,7 +615,7 @@ function PropertyCard({ listing, onClick }: { listing: any; onClick: () => void 
             className="w-full h-full flex items-center justify-center"
             style={{ background: 'var(--color-border-subtle)' }}
           >
-            <Map className="w-8 h-8" style={{ color: 'var(--color-text-muted)' }} />
+            <MapIcon className="w-8 h-8" style={{ color: 'var(--color-text-muted)' }} />
           </div>
         )}
         <div className="absolute bottom-2 right-2 flex gap-1">
@@ -694,7 +781,7 @@ function PropertyCardHorizontal({ listing, onClick }: { listing: any; onClick: (
             sizes="280px"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center"><Map className="w-8 h-8" style={{ color: 'var(--color-text-muted)' }} /></div>
+          <div className="w-full h-full flex items-center justify-center"><MapIcon className="w-8 h-8" style={{ color: 'var(--color-text-muted)' }} /></div>
         )}
         <div
           className="absolute bottom-0 left-0 right-0 px-2 py-1"

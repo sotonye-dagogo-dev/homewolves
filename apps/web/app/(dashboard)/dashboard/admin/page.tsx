@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useAuditLog, useExportAuditCsv, useExportAuditPdf } from '@/hooks/use-audit';
 import { BrandLogo } from '@/components/shared/brand-logo';
-import { useTheme } from '@/components/shared/ThemeProvider';
-import { Moon, Sun, LayoutDashboard, Home, ArrowLeftRight, FileText, Users, Settings } from 'lucide-react';
+import { useAdminSummary } from '@/hooks/use-analytics';
+import { LayoutDashboard, Home, ArrowLeftRight, FileText, Users, Settings } from 'lucide-react';
+import { formatCurrency, safeText } from '@/lib/format';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -16,8 +17,8 @@ const TABS = [
 
 const NAV_ITEMS = [
   { id: 'overview', label: 'Overview', Icon: LayoutDashboard },
-  { id: 'listings', label: 'Listings', badge: '12', Icon: Home },
-  { id: 'transactions', label: 'Transactions', badge: '8', Icon: ArrowLeftRight },
+  { id: 'listings', label: 'Listings', Icon: Home },
+  { id: 'transactions', label: 'Transactions', Icon: ArrowLeftRight },
   { id: 'audit', label: 'Audit Log', Icon: FileText },
 ] as const;
 
@@ -30,7 +31,7 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'audit'>('overview');
   const { user } = useAuth();
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  const { data: summary } = useAdminSummary();
 
   const [entityType, setEntityType] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
@@ -77,11 +78,10 @@ export default function AdminDashboardPage() {
               onClick={() => {
                 if (item.id === 'overview' || item.id === 'audit') { setActiveTab(item.id); return; }
                 if (item.id === 'listings') { router.push('/dashboard/agent/listings'); return; }
-                if (item.id === 'transactions') { router.push('/dashboard/agent/transactions'); return; }
+                if (item.id === 'transactions') { router.push('/dashboard/admin/payments'); return; }
               }}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-left ${
-                activeTab === item.id ? 'bg-white font-semibold shadow-xs' : ''
-              }`}
+              className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all w-full text-left"
+              data-active={activeTab === item.id}
               style={{
                 color: activeTab === item.id ? 'var(--color-brand-primary)' : 'var(--color-text-secondary)',
                 background: activeTab === item.id ? 'var(--color-bg-elevated)' : 'transparent',
@@ -91,12 +91,20 @@ export default function AdminDashboardPage() {
                 <item.Icon className="w-[18px] h-[18px]" />
               </span>
               <span>{item.label}</span>
-              {'badge' in item && item.badge && (
+              {item.id === 'listings' && (summary?.pendingListings ?? 0) > 0 && (
                 <span
                   className="ml-auto inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[10px] font-semibold"
                   style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}
                 >
-                  {item.badge}
+                  {summary?.pendingListings}
+                </span>
+              )}
+              {item.id === 'transactions' && (summary?.activeTransactions ?? 0) > 0 && (
+                <span
+                  className="ml-auto inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[10px] font-semibold"
+                  style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}
+                >
+                  {summary?.activeTransactions}
                 </span>
               )}
             </button>
@@ -128,14 +136,14 @@ export default function AdminDashboardPage() {
             className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
             style={{ background: 'var(--color-brand-primary)', color: 'var(--color-text-inverse)' }}
           >
-            {user?.firstName?.[0]}{user?.lastName?.[0]}
+            {safeText(user?.firstName, '?').charAt(0)}{safeText(user?.lastName, '').charAt(0)}
           </div>
           <div className="min-w-0">
             <div className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
               {user?.firstName} {user?.lastName}
             </div>
             <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              {user?.role}
+              {safeText(user?.role, 'Member')}
             </div>
           </div>
         </div>
@@ -151,17 +159,13 @@ export default function AdminDashboardPage() {
           <h1 className="text-xl md:text-2xl font-bold font-display" style={{ color: 'var(--color-brand-primary)' }}>
             Admin Dashboard
           </h1>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="w-10 h-10 flex items-center justify-center rounded-full transition-colors"
-              style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', color: 'var(--color-text-muted)' }}
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
-            </button>
-          </div>
+          <Link
+            href="/dashboard/admin/bug-reports"
+            className="text-sm font-semibold"
+            style={{ color: 'var(--color-brand-accent)' }}
+          >
+            Bug reports{(summary?.openBugReports ?? 0) > 0 ? ` (${summary?.openBugReports})` : ''}
+          </Link>
         </header>
 
         {/* Tabs */}
@@ -195,30 +199,26 @@ export default function AdminDashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Link href="/dashboard/admin/moderation" className="p-5 rounded-xl transition-all hover:translate-y-[-2px]" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-glass)' }}>
                 <div className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--color-text-muted)' }}>Pending Approvals</div>
-                <div className="text-3xl font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>—</div>
+                <div className="text-3xl font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>{summary?.pendingListings ?? 0}</div>
                 <div className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>Listings awaiting review</div>
-                <div className="flex items-center gap-1 text-sm font-semibold mt-2" style={{ color: 'var(--color-status-active)' }}>▲ 0%</div>
               </Link>
 
               <Link href="/dashboard/admin/moderation" className="p-5 rounded-xl transition-all hover:translate-y-[-2px]" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-glass)' }}>
                 <div className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--color-text-muted)' }}>Flagged Listings</div>
-                <div className="text-3xl font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>—</div>
-                <div className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>Reports to resolve</div>
-                <div className="flex items-center gap-1 text-sm font-semibold mt-2" style={{ color: 'var(--color-status-rejected)' }}>▼ 0</div>
+                <div className="text-3xl font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>{summary?.flaggedListings ?? 0}</div>
+                <div className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>Suspended listings</div>
               </Link>
 
               <Link href="/dashboard/admin/payments" className="p-5 rounded-xl transition-all hover:translate-y-[-2px]" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-glass)' }}>
                 <div className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--color-text-muted)' }}>Active Transactions</div>
-                <div className="text-3xl font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>—</div>
+                <div className="text-3xl font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>{summary?.activeTransactions ?? 0}</div>
                 <div className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>In progress</div>
-                <div className="flex items-center gap-1 text-sm font-semibold mt-2" style={{ color: 'var(--color-status-active)' }}>▲ 0</div>
               </Link>
 
               <div className="p-5 rounded-xl transition-all hover:translate-y-[-2px]" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-glass)' }}>
                 <div className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--color-text-muted)' }}>Revenue MTD</div>
-                <div className="text-3xl font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>₦—</div>
-                <div className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>Month to date</div>
-                <div className="flex items-center gap-1 text-sm font-semibold mt-2" style={{ color: 'var(--color-status-active)' }}>▲ 0%</div>
+                <div className="text-3xl font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(summary?.revenueMtd ?? 0)}</div>
+                <div className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>Confirmed payments this month</div>
               </div>
             </div>
 
@@ -357,10 +357,10 @@ export default function AdminDashboardPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                          {event.deviceInfo?.browser ?? '—'}
+                          {safeText(event.deviceInfo?.browser ?? event.ipAddress, '—')}
                         </td>
                         <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                          {event.ipAddress ?? '—'}
+                          {safeText(event.ipAddress, '—')}
                         </td>
                       </tr>
                     ))

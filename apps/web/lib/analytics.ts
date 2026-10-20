@@ -61,6 +61,20 @@ export async function fetchFunnel(days?: number) {
   return handleRes(r);
 }
 
+export interface AdminSummary {
+  pendingListings: number;
+  flaggedListings: number;
+  openBugReports: number;
+  activeTransactions: number;
+  revenueMtd: number;
+  currency: string;
+}
+
+export async function fetchAdminSummary(): Promise<AdminSummary> {
+  const r = await fetch(`${getApi()}/admin-summary`, { headers: authHeaders() });
+  return handleRes(r);
+}
+
 export async function fetchTopListings(days?: number, limit = 10) {
   const qs = [];
   if (days) qs.push(`days=${days}`);
