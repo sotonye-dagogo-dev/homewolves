@@ -10,24 +10,7 @@ import {
   updateNotificationPreferences,
 } from '@/lib/notifications';
 import { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-
-const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL ?? 'http://localhost:4000';
-
-let globalSocket: Socket | null = null;
-let globalListeners = 0;
-
-function getSocket(userId?: string, token?: string): Socket | null {
-  if (!userId || !token) return null;
-  if (!globalSocket?.connected) {
-    globalSocket = io(`${SOCKET_URL}/ws`, {
-      query: { userId },
-      auth: { token },
-      transports: ['websocket', 'polling'],
-    });
-  }
-  return globalSocket;
-}
+import { acquireRealtimeSocket, releaseRealtimeSocket } from '@/lib/realtime';
 
 export function useNotifications(userId?: string, token?: string) {
   const queryClient = useQueryClient();
@@ -64,10 +47,9 @@ export function useNotifications(userId?: string, token?: string) {
 
   useEffect(() => {
     if (!userId || !token) return;
-    const socket = getSocket(userId, token);
+    const socket = acquireRealtimeSocket(userId, token);
     if (!socket) return;
 
-    globalListeners++;
     const handler = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
       queryClient.invalidateQueries({ queryKey: ['notifications-unread', userId] });
@@ -75,12 +57,8 @@ export function useNotifications(userId?: string, token?: string) {
     socket.on('notification:new', handler);
 
     return () => {
-      globalListeners--;
       socket.off('notification:new', handler);
-      if (globalListeners <= 0 && globalSocket) {
-        globalSocket.disconnect();
-        globalSocket = null;
-      }
+      releaseRealtimeSocket();
     };
   }, [userId, token, queryClient]);
 

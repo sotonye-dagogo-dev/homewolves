@@ -28,6 +28,7 @@ export function MobileBar() {
   const { user } = useAuth();
   const role = user?.role;
   const isStaff = role === 'AGENT' || role === 'DEVELOPER' || role === 'HOMEOWNER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const showPost = !user || isStaff;
   const exploreTab = GUEST_TABS[0]!;
   const chatTab = GUEST_TABS[1]!;
   const tabs = isStaff
@@ -63,13 +64,15 @@ export function MobileBar() {
         );
       })}
 
-      <Link
-        href="/dashboard/agent/listings/new"
-        aria-label="Post property"
-        className="w-14 h-14 border-none rounded-full bg-accent text-accent-foreground grid place-items-center shadow-xl -mt-5 transition-transform duration-normal ease-spring active:scale-95"
-      >
-        <Plus className="w-7 h-7 stroke-[2.5]" />
-      </Link>
+      {showPost ? (
+        <Link
+          href="/dashboard/agent/listings/new"
+          aria-label="Post property"
+          className="w-14 h-14 border-none rounded-full bg-accent text-accent-foreground grid place-items-center shadow-xl -mt-5 transition-transform duration-normal ease-spring active:scale-95"
+        >
+          <Plus className="w-7 h-7 stroke-[2.5]" />
+        </Link>
+      ) : null}
     </nav>
   );
 }

@@ -1,7 +1,16 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
-import { and, desc, eq, gte, lte, count, inArray } from 'drizzle-orm';
+import { and, desc, eq, gte, lte, count, inArray, sql, or } from 'drizzle-orm';
 import { DrizzleService } from '../../drizzle/drizzle.service';
-import { analyticsEvents, listings, transactions, agentPoints, users, media } from '../../drizzle/schema';
+import {
+  analyticsEvents,
+  bugReports,
+  listings,
+  paymentRecords,
+  transactions,
+  agentPoints,
+  users,
+  media,
+} from '../../drizzle/schema';
 
 interface TrackEventInput {
   event: string;
@@ -186,6 +195,60 @@ export class AnalyticsService {
         conversionRate: previous && previous > 0 ? Number(((stepCount / previous) * 100).toFixed(1)) : (i === 0 ? 100 : 0),
       };
     });
+  }
+
+  async getAdminSummary() {
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const [
+      pendingListings,
+      flaggedListings,
+      openBugReports,
+      activeTransactions,
+      revenue,
+    ] = await Promise.all([
+      this.db
+        .select({ value: count() })
+        .from(listings)
+        .where(eq(listings.status, 'PENDING'))
+        .then((r) => Number(r[0]?.value ?? 0)),
+      this.db
+        .select({ value: count() })
+        .from(listings)
+        .where(eq(listings.status, 'SUSPENDED'))
+        .then((r) => Number(r[0]?.value ?? 0)),
+      this.db
+        .select({ value: count() })
+        .from(bugReports)
+        .where(or(eq(bugReports.status, 'OPEN'), eq(bugReports.status, 'UNDER_REVIEW')))
+        .then((r) => Number(r[0]?.value ?? 0)),
+      this.db
+        .select({ value: count() })
+        .from(transactions)
+        .where(or(eq(transactions.status, 'INITIATED'), eq(transactions.status, 'IN_PROGRESS')))
+        .then((r) => Number(r[0]?.value ?? 0)),
+      this.db
+        .select({ value: sql<string>`coalesce(sum(${paymentRecords.amount}), 0)` })
+        .from(paymentRecords)
+        .where(
+          and(
+            eq(paymentRecords.status, 'confirmed'),
+            gte(paymentRecords.confirmedAt, monthStart),
+          ),
+        )
+        .then((r) => Number(r[0]?.value ?? 0)),
+    ]);
+
+    return {
+      pendingListings,
+      flaggedListings,
+      openBugReports,
+      activeTransactions,
+      revenueMtd: Number.isFinite(revenue) ? revenue : 0,
+      currency: 'NGN',
+    };
   }
 
   async getOverview(days?: number) {

@@ -1,8 +1,8 @@
 # System Architecture
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-23
-> - last-verified-against-code: 2026-10-16
+> - last-updated-by: execute-feature-session-25
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: re-verify before trusting if any architecture-affecting commits have been made since last-verified-against-code
 
 > **Overview:** Homewolves is a multi-sided PropTech marketplace + Agent CRM + Transaction Management Platform targeting the Nigerian/African market. It uses a modular monolith architecture (Next.js 14 frontend + NestJS backend + PostgreSQL) designed to decompose into microservices as the platform scales. The system is metadata-driven — all configurable UI elements and business rules are stored in the database via `PlatformConfig`, with hardcoded fallbacks in `packages/config/src/fallbacks.ts`.
@@ -58,10 +58,11 @@
 | `transactions` | Full deal lifecycle stepper, payment evidence, document vault | transactions.service.ts | listings, users, audit, notifications, email, Drizzle |
 | `documents` | Document vault for transactions | documents.service.ts | Drizzle |
 | `signatures` | E-signature workflow | signatures.service.ts | email, Drizzle |
-| `messaging` | Real-time chat via Socket.io, conversation management | messaging.gateway.ts, messaging.service.ts | users, listings, Drizzle |
+| `messaging` | Real-time chat via Socket.io `/ws` + REST send fallback, conversation management, hydrated participant profiles | messaging.gateway.ts, messaging.service.ts, messaging.controller.ts | users, listings, Drizzle |
 | `notifications` | Multi-channel dispatch (WebSocket, email, SMS, WhatsApp) | notifications.service.ts, notifications.gateway.ts | BullMQ, Resend, Termii |
 | `alerts` | Price drop + new listing match alerts | alerts.service.ts | listings, notifications, email, Drizzle |
 | `activity` | Agent gamification — points, tiers, leaderboard | activity.service.ts | users, Drizzle |
+| `analytics` | Agent/listing performance, event funnel, admin summary (`GET /analytics/admin-summary`: pending/flagged listings, open bugs, active transactions, MTD confirmed revenue) | analytics.service.ts, analytics.controller.ts | transactions, listings, bugReports, paymentRecords, Drizzle |
 | `subscriptions` | Paystack billing, plan feature gating | subscriptions.service.ts | users, email, Drizzle |
 | `blog` | CMS-driven blog with magazine layout | blog.service.ts | Drizzle |
 | `platform-config` | All admin-configurable metadata (amenities, filters, nav, feature flags) | platform-config.service.ts | Drizzle, Redis |
@@ -169,6 +170,7 @@ Business event (e.g. transaction created)
 | `RESEND_API_KEY` | Email provider key (unset → simulated log-only emails) | .env | — |
 | `RESEND_FROM_EMAIL` / `RESEND_FROM_NAME` | Email sender identity | .env | noreply@homewolves.africa / Homewolves |
 | `ENABLE_DESIGN_VIEWER` | Mounts the dev-only design-asset viewer at `/__design/*`; must be false in production builds | .env | false |
+| `NEXT_PUBLIC_REALTIME_ENABLED` | Opt-in Socket.io connection (namespace `/ws`). Default `false` because Vercel serverless cannot host WebSockets; when false the web app uses REST + polling for messages/notifications | .env | false |
 
 ---
 
@@ -226,6 +228,8 @@ This is the "undo" instinct applied one layer up from data (§22 covers user-fac
 - **Google OAuth via Supabase (2026-08-19)** — web uses `@supabase/supabase-js`; provider client ID/secret live in the Supabase dashboard, not `.env`. `SUPABASE_JWT_SECRET` in `.env` verifies tokens at `POST /api/v1/auth/supabase`.
 - **Transactional email (2026-08-19)** — `@Global` EmailModule; templates in DB (`emailTemplates`), fallback constants in `packages/config/src/fallbacks.ts`; unset `RESEND_API_KEY` → simulated log-only delivery (by design).
 - **Notifications dispatch synchronously** — BullMQ async queue with retries is planned for production.
+- **Realtime is opt-in on serverless** (2026-10-20) — `NEXT_PUBLIC_REALTIME_ENABLED=false` by default. Messaging writes go through REST (`POST /messaging/conversations/:id/messages`) and reads poll; only set true when the API runs on a long-lived host that can terminate WebSockets. The browser never points at a hardcoded `wss://homewolves.com` socket when the flag is off.
+- **Analytics endpoints are role-scoped** (2026-10-20) — agent/listing/funnel analytics are self-scoped; `GET /analytics/admin-summary` requires ADMIN/SUPER_ADMIN and aggregates pending/flagged listings, open bug reports, active transactions, and MTD confirmed revenue.
 - **Blog content uses `dangerouslySetInnerHTML`** — must be paired with sanitization in production.
 - **Activity points** — wired into service-layer hooks (9 rules: listing_created, listing_approved, listing_sold, transaction_created/completed, client_added, review_received, inspection_scheduled, message_sent, daily_login); a self-award endpoint (`POST /activity/award/:ruleKey`) remains for the web activity UI (own-account only, cooldowns enforced).
 - **API security hardening landed** (2026-08-10) — global rate limiting (120 req/min/IP; 10 req/min on auth), zod validation pipes on all DTOs (`.strict()` unknown-key rejection), `@Roles` RBAC on admin/moderation/audit/config routes, `req.user.sub` identity fix, `GlobalExceptionFilter` wired globally.

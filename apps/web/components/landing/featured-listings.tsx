@@ -89,15 +89,15 @@ export function FeaturedListings() {
                     <div className="w-full h-full grid place-items-center text-muted-foreground"><MapPin className="w-8 h-8" /></div>
                   )}
                   <div className="absolute top-3 left-3 flex gap-1.5">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white/95 text-foreground shadow-sm">{l.category}</span>
+                    <span className="rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-sm" style={{ background: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-subtle)' }}>{l.category}</span>
                     {l.verified && (
-                      <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 inline-flex items-center gap-1">
+                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold" style={{ background: 'var(--color-success-bg)', color: 'var(--color-status-active)' }}>
                         <Star className="w-3 h-3" /> Verified
                       </span>
                     )}
                   </div>
                   {l.featured && (
-                    <span className="absolute bottom-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold bg-amber-500 text-white">Featured</span>
+                    <span className="absolute bottom-3 right-3 rounded-full px-2 py-1 text-[10px] font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>Featured</span>
                   )}
                 </div>
                 <div className="p-4 flex-1 flex flex-col">

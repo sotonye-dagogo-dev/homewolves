@@ -38,7 +38,7 @@ export function HwBatchBar({
     <div className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] lg:bottom-6 left-1/2 -translate-x-1/2 z-[210] animate-in slide-in-from-bottom-4 fade-in max-w-[calc(100vw-2rem)]">
       <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] shadow-xl backdrop-blur-md">
         <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
-          <span className="w-7 h-7 rounded-full bg-[var(--color-brand-accent)] text-white text-xs font-bold grid place-items-center">
+          <span className="w-7 h-7 rounded-full bg-[var(--color-brand-accent)] text-[var(--color-text-inverse)] text-xs font-bold grid place-items-center">
             {selectedCount}
           </span>
           <span className="hidden sm:inline">selected</span>

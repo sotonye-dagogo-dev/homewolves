@@ -1,7 +1,7 @@
 # Repair System — Error Knowledge Base
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-24
+> - last-updated-by: execute-feature-session-25
 > - last-verified-against-code: 2026-10-20
 > - staleness-policy: individual entries may be stale if the code has changed around them — verify fix still applies before reusing
 
@@ -385,4 +385,16 @@ Every root-level build/deploy script referenced by `vercel.json` must also exist
 **Files Affected:**
 `apps/web/package.json`, `scripts/vercel-build.mjs`
 **Date:** 2026-10-15
+**Status:** Active
+
+---
+
+### WebSocket connection fails on every page (`wss://homewolves.com/socket.io/`)
+
+**Symptom:** Browser console repeatedly logged `WebSocket connection to 'wss://homewolves.com/socket.io/?userId=…&EIO=4&transport=websocket' failed`.
+**Root Cause:** The client created a Socket.io connection unconditionally with a hardcoded production host. The web app runs on Vercel serverless, which cannot terminate WebSockets; the URL also omitted the API's `/ws` namespace.
+**Fix Applied:** Added `lib/realtime.ts` with `NEXT_PUBLIC_REALTIME_ENABLED` (default `false`), API-derived origin + `/ws` namespace, and ref-counted acquire/release. Messaging now sends via REST (`POST /messaging/conversations/:id/messages`) and polls reads; notifications poll when realtime is off. Removed the hardcoded client socket from messaging/notification hooks.
+**Prevention:** Never hardcode a socket origin; realtime is a deployment capability gated by an env flag with a REST/polling parity path.
+**Files Affected:** `apps/web/lib/realtime.ts`, `apps/web/lib/messaging.ts`, `apps/web/hooks/use-messaging.ts`, `apps/web/hooks/use-notifications.ts`, `packages/api/src/modules/messaging/messaging.controller.ts`, `.env.example`, `turbo.json`
+**Date:** 2026-10-20
 **Status:** Active

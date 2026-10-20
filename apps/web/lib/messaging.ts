@@ -1,27 +1,11 @@
-import { io, Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import { useAuth } from '@/hooks/use-auth';
 import { getApiBase } from '@/lib/api-base';
-
-
-function getWsUrl(): string {
-  const env = process.env.NEXT_PUBLIC_WS_URL?.trim();
-  if (typeof window === 'undefined') return env && env.length > 0 ? env : 'http://localhost:4000';
-  if (!env || env.length === 0) return window.location.origin.replace(/^http/, 'ws');
-  if (env.startsWith('/')) return `${window.location.origin.replace(/^http/, 'ws')}${env}`;
-  try {
-    const envUrl = new URL(env);
-    const locHost = window.location.host;
-    const envHost = envUrl.host;
-    const stripWww = (h: string) => h.replace(/^www\./i, '');
-    if (stripWww(envHost) === stripWww(locHost) && envHost !== locHost) {
-      return env.replace(envHost, locHost);
-    }
-    if (locHost.endsWith('homewolves.com') && envHost.endsWith('homewolves.com') && envHost !== locHost) {
-      return env.replace(envHost, locHost);
-    }
-  } catch {}
-  return env;
-}
+import {
+  acquireRealtimeSocket,
+  getRealtimeSocket,
+  releaseRealtimeSocket,
+} from '@/lib/realtime';
 
 function authHeaders(token?: string | null): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -90,63 +74,68 @@ export async function fetchUnreadCount() {
 
 // ─── WEB SOCKET ──────────────────────────────────────────
 
-let socketInstance: Socket | null = null;
+// ─── REST send fallback ──────────────────────────────────
 
-export function getSocket(): Socket | null {
-  return socketInstance;
+/**
+ * Send a message over REST. Used when realtime is disabled/unavailable so
+ * messaging remains fully functional on serverless deployments.
+ */
+export async function sendMessageRest(
+  conversationId: string,
+  content: string,
+  type = 'text',
+  mediaUrl?: string,
+) {
+  const res = await fetch(`${getApiBase()}/messaging/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ content, type, ...(mediaUrl ? { mediaUrl } : {}) }),
+  });
+  return handleResponse(res);
 }
 
-export function connectSocket(userId: string, token: string): Socket {
-  if (socketInstance?.connected) return socketInstance;
+// ─── WEB SOCKET (opt-in) ─────────────────────────────────
 
-  socketInstance = io(`${getWsUrl()}/ws`, {
-    query: { userId },
-    auth: { token },
-    transports: ['websocket', 'polling'],
-  });
+export function isSocketConnected(): boolean {
+  return Boolean(getRealtimeSocket()?.connected);
+}
 
-  socketInstance.on('connect', () => {
-    void 0;
-  });
+export function getSocket(): Socket | null {
+  return getRealtimeSocket();
+}
 
-  socketInstance.on('disconnect', () => {
-    void 0;
-  });
-
-  socketInstance.on('error', (err: any) => {
-    void err;
-  });
-
-  return socketInstance;
+/**
+ * Acquire the shared realtime socket. Returns null when realtime is not
+ * configured — callers must fall back to REST/polling.
+ */
+export function connectSocket(userId: string, token: string): Socket | null {
+  return acquireRealtimeSocket(userId, token);
 }
 
 export function disconnectSocket() {
-  if (socketInstance) {
-    socketInstance.disconnect();
-    socketInstance = null;
-  }
+  releaseRealtimeSocket();
 }
 
 export function joinConversation(conversationId: string) {
-  socketInstance?.emit('join:conversation', conversationId);
+  getRealtimeSocket()?.emit('join:conversation', conversationId);
 }
 
 export function leaveConversation(conversationId: string) {
-  socketInstance?.emit('leave:conversation', conversationId);
+  getRealtimeSocket()?.emit('leave:conversation', conversationId);
 }
 
 export function sendMessage(conversationId: string, content: string, type = 'text', mediaUrl?: string) {
-  socketInstance?.emit('message:send', { conversationId, content, type, mediaUrl });
+  getRealtimeSocket()?.emit('message:send', { conversationId, content, type, mediaUrl });
 }
 
 export function markRead(conversationId: string) {
-  socketInstance?.emit('message:mark-read', conversationId);
+  getRealtimeSocket()?.emit('message:mark-read', conversationId);
 }
 
 export function startTyping(conversationId: string) {
-  socketInstance?.emit('typing:start', conversationId);
+  getRealtimeSocket()?.emit('typing:start', conversationId);
 }
 
 export function stopTyping(conversationId: string) {
-  socketInstance?.emit('typing:stop', conversationId);
+  getRealtimeSocket()?.emit('typing:stop', conversationId);
 }

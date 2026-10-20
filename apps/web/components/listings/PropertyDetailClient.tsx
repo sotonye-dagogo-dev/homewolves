@@ -406,7 +406,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
                     </div>
                     <div className="p-2.5">
                       <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-md)', fontWeight: 700, color: 'var(--color-text-accent)' }}>
-                        {s.currency} {parseFloat(s.price).toLocaleString()}
+                        {formatPrice(s.price, s.currency ?? 'NGN')}
                       </div>
                       <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
                         {s.metadata?.beds ? `${s.metadata.beds} bed` : ''} {s.metadata?.baths ? `· ${s.metadata.baths} bath` : ''}

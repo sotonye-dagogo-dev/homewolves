@@ -27,12 +27,21 @@ function buildNavItems(user: any) {
   if (isAdmin) {
     items.push(
       { label: 'Moderation', href: '/dashboard/admin/moderation', Icon: ShieldCheck },
+      { label: 'Payments', href: '/dashboard/admin/payments', Icon: FileText },
       { label: 'Bug Reports', href: '/dashboard/admin/bug-reports', Icon: Bug },
     );
   }
 
   items.push(
-    { label: 'Transactions', href: isBuyer ? '/dashboard/client' : '/dashboard/agent/transactions', Icon: FileText },
+    {
+      label: 'Transactions',
+      href: isBuyer
+        ? '/dashboard/client'
+        : isAdmin
+          ? '/dashboard/admin/payments'
+          : '/dashboard/agent/transactions',
+      Icon: FileText,
+    },
     { label: 'Messages', href: '/messages', Icon: MessageCircle },
     { label: 'Notifications', href: '/dashboard/notifications', Icon: Bell },
   );

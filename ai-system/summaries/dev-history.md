@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-24
+> - last-updated-by: execute-feature-session-25
 > - last-verified-against-code: 2026-10-20
 > - staleness-policy: historical entries do not go stale
 
@@ -513,3 +513,25 @@ Ran the pending db migrations against production Supabase. Diagnosed and fixed a
 
 **Next Sprint Focus:**
 Operator live-verifies seed-user sign-in; optionally commit the `_journal.json` `when` fix.
+
+## 2026-10-20 — execute-feature: Realtime opt-in, design-token/role-aware UI pass, analytics wiring (Session 25)
+
+**Summary:**
+Closed the platform-wide WebSocket console failure by making realtime opt-in and routing messaging through REST + polling when disabled. Completed a broad design-token/role-awareness pass across public, agent, client, and admin surfaces; wired real analytics (including a new ADMIN summary endpoint), fixed null/NaN displays, replaced placeholder map/legal content, and closed QA green.
+
+**Completed:**
+- Realtime: `lib/realtime.ts` (`isRealtimeEnabled`, `/ws` URL, ref-counted acquire/release), `NEXT_PUBLIC_REALTIME_ENABLED=false` default + `turbo.json` env; `use-notifications`/`use-messaging` no longer hardcode `wss://homewolves.com` and poll only when realtime is off
+- Messaging: `POST /messaging/conversations/:id/messages` REST send (zod-validated) + participant profiles hydrated on conversations; full `/messages` UI (search, compose, attach, read receipts, mobile/desktop panes, call/property info)
+- Analytics: `getAdminSummary()` + `GET /analytics/admin-summary` (pending/flagged listings, open bugs, active transactions, MTD revenue); `useAdminSummary` + real admin dashboard badges; agent/dashboard and client dashboards use real analytics/transactions, fake chart/commission/lead data removed
+- Role-aware UI: TopNav/MobileBar/dashboard nav/admin layout guard; buyers redirected away from agent-only transaction/listing flows
+- Design tokens + formatting: admin payments/moderation/bug-reports/email surfaces, agent transaction list/detail, client dashboard, blog/auth/pricing/products/featured/Toast/batch bar tokenized; `formatCurrency`/`formatDate`/`formatFileSize` null-safe; lucide icons replace emoji; global floating `ThemeToggle`
+- Content/data: saved listings hydrated with media; property map view groups by city/state; real terms/privacy policies; `EmptyState` component used for centered empty/error states
+- QA: API 173/173 (18 files), web 155/155 (21 files), typecheck 4/4, lint 4/4, `next build` 38/38 pages
+
+**Key Changes:**
+- Rule: never connect a browser socket unless `NEXT_PUBLIC_REALTIME_ENABLED=true`; serverless deploys must use REST + polling. Socket namespace is `/ws`.
+- Rule: role-aware nav/profile links keep stable accessible names (`Profile`, `Post property`) so component tests reflect the user-facing contract.
+- New surfaces: `lib/{realtime,messaging,status,toast,analytics,format}.ts`, `components/shared/{empty-state,theme-toggle}.tsx`, `hooks/use-analytics.ts`, `app/(dashboard)/dashboard/admin/layout.tsx`, `POST /messaging/conversations/:id/messages`, `GET /analytics/admin-summary`
+
+**Next Sprint Focus:**
+Remaining backlog: WhatsApp integration, PWA/offline, push notifications, referral system; optionally enable realtime once the API has a long-lived WebSocket host.

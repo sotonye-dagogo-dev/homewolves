@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/shared/ThemeProvider';
 import { QueryProvider } from '@/components/shared/QueryProvider';
 import { ToastProvider } from '@/components/shared/Toast';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { FALLBACK_BRAND } from '@/config/fallbacks';
 import './globals.css';
 
@@ -68,7 +69,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem>
           <QueryProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <ToastProvider>
+              {children}
+              <ThemeToggle />
+            </ToastProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

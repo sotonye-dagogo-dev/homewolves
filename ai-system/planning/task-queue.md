@@ -1,9 +1,9 @@
 # Development Task Queue
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-24
+> - last-updated-by: execute-feature-session-25
 > - last-verified-against-code: 2026-10-20
-> - last-synced: 2026-10-20 (Session 24 — db migrations applied; silent journal-timestamp skip fixed; pooler region discovered)
+> - last-synced: 2026-10-20 (Session 25 — realtime opt-in, design-token/role-aware UI pass, admin analytics, QA green)
 > - staleness-policy: re-verify before each session
 
 > **Overview:** Sprint-level task queue with complexity tagging. Agents execute tasks top to bottom within the current sprint. Each task is sized so it can be completed in a single session. Sprint 1–3 are complete; the current focus is hardening, Backlog items, and the next scheduled phase.
@@ -84,6 +84,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 
 | Task | Completed |
 |------|-----------|
+| Platform hardening + design-system pass (Session 25) — Socket.io opt-in via `NEXT_PUBLIC_REALTIME_ENABLED` (+ REST/polling fallback, `/ws`), REST message send + participant profiles, role-aware nav/dashboards/admin guard, admin summary analytics, saved-listing hydration, tokenized admin/agent/client surfaces, real property map view, full legal pages, 173 API + 155 web tests green, 38-page build | [x] |
 | Sprint 1 — Core Marketplace MVP (scaffolding, auth, listings, feed, detail, save/recent) | [x] |
 | Sprint 2 — Agent & Communication (CRM, dashboard bento, messaging, notifications) | [x] |
 | Sprint 3 — Transactions & Client Portal (deal stepper, payments, activity points, moderation, blog) | [x] |

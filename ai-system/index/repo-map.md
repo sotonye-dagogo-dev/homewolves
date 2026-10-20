@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-23
-> - last-verified-against-code: 2026-10-16
+> - last-updated-by: execute-feature-session-25
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: auto-regenerable — can be derived from `Get-ChildItem -Recurse` or `tree` command. Manual content only where intent cannot be derived from structure.
 
 > **Overview:** Visual map of the Homewolves monorepo folder structure with purpose descriptions. Updated when the folder structure changes. This file is **auto-regenerable** — use tool-based discovery (filesystem MCP, git ls-tree) for ground truth, and treat manual entries here as supplementary context, not primary navigation.
@@ -37,17 +37,16 @@ homewolves/
 │   ├── web/                     ← Next.js 14 web application (App Router)
 │   │   ├── app/
 │   │   │   ├── (public)/        ← Public routes: landing, properties, blog, auth, about, contact, faq, privacy, terms, messages
-│   │   │   ├── (dashboard)/     ← Authenticated: agent/client dashboards, transactions, messages
-│   │   │   └── (admin)/         ← Admin panel routes
+│   │   │   └── (dashboard)/     ← Authenticated: agent/client/admin dashboards, transactions, messages (admin routes live at dashboard/admin/* under a role-guard layout)
 │   │   ├── components/
 │   │   │   ├── ui/              ← Hw* wrappers (HwButton, HwInput, HwSelect, HwTextarea, etc.) — the only import for UI primitives
 │   │   │   ├── landing/         ← Landing page zones (HeroSection, StatsStrip, CategoryBento, etc.)
 │   │   │   ├── listings/        ← Property card, gallery, filter bar, forms
 │   │   │   ├── dashboard/       ← Bento grid cells, KPI widgets, charts
 │   │   │   ├── transactions/    ← Stepper, document upload, audit trail
-│   │   │   └── shared/          ← Layouts, ThemeProvider, loaders
-│   │   ├── hooks/               ← Custom React hooks (use-crm, use-messaging, use-notifications, etc.)
-│   │   ├── lib/                 ← API clients (crm, messaging, notifications, transactions, blog) + server helpers (`lib/server/auth-local.ts`, `lib/property-filters.ts`, `lib/format-price.ts` safe price utils) + colocated `*.test.ts`
+│   │   │   └── shared/          ← Layouts, ThemeProvider, loaders, EmptyState, ThemeToggle
+│   │   ├── hooks/               ← Custom React hooks (use-crm, use-messaging, use-notifications, use-analytics, etc.)
+│   │   ├── lib/                 ← API clients (crm, messaging, notifications, analytics, transactions, blog), realtime socket layer (`realtime.ts`), data layers (`messaging.ts`, `status.ts`, `toast.ts`), null-safe formatters (`format.ts`) + server helpers (`lib/server/auth-local.ts`, `lib/property-filters.ts`, `lib/format-price.ts`) + colocated `*.test.ts`
 │   │   ├── e2e/                 ← Playwright E2E journeys (smoke, guest, auth, agent-dashboard, admin-journey, transaction-stepper)
 │   │   ├── app/api/v1/auth/     ← Local email/OTP auth route (proxies NestJS when backendOrigin set; imports `postgres` — declared on this package)
 │   │   ├── config/              ← fallbacks.ts (web re-export)
@@ -63,7 +62,7 @@ homewolves/
 ├── packages/
 │   ├── api/                     ← NestJS backend
 │   │   ├── src/
-│   │   │   ├── modules/         ← auth, listings, crm, transactions, messaging, notifications, alerts, activity, blog, platform-config, audit, recently-viewed, saved, documents, signatures, subscriptions (+ colocated `*.service.spec.ts`)
+│   │   │   ├── modules/         ← auth, listings, crm, transactions, messaging, notifications, alerts, activity, analytics, blog, platform-config, audit, recently-viewed, saved, documents, signatures, subscriptions (+ colocated `*.service.spec.ts`)
 │   │   │   ├── common/          ← filters (GlobalExceptionFilter), guards (JwtGuard via auth, RolesGuard, OptionalJwtGuard), pipes (ZodValidationPipe), decorators (@Roles), rate-limit (RateLimitGuard + @Throttle), interceptors (AuditInterceptor), types (request.types.ts — AuthenticatedRequest/MaybeAuthenticatedRequest/toActor)
 │   │   │   └── drizzle/         ← DrizzleService (postgres.js client wrapper) + schema.ts (31 tables, 6 pgEnums) — replaces Prisma
 │   │   └── drizzle/             ← Operational scripts: seed.ts, seed.data.ts (SEED_MANIFEST), seed.revert.ts, table.registry.ts, seed.backup.ts (+ seed.backup.spec.ts — vitest-included), migrations/

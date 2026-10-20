@@ -12,6 +12,14 @@ const createConversationSchema = z
   })
   .strict();
 
+const sendMessageSchema = z
+  .object({
+    content: z.string().trim().min(1).max(4000),
+    type: z.enum(['text', 'image', 'file']).optional(),
+    mediaUrl: z.string().url().max(2048).optional(),
+  })
+  .strict();
+
 @Controller('messaging')
 @UseGuards(JwtGuard)
 export class MessagingController {
@@ -39,6 +47,22 @@ export class MessagingController {
   @Get('conversations/:id/messages')
   getMessages(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.messagingService.getMessages(id, req.user.sub);
+  }
+
+  @Post('conversations/:id/messages')
+  sendMessage(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(sendMessageSchema))
+    body: { content: string; type?: 'text' | 'image' | 'file'; mediaUrl?: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.messagingService.sendMessage(
+      id,
+      req.user.sub,
+      body.content,
+      body.type ?? 'text',
+      body.mediaUrl,
+    );
   }
 
   @Post('conversations/:id/read')

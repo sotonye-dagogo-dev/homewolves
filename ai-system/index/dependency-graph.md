@@ -1,8 +1,8 @@
 # Dependency Graph
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-23
-> - last-verified-against-code: 2026-10-16
+> - last-updated-by: execute-feature-session-25
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: auto-regenerable — can be derived from import analysis tools. Manual content only for conventions and rules that cannot be inferred from code.
 
 > **Overview:** Maps how modules depend on each other in the Homewolves NestJS backend. Agents consult this before modifying a module to understand the impact radius. This file is **auto-regenerable** — prefer tool-based import analysis for ground truth, and treat manual entries as supplementary.
@@ -75,6 +75,11 @@ ActivityModule
   → DrizzleModule (DrizzleService)
   → UsersModule (points, tiers, leaderboard)
 
+AnalyticsModule
+  → DrizzleModule (DrizzleService)
+  → transactions / listings / bugReports / paymentRecords tables
+  (self-scoped agent/listing/funnel analytics; ADMIN-only admin summary)
+
 SubscriptionsModule
   → DrizzleModule (DrizzleService)
   → UsersModule (plan assignment)
@@ -109,7 +114,9 @@ apps/web (Next.js 14)
   → shadcn/ui (Radix primitives — through Hw* wrappers only)
   → TanStack Query (server state)
   → Zustand (client state)
-  → Socket.io client (real-time messaging + notifications)
+  → lib/realtime — opt-in ref-counted Socket.io client (`NEXT_PUBLIC_REALTIME_ENABLED`, namespace `/ws`); REST + polling fallback when disabled
+  → lib/messaging — REST send/read + socket hybrid
+  → lib/analytics — agent/admin analytics REST clients
   → Tailwind CSS (styling with CSS variable tokens)
 
 apps/mobile (React Native / Expo)

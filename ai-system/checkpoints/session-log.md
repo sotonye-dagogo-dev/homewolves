@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-24
+> - last-updated-by: execute-feature-session-25
 > - last-verified-against-code: 2026-10-20
 > - staleness-policy: append-only — never modify past entries
 
@@ -825,3 +825,33 @@ Live-verify seed-user sign-in on the operator machine (`npm run dev` — DB IS r
 
 **Notes / Blockers:**
 - None blocking. Operator should consider committing the `_journal.json` change so future migrate runs stay consistent.
+
+## Session 25 — 2026-10-20 (execute-feature: realtime opt-in + platform design/role pass)
+
+**Completed:**
+- Removed the hardcoded `wss://homewolves.com` socket connection that failed on Vercel serverless. Realtime is now opt-in via `NEXT_PUBLIC_REALTIME_ENABLED` (default false), uses the `/ws` namespace and API-derived origin, and is ref-counted in `lib/realtime.ts`. Messaging uses REST send (`POST /messaging/conversations/:id/messages`) + polling reads when realtime is off; notifications poll as fallback.
+- Messaging surface rebuilt end-to-end (`/messages`): desktop two-pane + mobile list/chat, search, compose, image attach, read receipts, date dividers, call/property info. Conversations now include hydrated participant profiles.
+- Analytics wired: `GET /analytics/admin-summary` (ADMIN/SUPER_ADMIN) + `useAdminSummary`; admin dashboard stats/badges are real; agent/dashboard/client dashboards show real listing performance, funnel, transactions, saved listings, and recent views. Removed fake charts, mock commission/lead data, and fake trend arrows.
+- Role-aware navigation and guards: TopNav/MobileBar/dashboard nav vary by role; buyers no longer see post-property CTAs or agent transaction flows; `/dashboard/admin/*` guarded by a client layout.
+- Design-system pass: tokens replace hardcoded white/black across admin payments/moderation/bug-reports, agent transactions, client dashboard, blog/auth/pricing/products, Toast/batch bar; lucide icons replace emoji; global floating `ThemeToggle`; centered `EmptyState`; null-safe formatters eliminate NaN/null renders.
+- Content/data fixes: saved listings hydrate listing media; property map view groups listings by city/state; real terms/privacy pages; sitemap/main logging warnings cleaned.
+- QA: API 173/173 (18 files), web 155/155 (21 files), typecheck 4/4, lint 4/4 (0 warnings), `next build` 38/38 pages.
+
+**Files Modified:** (highlights)
+- `apps/web/lib/{realtime,messaging,status,toast,analytics,format}.ts`; `apps/web/hooks/{use-messaging,use-notifications,use-analytics}.ts`
+- `apps/web/components/shared/{empty-state,theme-toggle}.tsx`; `apps/web/app/layout.tsx`
+- `apps/web/app/(public)/messages/page.tsx`, `properties/page.tsx`, `terms/page.tsx`, `privacy/page.tsx`
+- `apps/web/app/(dashboard)/dashboard/{page.tsx,client/page.tsx,admin/layout.tsx,admin/page.tsx,admin/payments/page.tsx,admin/moderation/page.tsx,admin/bug-reports/page.tsx,agent/transactions/page.tsx,agent/transactions/[id]/page.tsx}`
+- `apps/web/components/landing/{top-nav,mobile-bar}.tsx`; `.env.example`, `turbo.json`
+- `packages/api/src/modules/{messaging/messaging.controller.ts,messaging/messaging.service.ts,analytics/analytics.service.ts,analytics/analytics.controller.ts,saved/saved.service.ts}`
+- Docs: `ai-system/{system-architecture.md,project-context.md,index/repo-map.md,index/dependency-graph.md,planning/project-plan.md,planning/task-queue.md,summaries/dev-history.md,memory/lessons-learned.md,testing/test-results.md,checkpoints/session-log.md,checkpoints/in-progress.md}`
+
+**Next Task:**
+Remaining backlog: WhatsApp integration, PWA/offline support, push notifications, referral system. Realtime can be enabled once the API runs on a long-lived WebSocket-capable host.
+
+**Assumptions Made:**
+- Vercel serverless remains the web deployment target, so realtime must default off; REST + polling is an acceptable parity path.
+- Admin summary revenue uses confirmed `paymentRecords.amount` for the current calendar month.
+
+**Notes / Blockers:**
+- None blocking. E2E (Playwright) was not run in this session; unit/component + typecheck/lint/build are green.
