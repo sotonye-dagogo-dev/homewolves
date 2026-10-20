@@ -1,8 +1,8 @@
 # Dependency Graph
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-19
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: execute-feature-session-23
+> - last-verified-against-code: 2026-10-16
 > - staleness-policy: auto-regenerable — can be derived from import analysis tools. Manual content only for conventions and rules that cannot be inferred from code.
 
 > **Overview:** Maps how modules depend on each other in the Homewolves NestJS backend. Agents consult this before modifying a module to understand the impact radius. This file is **auto-regenerable** — prefer tool-based import analysis for ground truth, and treat manual entries as supplementary.
@@ -21,74 +21,74 @@ Common security infrastructure (global, not module-scoped):
   RolesGuard / OptionalJwtGuard / @Roles — applied per-route/controller
 
 AuthModule
-  → PrismaModule (database access)
+  → DrizzleModule (DrizzleService — postgres.js client)
   → NotificationsModule (OTP dispatch)
   → JwtModule / PassportModule (tokens, strategies)
 
 ListingsModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
   → AuditModule (log mutations)
   → NotificationsModule (wishlist alerts)
   → AlertsModule (price drop + match detection)
   → PlatformConfigModule (amenities, property types)
 
 RecentlyViewedModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
 
 SavedModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
 
 CrmModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
   → AuditModule (log mutations)
   → NotificationsModule (inspection reminders)
   → UsersModule / ListingsModule references
 
 TransactionsModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
   → AuditModule (log every step)
   → NotificationsModule (step change alerts)
   → PlatformConfigModule (step templates)
 
 DocumentsModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
 
 SignaturesModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
 
 MessagingModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
   → UsersModule (participant resolution)
   → ListingsModule (property context)
 
 NotificationsModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
   → UsersModule (preferences, devices)
   → PlatformConfigModule (templates)
   → BullMQ (job queue) / Resend (email) / Termii (SMS)
 
 AlertsModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
   → NotificationsModule (dispatch alerts)
 
 ActivityModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
   → UsersModule (points, tiers, leaderboard)
 
 SubscriptionsModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
   → UsersModule (plan assignment)
   → Paystack (billing)
 
 BlogModule
-  → PrismaModule
+  → DrizzleModule (DrizzleService)
 
 PlatformConfigModule
-  → PrismaModule (read/write)
+  → DrizzleModule (DrizzleService) (read/write)
   → Redis (cache, 5min TTL)
 
 AuditModule
-  → PrismaModule (append-only writes)
+  → DrizzleModule (DrizzleService) (append-only writes)
 ```
 
 ---
@@ -103,7 +103,8 @@ apps/web (Next.js 14)
   → packages/config (fallbacks — compiled/bundled)
   → packages/api (REST client — type-safe)
   → postgres (direct dep; server external via next.config experimental.serverComponentsExternalPackages — used by app/api/v1/auth/[action])
-  → app/api/v1/auth/[action] → lib/server/auth-local (local OTP/JWT when backendOrigin null; proxies NestJS otherwise)
+  → app/api/v1/auth/[action] → lib/server/auth-local (local OTP/JWT when backendOrigin null; proxies NestJS otherwise); root `.env` loaded via dotenv in next.config.js
+  → lib/api-base — `getApiBase()` for general API calls; `authApiBase()` (same-origin `/api/v1` in the browser) for ALL `/auth/*` calls (use-auth, google-auth)
   → lib/property-filters (URL↔pill sync for properties page)
   → shadcn/ui (Radix primitives — through Hw* wrappers only)
   → TanStack Query (server state)
@@ -125,9 +126,9 @@ apps/mobile (React Native / Expo)
 
 | Service | Purpose | Used In |
 |---------|---------|---------|
-| PostgreSQL 16 | Primary database | All modules via Prisma |
+| PostgreSQL 16 | Primary database | All modules via Drizzle (`src/drizzle/drizzle.service.ts`) |
 | Redis 7 | Cache, session store, BullMQ queue | PlatformConfig, Auth, Notifications |
-| Cloudflare R2 / AWS S3 | File/image storage | Listings (media upload), Transactions (evidence) |
+| Cloudinary | File/image storage (SDK wrapper: StorageClient) | Listings (media upload), Transactions (evidence), Bug reports (screenshots) |
 | Resend | Transactional email | Notifications |
 | Termii | SMS delivery (primary) | Auth (OTP), Notifications |
 | Twilio | SMS fallback | Notifications |
@@ -148,13 +149,14 @@ apps/mobile (React Native / Expo)
 ## Dependency Rules
 
 - **Controllers** → Services (not the other way around)
-- **Services** → Repositories/Prisma (not the other way around)
+- **Services** → DrizzleService (not the other way around)
 - **Common module** (decorators, guards, interceptors) → No application modules
-- **AuditModule** → Prisma only — no circular reference with business modules
-- **PlatformConfigModule** → Prisma + Redis only — no business logic dependencies
+- **AuditModule** → Drizzle only — no circular reference with business modules
+- **PlatformConfigModule** → Drizzle + Redis only — no business logic dependencies
 - **Types package** → Zero dependencies — pure interfaces, types, and enums
 - **Config package** → Zero runtime dependencies — plain objects and functions
 - **UI components** → `@/components/ui` barrel only — never import shadcn directly
-- **Service specs** (`*.service.spec.ts`) → vitest + `PrismaService` mock (plain `vi.fn()` object cast `as unknown as PrismaService`) — no real DB
+- **Service specs** (`*.service.spec.ts`) → vitest + `DrizzleService` mock (`createDrizzleMock` from `src/test/drizzle.mock.ts` — chainable thenable proxy) — no real DB
+- **Seed/ops specs** (`drizzle/*.spec.ts`, included via vitest.config) → vitest + minimal structural fake DB; file I/O uses `os.tmpdir()` fixtures
 - **Web lib tests** (`lib/*.test.ts`) → vitest + stubbed `fetch` via `vi.stubGlobal`; token from `useAuth` store (zustand) or `hw-auth` localStorage
 - **E2E specs** (`e2e/*.spec.ts`) → Playwright; API stubbed with `page.route`, sessions seeded via `addInitScript` writing `hw-auth`

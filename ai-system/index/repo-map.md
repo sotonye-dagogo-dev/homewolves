@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-20
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: execute-feature-session-23
+> - last-verified-against-code: 2026-10-16
 > - staleness-policy: auto-regenerable — can be derived from `Get-ChildItem -Recurse` or `tree` command. Manual content only where intent cannot be derived from structure.
 
 > **Overview:** Visual map of the Homewolves monorepo folder structure with purpose descriptions. Updated when the folder structure changes. This file is **auto-regenerable** — use tool-based discovery (filesystem MCP, git ls-tree) for ground truth, and treat manual entries here as supplementary context, not primary navigation.
@@ -65,9 +65,8 @@ homewolves/
 │   │   ├── src/
 │   │   │   ├── modules/         ← auth, listings, crm, transactions, messaging, notifications, alerts, activity, blog, platform-config, audit, recently-viewed, saved, documents, signatures, subscriptions (+ colocated `*.service.spec.ts`)
 │   │   │   ├── common/          ← filters (GlobalExceptionFilter), guards (JwtGuard via auth, RolesGuard, OptionalJwtGuard), pipes (ZodValidationPipe), decorators (@Roles), rate-limit (RateLimitGuard + @Throttle), interceptors (AuditInterceptor), types (request.types.ts — AuthenticatedRequest/MaybeAuthenticatedRequest/toActor)
-│   │   │   └── prisma/          ← PrismaService (DI wrapper for PrismaClient)
-│   │   └── prisma/
-│   │       └── schema.prisma    ← Full database schema (20+ models)
+│   │   │   └── drizzle/         ← DrizzleService (postgres.js client wrapper) + schema.ts (31 tables, 6 pgEnums) — replaces Prisma
+│   │   └── drizzle/             ← Operational scripts: seed.ts, seed.data.ts (SEED_MANIFEST), seed.revert.ts, table.registry.ts, seed.backup.ts (+ seed.backup.spec.ts — vitest-included), migrations/
 │   ├── types/                   ← Global TypeScript types — no imports needed
 │   │   └── src/
 │   │       ├── entities/        ← User, Listing, Transaction, AuditEvent, CrmClient, Activity, etc.
@@ -97,7 +96,7 @@ homewolves/
 | `ai-system/` | AI development system — protocols, planning, memory, checkpoints | `protocols/`, `planning/task-queue.md` |
 | `apps/web/` | Next.js 14 web application — SSR/SSG, mobile-first responsive | `app/`, `components/ui/`, `lib/`, `e2e/` |
 | `apps/mobile/` | React Native (Expo) mobile app — parity with web (placeholder) | `app/`, `components/ui/` |
-| `packages/api/` | NestJS backend — all business logic, Prisma ORM, REST. Unit specs colocated as `*.service.spec.ts` (vitest) | `src/modules/`, `prisma/schema.prisma` |
+| `packages/api/` | NestJS backend — all business logic, Drizzle ORM (31-table schema), REST. Unit specs colocated as `*.service.spec.ts` (vitest); seed/backup ops scripts + specs in `drizzle/` | `src/modules/`, `src/drizzle/schema.ts`, `drizzle/seed.ts` |
 | `packages/types/` | Global TypeScript types — zero-import via triple-slash refs. Generated `.js`/`.d.ts`/`.map` build artifacts are gitignored + lint-ignored (regenerate on API builds); only `.ts` sources + `global.d.ts` are tracked | `src/entities/*.ts`, `src/global.d.ts`, `.eslintignore` |
 | `packages/config/` | Shared fallback constants for all config domains | `src/fallbacks.ts` |
 
@@ -112,7 +111,7 @@ homewolves/
 | Web E2E journeys | `apps/web/package.json` — `e2e` (Playwright) |
 | API server | `packages/api/src/main.ts` — NestJS bootstrap |
 | API unit tests | `packages/api/package.json` — `vitest run` |
-| Database schema | `packages/api/prisma/schema.prisma` |
+| Database schema | `packages/api/src/drizzle/schema.ts` + `drizzle/migrations/` |
 | Config fallbacks | `packages/config/src/fallbacks.ts` |
 | Global types injection | `packages/types/src/global.d.ts` |
 | AI session start | `ai-context.md` — read this first |

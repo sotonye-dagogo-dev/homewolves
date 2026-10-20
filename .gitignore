@@ -23,3 +23,7 @@ packages/types/src/**/*.js.map
 packages/types/src/**/*.d.ts.map
 packages/types/src/**/*.d.ts
 !packages/types/src/global.d.ts
+
+# Seed/purge safety backups (drizzle) — timestamped JSON captures written by
+# db:seed:backup / db:seed:revert / db:purge before any destructive run.
+packages/api/drizzle/backups/

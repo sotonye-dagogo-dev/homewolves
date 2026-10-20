@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-21
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-23
+> - last-verified-against-code: 2026-10-16
 > - staleness-policy: historical entries do not go stale
 
 > **Overview:** Chronological log of completed development work. Each sprint ends with a summary entry. Agents add entries after completing tasks. Useful for understanding what has been built, when decisions were made, and what patterns have emerged.
@@ -474,3 +474,24 @@ The `vercel build` log truncated right after `Running "npm run vercel-build"` wi
 
 **Next Sprint Focus:**
 Redeploy on Vercel and confirm `[vercel-build] ... Web build completed.` in the log; use `SKIP_DB_MIGRATE=1` as the emergency unblock while DB reachability is investigated.
+
+## 2026-10-16 — execute-feature: Auth same-origin routing + seed backup/purge/restore (Session 23)
+
+**Summary:**
+Fixed the recurring seed-user sign-in failure (constant, near-instant 500) by making all browser `/auth/*` calls same-origin in every environment and loading the repo-root `.env` into the Next.js server runtime. Added full data protection to destructive seed operations: timestamped JSON backups before any revert/purge, a confirmation-gated full purge, and an idempotent restore — plus fixes for two seed-revert bugs (hidden user deletion, shared-key activityRules targeting).
+
+**Completed:**
+- `authApiBase()` same-origin auth routing (`lib/api-base.ts`, 12 `use-auth.ts` call sites, `google-auth.ts`)
+- `next.config.js` dotenv load of repo-root `.env` (non-overriding; shell/Vercel env authoritative)
+- `drizzle/table.registry.ts` (31 tables, FK-safe orders, seed-scope predicates) + `drizzle/seed.backup.ts` (collect/create/restore, versioned JSON, host-only provenance) + 14 specs
+- `db:seed:backup` / `db:purge -- --yes` / `db:restore -- <file>` commands; revert/purge backup-first (backup failure aborts)
+- Fixed `--with-users` hidden-delete bug + activityRules revert by `seed-` ID
+- QA: api 173/173, web 155/155, typecheck 4/4, lint 0 errors, build 38/38 pages
+
+**Key Changes:**
+- Rule: browser auth is always same-origin (`authApiBase()` → Next auth route proxy-or-local) — never direct-to-API, in any environment
+- Rule: destructive data operations are backup-first, fail-hard on backup error, and full wipes require an explicit `--yes`
+- New ops surface: `npm run db:seed:backup` | `db:seed:revert` | `db:purge -- --yes` | `db:restore -- <file>` (backups in gitignored `packages/api/drizzle/backups/`)
+
+**Next Sprint Focus:**
+Live-verify sign-in (`admin@homewolves.com` / `Homewolves123!`) with `npm run dev`; first live DB op should be `npm run db:seed:backup`, then exercise revert + restore round-trip; commit the (currently uncommitted) Session 23 changes.

@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: fix-build-session-22
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-23
+> - last-verified-against-code: 2026-10-16
 > - staleness-policy: this file is overwritten every session — always current
 
 > **Overview:** Tracks work that is currently in progress but not yet complete. Written _before_ starting risky multi-step work, cleared on clean completion.
@@ -12,10 +12,10 @@
 
 ## Current Status
 
-**Status:** CLEAR — fix-build Session 22 (`Missing script: "vercel-build"` in @hw/web) completed 2026-10-15.
+**Status:** CLEAR — no in-progress work. Session 23 (auth same-origin fix + seed backup/purge/restore) completed and closed 2026-10-16.
 
-Verified green:
-- `npm run vercel-build` green from `apps/web` cwd (direct `next build`, full route table) — the exact failing path
-- `npm run vercel-build` green from repo root (migrate-skip + turbo + output verified)
-- `findRepoRoot()` resolves repo root from both cwds; `npm run --workspace=@hw/web vercel-build` resolves
-- Sync-context drift fixed: `project-decisions.md` Session 21 Root assumption superseded
+**Last closed session:** Session 23 — see `checkpoints/session-log.md` (Session 23 entry) for what was done, and `summaries/dev-history.md` for the narrative summary.
+
+**Known follow-ups (not blocking, no active work):**
+- Session 23 changes are **uncommitted** — commit when convenient.
+- Live-verify sign-in (`admin@homewolves.com` / `Homewolves123!`) with `npm run dev`; first live DB op: `npm run db:seed:backup`, then a `db:seed:revert` + `db:restore` round-trip (Supabase unreachable from the agent environment — unit-spec coverage only).

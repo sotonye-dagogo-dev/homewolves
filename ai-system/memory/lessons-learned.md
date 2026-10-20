@@ -1,8 +1,8 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-21
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-23
+> - last-verified-against-code: 2026-10-16
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Practical knowledge accumulated during Homewolves development — things that worked well, things that didn't, and patterns worth repeating. Different from `repair-system.md` (tracks errors); this file tracks development process insights and architectural wisdom. Uses supersedes/superseded-by links for evolving practices.
@@ -388,6 +388,42 @@ Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeo
 
 **Apply When:**
 - Any script Vercel executes that touches the network — bound it, log the bound, and continue to the main build on failure.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Browser auth must be same-origin in every environment
+
+**Context:**
+2026-10-16 execute-feature — seed users could not sign in: a constant internal server error returned so fast the request seemed to never complete. Root cause: `getApiBase()` sent browser `/auth/*` calls on localhost directly to `http://localhost:4000` (NestJS). API not running → instant connection-refused; API running but DB unreachable → opaque 500. Production never had this failure mode because auth is same-origin there. A second, independent cause: Next.js only auto-loads `apps/web/.env*`, so the repo-root `.env` (DATABASE_URL, JWT_SECRET) was invisible to the local auth route.
+
+**What We Learned:**
+- Never let browser auth depend on a direct hop to a separate API process. Route all `/auth/*` calls same-origin (`authApiBase()` → Next route that proxies-or-handles-locally) so sign-in works identically in dev and prod and survives the API process being down.
+- Env loading is per-runtime: each server runtime (Next route handlers, NestJS, standalone scripts) must load the root `.env` itself. dotenv's non-overriding default keeps shell/Vercel env authoritative.
+- "Request never completes / returns instantly" almost always means connection-refused or an early guard — check what process the request actually reached before suspecting business logic.
+
+**Apply When:**
+- Adding any new browser-called auth endpoint (must use `authApiBase()`), any new server runtime needing env vars, or debugging "instant 500" reports.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Destructive data operations: backup-first, and never delete from the "skip" branch
+
+**Context:**
+2026-10-16 execute-feature — `db:seed:revert` logged "Skipping seed users revert" and then deleted the seed users anyway via a hidden fallback call; `activityRules` revert deleted by shared business keys that non-seed rows also use. The operator requirement: destructive seed ops must back up existing data first so nothing is permanently lost, standard revert must target only seed data, and a full purge must exist but stay backup-protected.
+
+**What We Learned:**
+- A destructive operation must never sit in the same code path as its own "skipped" branch — if the log says skip, zero deletes may execute. Structure it as early-return, not fallthrough.
+- Target deletions by stable seed identity (`seed-` ID prefix + manifest), never by business keys shared with real data.
+- Backup-before-destroy pattern: write a timestamped, versioned JSON capture of the exact rows to be affected; a failed backup ABORTS the operation; full wipes additionally require an explicit `--yes`; restore is parents-first with `ON CONFLICT DO NOTHING` (idempotent, never overwrites). A central table registry (FK order + per-table seed predicates) makes all four ops derive from one source of truth.
+
+**Apply When:**
+- Writing any new destructive script (seed revert/purge, fixture reset, data migration with deletes), or reviewing one for safety.
 
 **Supersedes:** None
 **Superseded by:** None

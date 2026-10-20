@@ -19,8 +19,11 @@
     "db:migrate": "npm --prefix packages/api run db:migrate",
     "db:studio": "npm --prefix packages/api run db:studio",
     "db:seed": "npm --prefix packages/api run db:seed",
+    "db:seed:backup": "npm --prefix packages/api run db:seed:backup",
     "db:seed:revert": "npm --prefix packages/api run db:seed:revert",
     "db:seed:revert:full": "npm --prefix packages/api run db:seed:revert:full",
+    "db:purge": "npm --prefix packages/api run db:purge",
+    "db:restore": "npm --prefix packages/api run db:restore",
     "vercel-build": "node scripts/vercel-build.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,json,css,md}\"",
     "clean": "turbo run clean --filter=./apps/* --filter=./packages/*"

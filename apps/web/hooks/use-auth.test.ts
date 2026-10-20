@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('@/lib/api-base', () => ({
   getApiBase: () => 'http://api.test/v1',
+  authApiBase: () => 'http://api.test/v1',
   backendOrigin: () => null,
 }));
 

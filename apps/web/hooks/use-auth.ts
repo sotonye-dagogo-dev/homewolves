@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { getApiBase } from '@/lib/api-base';
+import { authApiBase } from '@/lib/api-base';
 
 interface AuthUser {
   id: string;
@@ -55,7 +55,7 @@ export const useAuth = create<AuthState>()(
       register: async (email: string) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/register`, {
+          const res = await fetch(`${authApiBase()}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email }),
@@ -80,7 +80,7 @@ export const useAuth = create<AuthState>()(
       verifyOtp: async (email: string, otp: string) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/verify-otp`, {
+          const res = await fetch(`${authApiBase()}/auth/verify-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, otp }),
@@ -105,7 +105,7 @@ export const useAuth = create<AuthState>()(
       registerWithPassword: async (input) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/register-password`, {
+          const res = await fetch(`${authApiBase()}/auth/register-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(input),
@@ -127,7 +127,7 @@ export const useAuth = create<AuthState>()(
       loginWithPassword: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/login-password`, {
+          const res = await fetch(`${authApiBase()}/auth/login-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
@@ -149,7 +149,7 @@ export const useAuth = create<AuthState>()(
       requestPasswordReset: async (email) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/forgot-password`, {
+          const res = await fetch(`${authApiBase()}/auth/forgot-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email }),
@@ -169,7 +169,7 @@ export const useAuth = create<AuthState>()(
       resetPassword: async (token, password) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/reset-password`, {
+          const res = await fetch(`${authApiBase()}/auth/reset-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, password }),
@@ -189,7 +189,7 @@ export const useAuth = create<AuthState>()(
       resendVerification: async (email) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/register`, {
+          const res = await fetch(`${authApiBase()}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email }),
@@ -209,7 +209,7 @@ export const useAuth = create<AuthState>()(
       completeProfile: async (profile) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/complete-profile`, {
+          const res = await fetch(`${authApiBase()}/auth/complete-profile`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(profile),
@@ -236,7 +236,7 @@ export const useAuth = create<AuthState>()(
       login: async (email: string) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/login`, {
+          const res = await fetch(`${authApiBase()}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email }),
@@ -257,7 +257,7 @@ export const useAuth = create<AuthState>()(
       exchangeSupabase: async (accessToken, opts) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/supabase`, {
+          const res = await fetch(`${authApiBase()}/auth/supabase`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accessToken, ...opts }),
@@ -281,7 +281,7 @@ export const useAuth = create<AuthState>()(
       exchangeGoogle: async (credential, opts) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch(`${getApiBase()}/auth/google`, {
+          const res = await fetch(`${authApiBase()}/auth/google`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ credential, ...opts }),
@@ -302,7 +302,7 @@ export const useAuth = create<AuthState>()(
       logout: async () => {
         const { accessToken } = get();
         try {
-          await fetch(`${getApiBase()}/auth/logout`, {
+          await fetch(`${authApiBase()}/auth/logout`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

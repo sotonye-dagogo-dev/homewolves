@@ -59,3 +59,24 @@ export function apiUrl(path: string): string {
   const suffix = path.startsWith('/') ? path : `/${path}`;
   return `${base}${suffix}`;
 }
+
+/**
+ * Base URL for `/auth/*` calls — ALWAYS same-origin in the browser.
+ *
+ * Auth must never depend on the NestJS API process being up or on a direct
+ * cross-origin hop. The Next.js route `app/api/v1/auth/[action]/route.ts`
+ * proxies to the NestJS API when one is configured (`API_PROXY_URL` /
+ * external `NEXT_PUBLIC_API_URL`) and otherwise handles auth locally against
+ * Postgres with coded, actionable errors (DB_NOT_MIGRATED, DB_LOOKUP_FAILED,
+ * TOKEN_CONFIG…).
+ *
+ * Previously the browser called `http://localhost:4000/api/v1/auth/*` directly
+ * during local dev, so sign-in died with an instant connection-refused (API
+ * not running) or an opaque 500 (API running, DB unreachable) — the request
+ * never reached a working auth path. Same-origin removes that entire failure
+ * class and matches how production already routes auth.
+ */
+export function authApiBase(): string {
+  if (typeof window === 'undefined') return getApiBase();
+  return '/api/v1';
+}

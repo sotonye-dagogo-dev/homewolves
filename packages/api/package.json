@@ -15,8 +15,11 @@
     "db:studio": "drizzle-kit studio",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "ts-node drizzle/seed.ts",
+    "db:seed:backup": "ts-node drizzle/seed.ts -- --backup",
     "db:seed:revert": "ts-node drizzle/seed.ts -- --revert",
     "db:seed:revert:full": "ts-node drizzle/seed.ts -- --revert --with-config --with-users",
+    "db:purge": "ts-node drizzle/seed.ts -- --purge",
+    "db:restore": "ts-node drizzle/seed.ts -- --restore",
     "clean": "rimraf dist"
   },
   "dependencies": {

@@ -1,8 +1,8 @@
 # Repair System — Error Knowledge Base
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-21
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-23
+> - last-verified-against-code: 2026-10-16
 > - staleness-policy: individual entries may be stale if the code has changed around them — verify fix still applies before reusing
 
 > **Overview:** Living knowledge base of errors encountered during development, their root causes, and how they were fixed. Agents must search this before diagnosing new errors and log every fixed bug to prevent recurrence.
@@ -244,6 +244,29 @@ Every schema.ts change must ship with a generated migration (`drizzle-kit genera
 **Files Affected:**
 `packages/api/drizzle/migrations/0004_stale_starjammers.sql` (new), `packages/api/drizzle/migrations/meta/0004_snapshot.json` (new), `packages/api/drizzle/migrations/meta/_journal.json`, `apps/web/app/api/v1/auth/[action]/route.ts`
 **Date:** 2026-10-14
+**Status:** Active
+
+### Auth sign-in constant fast 500 — split-brain routing + root `.env` invisible to Next (Session 23, 2026-10-16)
+
+**Symptom:**
+Sign-in (including seed demo users) fails with a constant internal server error that returns so fast the operator believed the request never completed. Reproduced environment state: no servers running (instant connection-refused) and `DATABASE_URL` host resolving IPv6-only behind Cloudflare WARP with ~5.4s DNS / ~8.5s TCP latency.
+
+**Root Cause (three findings):**
+1. `getApiBase()` sent ALL browser `/auth/*` calls on localhost directly to `http://localhost:4000` (NestJS), bypassing the Next.js local auth route built for graceful handling. API not running → instant connection-refused; API running but DB unreachable → opaque 500 in milliseconds. The request never reached a working auth path — matching the operator's "not even being made" intuition.
+2. Next.js only auto-loads `apps/web/.env*` — the repo-root `.env` (holding `DATABASE_URL`, `JWT_SECRET`) was never loaded into the Next server runtime, so even the correctly-routed local auth route would 503 ("Auth requires DATABASE_URL") in local dev.
+3. Seed-revert bug (separate but adjacent): `db:seed:revert` without `--with-users` logged "Skipping seed users revert" and then deleted the seed users anyway via a hidden fallback call; `activityRules` revert deleted by shared business keys instead of seed- IDs.
+
+**Fix Applied:**
+- `authApiBase()` (`apps/web/lib/api-base.ts`) — browser always uses same-origin `/api/v1` for `/auth/*`; consumed by `use-auth.ts` (12 call sites) and `lib/google-auth.ts`. Auth now always flows through the Next auth route (proxy-or-local, coded JSON errors).
+- `apps/web/next.config.js` loads the repo-root `.env` via dotenv (non-overriding — shell/Vercel env stays authoritative) before compilation, so route handlers see `DATABASE_URL`/`JWT_SECRET` in local dev.
+- Seed protection: new `drizzle/table.registry.ts` (31 tables, parents-first + children-first orders + per-table seed-scope predicates) + `drizzle/seed.backup.ts` (seed/full JSON backups to gitignored `drizzle/backups/`, restore with `ON CONFLICT DO NOTHING`); revert now backs up first and genuinely skips seed users without `--with-users`; activityRules revert targets `seed-` IDs only; new `db:seed:backup`, `db:purge -- --yes` (refuses without confirmation), `db:restore -- <file>`.
+
+**Prevention:**
+Browser auth must never depend on a direct hop to the API process — keep `/auth/*` same-origin so the Next route can proxy-or-fallback. Any new server runtime (route handlers, middleware, workers) that needs env vars must load the root `.env` itself — Next does not. Destructive data operations ship backup-first: backup failure aborts the run; full wipes require an explicit confirmation flag.
+
+**Files Affected:**
+`apps/web/lib/api-base.ts`, `apps/web/hooks/use-auth.ts`, `apps/web/hooks/use-auth.test.ts`, `apps/web/lib/google-auth.ts`, `apps/web/next.config.js`, `packages/api/drizzle/table.registry.ts` (new), `packages/api/drizzle/seed.backup.ts` (new), `packages/api/drizzle/seed.backup.spec.ts` (new), `packages/api/drizzle/seed.revert.ts`, `packages/api/drizzle/seed.ts`, `packages/api/vitest.config.ts`, `packages/api/package.json`, `package.json`, `.gitignore`
+**Date:** 2026-10-16
 **Status:** Active
 
 ### Register-password 500, round 3 — pooler prepared-statements + seed NULL hashes + opaque errors (fix-build Session 20d, 2026-10-15)

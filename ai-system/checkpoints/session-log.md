@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-21
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-23
+> - last-verified-against-code: 2026-10-16
 > - staleness-policy: append-only — never modify past entries
 
 > **Overview:** Append-only running log of development sessions. Each entry records what was completed, what comes next, and which files were modified. Agents write here at the end of every session so work can be resumed without re-reading the entire codebase. This file is the **append-only historical record** — use `checkpoints/in-progress.md` for current in-progress work.
@@ -768,3 +768,36 @@ Redeploy on Vercel — the `Missing script` error is resolved for Root `apps/web
 
 **Notes / Blockers:**
 - None blocking.
+
+## Session 23 — 2026-10-16 (execute-feature: auth sign-in constant-fast-500 fix + seed data protection)
+
+**Completed:**
+- Fixed seed-user sign-in failing with a constant, near-instant internal server error: (1) new `authApiBase()` in `apps/web/lib/api-base.ts` — browser `/auth/*` calls now always use same-origin `/api/v1` (swapped at 12 call sites in `use-auth.ts` + `lib/google-auth.ts`) instead of firing directly at `http://localhost:4000`; (2) `apps/web/next.config.js` loads the repo-root `.env` via dotenv (non-overriding) so the Next auth route sees `DATABASE_URL`/`JWT_SECRET` in local dev.
+- Seed data protection: new `packages/api/drizzle/table.registry.ts` (31 tables, parents-first/children-first orders, per-table seed-scope predicates) + `drizzle/seed.backup.ts` (`collectBackup`/`createBackup`/`restoreBackup`, versioned JSON format, host-only provenance) + `drizzle/seed.backup.spec.ts` (14 specs). Destructive seed ops (revert/purge) now take a timestamped backup first; failed backup aborts the run.
+- New CLI modes/commands: `npm run db:seed:backup`, `npm run db:purge -- --yes` (refuses without `--yes`), `npm run db:restore -- <file>` (parents-first, `ON CONFLICT DO NOTHING`, idempotent); `db:seed -- --backup [--scope=seed]`.
+- Fixed two revert bugs: hidden fallback deleted seed users even without `--with-users`; `activityRules` revert deleted by shared business keys instead of `seed-` IDs.
+- QA gate green: api vitest 173/173 (18 files), web 155/155 (21 files), typecheck 4/4, lint 0 errors (3 pre-existing warnings; auth.service:290 error gone), `npm run build` Next 38/38 pages + nest clean. E2E not run this session.
+- Docs: repair-system Session 23 entry; project-decisions (browser-auth-same-origin); system-architecture (auth flow, seed backup/purge/restore, SEED_BACKUP_DIR/PG_PREPARE/PG_SSL config); task-queue (2 completed tasks); repo-map + dependency-graph (Drizzle/Cloudinary/authApiBase corrections); README (data-safety + authentication runbooks); `.env.example` (SEED_BACKUP_DIR, PG knobs); test-results overwrite.
+
+**Files Modified:**
+- `apps/web/lib/api-base.ts` — `authApiBase()` (browser always same-origin)
+- `apps/web/hooks/use-auth.ts` + `apps/web/lib/google-auth.ts` — auth fetches use `authApiBase()`
+- `apps/web/hooks/use-auth.test.ts` — mock updated
+- `apps/web/next.config.js` — repo-root `.env` loaded via dotenv (non-overriding)
+- `packages/api/drizzle/table.registry.ts` (new), `packages/api/drizzle/seed.backup.ts` (new), `packages/api/drizzle/seed.backup.spec.ts` (new)
+- `packages/api/drizzle/seed.ts` — `--backup`/`--purge`/`--restore` modes + safety-backup wiring + `--with-users` hidden-delete fix
+- `packages/api/drizzle/seed.revert.ts` — activityRules seed-ID targeting + `purgeAllRows()`
+- `packages/api/vitest.config.ts` — include `drizzle/**/*.spec.ts`
+- `packages/api/package.json`, `package.json` — `db:seed:backup`/`db:purge`/`db:restore` scripts
+- `.gitignore` — ignore `packages/api/drizzle/backups/`
+- Docs: `ai-system/repair-system.md`, `memory/project-decisions.md`, `system-architecture.md`, `planning/task-queue.md`, `index/repo-map.md`, `index/dependency-graph.md`, `testing/test-results.md`, `README.md`, `.env.example`
+
+**Next Task:**
+Live-verify sign-in as `admin@homewolves.com` / `Homewolves123!` with `npm run dev` (web alone is now sufficient for auth). First live DB op: `npm run db:seed:backup`, then try `db:seed:revert` and confirm the backup file in `packages/api/drizzle/backups/` restores cleanly via `db:restore`. Commit all changes (currently uncommitted).
+
+**Assumptions Made:**
+- `db:seed`/`db:purge`/`db:restore` could not be live-tested here (Supabase unreachable from this environment: IPv6-only host + WARP DNS latency) — unit-spec coverage only; residual risk logged per QA-gate convention.
+- Root `.env` remains canonical for the whole monorepo; Next's dir-scoped loader never overwrites, so apps/web `.env.local` overrides still work for non-conflicting keys.
+
+**Notes / Blockers:**
+- None blocking. All Session 23 changes are UNCOMMITTED — no git operations were performed.
