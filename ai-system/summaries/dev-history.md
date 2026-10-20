@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-21
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-24
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: historical entries do not go stale
 
 > **Overview:** Chronological log of completed development work. Each sprint ends with a summary entry. Agents add entries after completing tasks. Useful for understanding what has been built, when decisions were made, and what patterns have emerged.
@@ -474,3 +474,42 @@ The `vercel build` log truncated right after `Running "npm run vercel-build"` wi
 
 **Next Sprint Focus:**
 Redeploy on Vercel and confirm `[vercel-build] ... Web build completed.` in the log; use `SKIP_DB_MIGRATE=1` as the emergency unblock while DB reachability is investigated.
+
+## 2026-10-16 — execute-feature: Auth same-origin routing + seed backup/purge/restore (Session 23)
+
+**Summary:**
+Fixed the recurring seed-user sign-in failure (constant, near-instant 500) by making all browser `/auth/*` calls same-origin in every environment and loading the repo-root `.env` into the Next.js server runtime. Added full data protection to destructive seed operations: timestamped JSON backups before any revert/purge, a confirmation-gated full purge, and an idempotent restore — plus fixes for two seed-revert bugs (hidden user deletion, shared-key activityRules targeting).
+
+**Completed:**
+- `authApiBase()` same-origin auth routing (`lib/api-base.ts`, 12 `use-auth.ts` call sites, `google-auth.ts`)
+- `next.config.js` dotenv load of repo-root `.env` (non-overriding; shell/Vercel env authoritative)
+- `drizzle/table.registry.ts` (31 tables, FK-safe orders, seed-scope predicates) + `drizzle/seed.backup.ts` (collect/create/restore, versioned JSON, host-only provenance) + 14 specs
+- `db:seed:backup` / `db:purge -- --yes` / `db:restore -- <file>` commands; revert/purge backup-first (backup failure aborts)
+- Fixed `--with-users` hidden-delete bug + activityRules revert by `seed-` ID
+- QA: api 173/173, web 155/155, typecheck 4/4, lint 0 errors, build 38/38 pages
+
+**Key Changes:**
+- Rule: browser auth is always same-origin (`authApiBase()` → Next auth route proxy-or-local) — never direct-to-API, in any environment
+- Rule: destructive data operations are backup-first, fail-hard on backup error, and full wipes require an explicit `--yes`
+- New ops surface: `npm run db:seed:backup` | `db:seed:revert` | `db:purge -- --yes` | `db:restore -- <file>` (backups in gitignored `packages/api/drizzle/backups/`)
+
+**Next Sprint Focus:**
+Live-verify sign-in (`admin@homewolves.com` / `Homewolves123!`) with `npm run dev`; first live DB op should be `npm run db:seed:backup`, then exercise revert + restore round-trip; commit the (currently uncommitted) Session 23 changes.
+
+## 2026-10-20 — execute-feature: db migrations applied + silent-skip fixed (Session 24)
+
+**Summary:**
+Ran the pending db migrations against production Supabase. Diagnosed and fixed a silent migration skip (hand-forged journal timestamps predate a runtime Date.now() journal row), bypassed a new IPv6-only DNS wall via pooler-region discovery, and verified the end state: journal 6/6, 31 tables, and all 5 seed users backfilled with the demo password hash — seed-user password sign-in is now unblocked end-to-end.
+
+**Completed:**
+- Migrations 0000–0005 applied via `drizzle-kit migrate` through pooler `aws-1-eu-west-1.pooler.supabase.com:5432` (session mode) with CLI env override (`.env` untouched)
+- `_journal.json`: 0005 `when` 1790116800000 → 1792089600000 (pending-detection fix; migrator compares journal `when` vs remote max `created_at`)
+- Verified: 6/6 journal entries, `User.passwordHash` populated for all seed users, 31 tables, row counts unchanged (zero destructive SQL in the whole migration set — scanned)
+- Docs: repair-system Session 24 entry, lessons-learned (journal timestamp discipline), task-queue/test-results/session-log/dev-history
+
+**Key Changes:**
+- Rule: NEVER hand-set synthetic journal `when` values below a runtime-applied row — the migrator tracks "applied" by timestamp comparison, not hash; "applied successfully" must always be confirmed against `drizzle.__drizzle_migrations`
+- Ops knowledge: project pooler = `aws-1-eu-west-1.pooler.supabase.com` (user `postgres.<ref>`; ports 5432 session / 6543 transaction); direct host is IPv6-only and Node/WARP fails ENOTFOUND
+
+**Next Sprint Focus:**
+Operator live-verifies seed-user sign-in; optionally commit the `_journal.json` `when` fix.

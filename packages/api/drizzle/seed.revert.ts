@@ -2,6 +2,7 @@ import { inArray, like, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../src/drizzle/schema';
 import { SEED_MANIFEST } from './seed.data';
+import { TABLES_CHILDREN_FIRST } from './table.registry';
 
 type DbType = PostgresJsDatabase<typeof schema>;
 
@@ -53,8 +54,11 @@ export async function revertSeed(db: DbType): Promise<void> {
     // fallback if above fails, try inArray on referrer
     void seedUserIds;
   });
-  await tryDelete('activityRules (seed keys)', () =>
-    db.delete(schema.activityRules).where(inArray(schema.activityRules.key, ['listing_created','listing_approved','listing_sold','client_added','inspection_scheduled','message_sent','transaction_created','transaction_completed','review_received','daily_login'])),
+  // Seed-only targeting: delete ActivityRule rows by their `seed-` ID prefix.
+  // (Previously deleted by shared business keys — that could remove rules a
+  // post-seed admin had customized, violating "target only seed data".)
+  await tryDelete('activityRules (seed ids)', () =>
+    db.delete(schema.activityRules).where(like(schema.activityRules.id, seedIdPattern)),
   );
   // Do NOT delete platformConfig keys if they may have been customized post-seed — only delete seed keys where value is still seed-default?
   // Per requirement we revert seeded data; safest is to delete keys that exactly match seed manifest — post-seed custom keys are untouched.
@@ -77,6 +81,26 @@ export async function revertPlatformConfigAndPlans(db: DbType): Promise<void> {
   await db.delete(schema.subscriptionPlans).where(inArray(schema.subscriptionPlans.slug, [...SEED_MANIFEST.subscriptionPlanSlugs] as string[]));
   console.log('Reverted subscriptionPlans seed slugs');
   // email templates already handled in revertSeed
+}
+
+/**
+ * FULL PURGE — deletes every row from every table (children first, FK-safe).
+ * Destructive by definition: callers MUST (1) take a full backup first
+ * (`seed.backup.ts`), (2) require explicit operator confirmation (`--yes`).
+ * Per-table failures are logged and iteration continues, mirroring revertSeed.
+ */
+export async function purgeAllRows(db: DbType): Promise<void> {
+  for (const ref of TABLES_CHILDREN_FIRST) {
+    try {
+      const del = db.delete(ref.table) as unknown as {
+        where: (cond: unknown) => PromiseLike<unknown>;
+      };
+      await del.where(sql`TRUE`);
+      console.log(`Purged ${ref.key}`);
+    } catch (err) {
+      console.warn(`Purge ${ref.key} skipped (FK or missing): ${(err as Error).message.slice(0, 200)}`);
+    }
+  }
 }
 
 export async function revertSeedUsers(db: DbType): Promise<void> {

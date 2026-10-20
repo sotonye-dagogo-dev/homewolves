@@ -1,4 +1,4 @@
-import { getApiBase } from '@/lib/api-base';
+import { authApiBase } from '@/lib/api-base';
 
 declare global {
   interface Window {
@@ -30,7 +30,7 @@ export function loadGoogleScript(_clientId: string): Promise<void> {
 }
 
 export async function exchangeGoogleCredential(credential: string, opts?: { referralCode?: string; role?: string }) {
-  const res = await fetch(`${getApiBase()}/auth/google`, {
+  const res = await fetch(`${authApiBase()}/auth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ credential, ...opts }),

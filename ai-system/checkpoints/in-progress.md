@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: fix-build-session-22
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-24
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: this file is overwritten every session — always current
 
 > **Overview:** Tracks work that is currently in progress but not yet complete. Written _before_ starting risky multi-step work, cleared on clean completion.
@@ -12,10 +12,11 @@
 
 ## Current Status
 
-**Status:** CLEAR — fix-build Session 22 (`Missing script: "vercel-build"` in @hw/web) completed 2026-10-15.
+**Status:** CLEAR — no in-progress work. Session 24 (run the db migrations) completed and closed 2026-10-20.
 
-Verified green:
-- `npm run vercel-build` green from `apps/web` cwd (direct `next build`, full route table) — the exact failing path
-- `npm run vercel-build` green from repo root (migrate-skip + turbo + output verified)
-- `findRepoRoot()` resolves repo root from both cwds; `npm run --workspace=@hw/web vercel-build` resolves
-- Sync-context drift fixed: `project-decisions.md` Session 21 Root assumption superseded
+**Last closed session:** Session 24 — `checkpoints/session-log.md` (Session 24 entry). Migrations 0000–0005 applied and verified on the production Supabase DB (via `aws-1-eu-west-1` pooler); seed-user password hashes backfilled; the silent journal-timestamp skip fixed in `_journal.json`.
+
+**Known follow-ups (not blocking, no active work):**
+- Operator: live-verify seed-user sign-in (`admin@homewolves.com` / `Homewolves123!`) with `npm run dev`.
+- Prefer committing the `_journal.json` `when` fix (it is the only uncommitted code-adjacent file from this session).
+- `.env` still points at the IPv6-only direct host — local runs that fail ENOTFOUND can use the pooler URL from the Supabase dashboard (note: project lives on `aws-1-eu-west-1`). `.env` was never modified by the agent (operator constraint).

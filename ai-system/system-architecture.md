@@ -1,8 +1,8 @@
 # System Architecture
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-21
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-23
+> - last-verified-against-code: 2026-10-16
 > - staleness-policy: re-verify before trusting if any architecture-affecting commits have been made since last-verified-against-code
 
 > **Overview:** Homewolves is a multi-sided PropTech marketplace + Agent CRM + Transaction Management Platform targeting the Nigerian/African market. It uses a modular monolith architecture (Next.js 14 frontend + NestJS backend + PostgreSQL) designed to decompose into microservices as the platform scales. The system is metadata-driven — all configurable UI elements and business rules are stored in the database via `PlatformConfig`, with hardcoded fallbacks in `packages/config/src/fallbacks.ts`.
@@ -87,6 +87,11 @@ Browser/Mobile App
 
 ### Authentication Flow
 ```
+All browser /auth/* calls are SAME-ORIGIN in every environment (authApiBase() →
+`/api/v1/auth/*`, lib/api-base.ts) — they hit the Next.js auth route, never the
+NestJS API directly. The route proxies to the API when one is configured and
+otherwise handles auth locally against Postgres with coded JSON errors.
+
 Native flow:
   User enters email/phone
     → AuthService.register()
@@ -147,6 +152,8 @@ Business event (e.g. transaction created)
 | `property_types` | Property type categories and icons | PlatformConfig table | FALLBACK_TYPES |
 | `DATABASE_URL` | PostgreSQL connection string | .env | — |
 | `SKIP_DB_MIGRATE` / `SKIP_MIGRATIONS` | Skip build-time `drizzle-kit migrate` in `scripts/vercel-build.mjs` (preview/emergency unblock) | .env | unset (migrate runs when `DATABASE_URL` is a postgres URL) |
+| `SEED_BACKUP_DIR` | Override directory for seed/purge safety backups (default `packages/api/drizzle/backups/`, gitignored) | .env | drizzle/backups/ |
+| `PG_PREPARE` / `PG_SSL` | postgres.js driver tuning shared by web auth route + API DrizzleService (`prepare: false` default for pooler hosts; `ssl: 'require'` for non-local hosts) | .env | unset |
 | `VERCEL_MIGRATE_TIMEOUT_MS` | Cap on the build-time migrate step; fail-soft continue to web build on timeout | .env | 60000 |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Direct Google OAuth (server-only; web GSI reads server-serialized FALLBACK_GOOGLE_OAUTH / API config — no `NEXT_PUBLIC_GOOGLE_CLIENT_ID`) | .env | — |
 | `JWT_SECRET` | Local auth HS256 signing when NestJS API is unreachable (dev fallback `homewolves-dev-secret`) | .env | apps/web `lib/server/auth-local.ts` |
@@ -180,7 +187,7 @@ This is the "undo" instinct applied one layer up from data (§22 covers user-fac
 
 - **Previous-build promotion** — deploys are build-artifact based (Vercel web / Railway API); rollback = redeploy the previous build from the provider's release history. No separate release pipeline exists.
 - **DB migration reversibility** — Drizzle migrations live in `packages/api/drizzle/migrations/` (`0000`, `0001`) generated via `npm run db:generate`; applied with `npm run db:migrate`. Not down-migrated in practice today.
-- **Seed reversibility** — `packages/api/drizzle/seed.data.ts` (`seed-` IDs + `SEED_MANIFEST`) + `seed.revert.ts` (FK-ordered `LIKE 'seed-%'` delete, leaves post-seed rows intact). CLI: `npm run db:seed -- --revert [--with-config] [--with-users]` (aliases `db:seed:revert`/`db:seed:revert:full`). Seed is idempotent (`onConflictDoUpdate`).
+- **Seed reversibility + backup protection (2026-10-16)** — `packages/api/drizzle/seed.data.ts` (`seed-` IDs + `SEED_MANIFEST`) + `seed.revert.ts` (FK-ordered `LIKE 'seed-%'` delete, leaves post-seed rows intact). CLI: `npm run db:seed -- --revert [--with-config] [--with-users]` (aliases `db:seed:revert`/`db:seed:revert:full`). Seed is idempotent (`onConflictDoUpdate`). **Every destructive run is now backup-protected**: revert/purge first write a timestamped JSON capture of the affected rows to `packages/api/drizzle/backups/` (gitignored; override dir via `SEED_BACKUP_DIR`); a failed backup aborts the operation. `table.registry.ts` defines all 31 tables parents-first (restore order) / children-first (purge order) with per-table seed-scope predicates. New commands: `db:seed:backup` (standalone full backup), `db:purge -- --yes` (full wipe — refuses without `--yes`), `db:restore -- <file>` (parents-first re-insert, `ON CONFLICT DO NOTHING`, idempotent). Full-purge/revert targeting: activityRules revert uses `seed-` ID prefix, never shared business keys.
 - **Feature-flag kill switch** — yes: the `feature_flags` PlatformConfig table + `FeatureFlagGuard` / `useFeatureFlag()` can disable a bad feature without a deploy (this is the primary rollback lever).
 
 ---

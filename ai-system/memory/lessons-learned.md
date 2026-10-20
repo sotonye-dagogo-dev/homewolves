@@ -1,8 +1,8 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-21
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-24
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Practical knowledge accumulated during Homewolves development — things that worked well, things that didn't, and patterns worth repeating. Different from `repair-system.md` (tracks errors); this file tracks development process insights and architectural wisdom. Uses supersedes/superseded-by links for evolving practices.
@@ -388,6 +388,61 @@ Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeo
 
 **Apply When:**
 - Any script Vercel executes that touches the network — bound it, log the bound, and continue to the main build on failure.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Migration journals track "applied" by timestamp ordering — synthetic timestamps can silently disable migrations
+
+**Context:**
+2026-10-20 execute-feature — `db:migrate` reported success but migration `0005` (seed password-hash backfill) never applied. drizzle-orm's pg migrator compares each local journal `when` against `max(remote created_at)`; the remote's newest row had been written by a runtime migrator boot with `Date.now()` (2026-10-14), while `0005`'s hand-set synthetic `when` pointed at 2026-09-22 → perpetually classified as applied.
+
+**What We Learned:**
+- `__drizzle_migrations` rows are comparisons, not registries: kit copies the local journal `when` + content sha256 when IT applies, but other runtimes (server boots etc.) store `Date.now()`. A journal timestamp older than any such row makes a migration unreachable — no error, no warning.
+- "✓ migrations applied successfully" is a UI string, not a state proof. Verify `select count(*) from drizzle.__drizzle_migrations` AND the migration's actual data effect before claiming completion.
+- Hand-fixing ordering is safe reading: bump the affected entry's `when` above the remote numeric max (use the raw ms value; convert dates carefully — a ms value of 1791331200000 is 2026-10-07, not Oct 21 as mental math suggested).
+- Read-only probing beats guesswork: dumping raw `created_at` values + running drizzle-orm's own `readMigrationFiles` locally reproduces the decision exactly.
+
+**Apply When:**
+- Any migration that was written/edited by hand (hand-set `when`), any scenario mixing `drizzle-kit migrate` with runtime migrator boots, and any post-migrate verification step.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Browser auth must be same-origin in every environment
+
+**Context:**
+2026-10-16 execute-feature — seed users could not sign in: a constant internal server error returned so fast the request seemed to never complete. Root cause: `getApiBase()` sent browser `/auth/*` calls on localhost directly to `http://localhost:4000` (NestJS). API not running → instant connection-refused; API running but DB unreachable → opaque 500. Production never had this failure mode because auth is same-origin there. A second, independent cause: Next.js only auto-loads `apps/web/.env*`, so the repo-root `.env` (DATABASE_URL, JWT_SECRET) was invisible to the local auth route.
+
+**What We Learned:**
+- Never let browser auth depend on a direct hop to a separate API process. Route all `/auth/*` calls same-origin (`authApiBase()` → Next route that proxies-or-handles-locally) so sign-in works identically in dev and prod and survives the API process being down.
+- Env loading is per-runtime: each server runtime (Next route handlers, NestJS, standalone scripts) must load the root `.env` itself. dotenv's non-overriding default keeps shell/Vercel env authoritative.
+- "Request never completes / returns instantly" almost always means connection-refused or an early guard — check what process the request actually reached before suspecting business logic.
+
+**Apply When:**
+- Adding any new browser-called auth endpoint (must use `authApiBase()`), any new server runtime needing env vars, or debugging "instant 500" reports.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Destructive data operations: backup-first, and never delete from the "skip" branch
+
+**Context:**
+2026-10-16 execute-feature — `db:seed:revert` logged "Skipping seed users revert" and then deleted the seed users anyway via a hidden fallback call; `activityRules` revert deleted by shared business keys that non-seed rows also use. The operator requirement: destructive seed ops must back up existing data first so nothing is permanently lost, standard revert must target only seed data, and a full purge must exist but stay backup-protected.
+
+**What We Learned:**
+- A destructive operation must never sit in the same code path as its own "skipped" branch — if the log says skip, zero deletes may execute. Structure it as early-return, not fallthrough.
+- Target deletions by stable seed identity (`seed-` ID prefix + manifest), never by business keys shared with real data.
+- Backup-before-destroy pattern: write a timestamped, versioned JSON capture of the exact rows to be affected; a failed backup ABORTS the operation; full wipes additionally require an explicit `--yes`; restore is parents-first with `ON CONFLICT DO NOTHING` (idempotent, never overwrites). A central table registry (FK order + per-table seed predicates) makes all four ops derive from one source of truth.
+
+**Apply When:**
+- Writing any new destructive script (seed revert/purge, fixture reset, data migration with deletes), or reviewing one for safety.
 
 **Supersedes:** None
 **Superseded by:** None

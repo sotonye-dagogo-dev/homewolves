@@ -2,11 +2,13 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { and, inArray, isNull } from 'drizzle-orm';
 import * as path from 'path';
+import * as fs from 'fs';
 import * as dotenv from 'dotenv';
 import * as schema from '../src/drizzle/schema';
 import { SEED_USERS, SEED_USER_PASSWORD_HASH, SEED_LISTINGS, SEED_MEDIA, SEED_BLOG_POSTS, SEED_ACTIVITY_RULES } from './seed.data';
 import { DEFAULT_EMAIL_TEMPLATES } from '../src/modules/email/email-templates.defaults';
-import { revertSeed, revertPlatformConfigAndPlans, revertSeedUsers } from './seed.revert';
+import { revertSeed, revertPlatformConfigAndPlans, revertSeedUsers, purgeAllRows } from './seed.revert';
+import { createBackup, restoreBackup, backupDir, type BackupScope } from './seed.backup';
 
 // Auto-load .env from repo root so `npm run db:seed` works from root without manual export.
 for (const candidate of [
@@ -164,10 +166,68 @@ async function seedBlogPosts() {
 async function main() {
   const args = process.argv.slice(2);
   const isRevert = args.includes('--revert') || args.includes('--rollback');
+  const isPurge = args.includes('--purge');
   const includeConfig = args.includes('--with-config');
+  const restoreIdx = args.indexOf('--restore');
+  const restoreFile = restoreIdx >= 0 ? args[restoreIdx + 1] : undefined;
+  const skipBackup = args.includes('--skip-backup');
 
+  /**
+   * Safety net: capture the rows a destructive operation is about to touch.
+   * A failed backup ABORTS the operation — deletion never runs against a
+   * partially-captured (or missing) backup unless explicitly overridden
+   * with --skip-backup (loud, deliberate opt-out only).
+   */
+  const runSafetyBackup = async (scope: BackupScope): Promise<string | null> => {
+    if (skipBackup) {
+      console.warn('⚠ --skip-backup: proceeding WITHOUT a safety backup. Anything deleted here is permanently lost.');
+      return null;
+    }
+    console.log(`Creating ${scope} backup (dir: ${backupDir()})...`);
+    const { file, path: written } = await createBackup(db as unknown as never, scope);
+    console.log(`Backup written: ${written} (${file.meta.totalRows} rows)`);
+    return written;
+  };
+
+  // ── Restore mode: re-insert rows from a backup file, then exit ─────────
+  if (restoreFile) {
+    if (!fs.existsSync(restoreFile)) {
+      console.error(`Backup file not found: ${restoreFile}`);
+      process.exit(1);
+    }
+    console.log(`Restoring from backup: ${restoreFile}`);
+    const { restored } = await restoreBackup(db as unknown as never, restoreFile);
+    const total = Object.values(restored).reduce((a, b) => a + b, 0);
+    console.log(`Restore complete (${total} rows): ${Object.entries(restored).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+    return;
+  }
+
+  // ── Standalone backup mode: capture and exit, no destructive work ──────
+  if (args.includes('--backup')) {
+    const scope: BackupScope = args.includes('--scope=seed') ? 'seed' : 'full';
+    await runSafetyBackup(scope);
+    return;
+  }
+
+  // ── Full purge mode: EVERY row of EVERY table (backup-protected) ───────
+  if (isPurge) {
+    if (!args.includes('--yes')) {
+      console.error('Refusing to purge: this deletes EVERY row in EVERY table.');
+      console.error('A full backup is taken first and restore is supported, but confirmation is still required:');
+      console.error('  npm run db:purge -- --yes');
+      console.error('Restore afterwards with:  npm run db:restore -- <backup-file>');
+      process.exit(1);
+    }
+    await runSafetyBackup('full');
+    await purgeAllRows(db as unknown as never);
+    console.log('Purge complete. Restore with: npm run db:restore -- <backup-file>');
+    return;
+  }
+
+  // ── Seed revert mode: ONLY seed- rows / manifest keys (backup-protected) ─
   if (isRevert) {
     console.log('Reverting seeded data (only seed- prefixed rows / manifest keys)...');
+    await runSafetyBackup('seed');
     await revertSeed(db as unknown as never);
     if (includeConfig) {
       await revertPlatformConfigAndPlans(db as unknown as never);
@@ -177,9 +237,9 @@ async function main() {
     if (args.includes('--with-users')) {
       await revertSeedUsers(db as unknown as never);
     } else {
+      // NOTE: this branch previously logged "Skipping..." and then deleted the
+      // seed users anyway via a hidden fallback call. It now genuinely skips.
       console.log('Skipping seed users revert (use --with-users to remove seed users). Add it after dependent data is cleared.');
-      // Still revert users if no FK blockers — try lightweight
-      try { await revertSeedUsers(db as unknown as never); } catch (e) { console.warn(`Seed users revert deferred: ${(e as Error).message.slice(0,120)}`); }
     }
     console.log('Revert complete. Post-seed data untouched (only seed- rows removed).');
     return;
@@ -193,6 +253,7 @@ async function main() {
   await seedListingsAndMedia();
   await seedBlogPosts();
   console.log('Seed complete. Revert with: npm run db:seed -- --revert [--with-config] [--with-users]  or  npm run db:seed:revert');
+  console.log('Destructive ops are backup-protected: npm run db:seed:backup | db:purge -- --yes | db:restore -- <file>');
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await client.end(); });

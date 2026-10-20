@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/*.spec.ts'],
+    include: ['src/**/*.spec.ts', 'drizzle/**/*.spec.ts'],
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: ['src/main.ts', 'src/drizzle/**', '**/*.module.ts', '**/*.controller.ts'],

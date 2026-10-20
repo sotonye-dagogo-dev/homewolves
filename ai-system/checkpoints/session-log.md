@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-21
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-24
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: append-only — never modify past entries
 
 > **Overview:** Append-only running log of development sessions. Each entry records what was completed, what comes next, and which files were modified. Agents write here at the end of every session so work can be resumed without re-reading the entire codebase. This file is the **append-only historical record** — use `checkpoints/in-progress.md` for current in-progress work.
@@ -768,3 +768,60 @@ Redeploy on Vercel — the `Missing script` error is resolved for Root `apps/web
 
 **Notes / Blockers:**
 - None blocking.
+
+## Session 23 — 2026-10-16 (execute-feature: auth sign-in constant-fast-500 fix + seed data protection)
+
+**Completed:**
+- Fixed seed-user sign-in failing with a constant, near-instant internal server error: (1) new `authApiBase()` in `apps/web/lib/api-base.ts` — browser `/auth/*` calls now always use same-origin `/api/v1` (swapped at 12 call sites in `use-auth.ts` + `lib/google-auth.ts`) instead of firing directly at `http://localhost:4000`; (2) `apps/web/next.config.js` loads the repo-root `.env` via dotenv (non-overriding) so the Next auth route sees `DATABASE_URL`/`JWT_SECRET` in local dev.
+- Seed data protection: new `packages/api/drizzle/table.registry.ts` (31 tables, parents-first/children-first orders, per-table seed-scope predicates) + `drizzle/seed.backup.ts` (`collectBackup`/`createBackup`/`restoreBackup`, versioned JSON format, host-only provenance) + `drizzle/seed.backup.spec.ts` (14 specs). Destructive seed ops (revert/purge) now take a timestamped backup first; failed backup aborts the run.
+- New CLI modes/commands: `npm run db:seed:backup`, `npm run db:purge -- --yes` (refuses without `--yes`), `npm run db:restore -- <file>` (parents-first, `ON CONFLICT DO NOTHING`, idempotent); `db:seed -- --backup [--scope=seed]`.
+- Fixed two revert bugs: hidden fallback deleted seed users even without `--with-users`; `activityRules` revert deleted by shared business keys instead of `seed-` IDs.
+- QA gate green: api vitest 173/173 (18 files), web 155/155 (21 files), typecheck 4/4, lint 0 errors (3 pre-existing warnings; auth.service:290 error gone), `npm run build` Next 38/38 pages + nest clean. E2E not run this session.
+- Docs: repair-system Session 23 entry; project-decisions (browser-auth-same-origin); system-architecture (auth flow, seed backup/purge/restore, SEED_BACKUP_DIR/PG_PREPARE/PG_SSL config); task-queue (2 completed tasks); repo-map + dependency-graph (Drizzle/Cloudinary/authApiBase corrections); README (data-safety + authentication runbooks); `.env.example` (SEED_BACKUP_DIR, PG knobs); test-results overwrite.
+
+**Files Modified:**
+- `apps/web/lib/api-base.ts` — `authApiBase()` (browser always same-origin)
+- `apps/web/hooks/use-auth.ts` + `apps/web/lib/google-auth.ts` — auth fetches use `authApiBase()`
+- `apps/web/hooks/use-auth.test.ts` — mock updated
+- `apps/web/next.config.js` — repo-root `.env` loaded via dotenv (non-overriding)
+- `packages/api/drizzle/table.registry.ts` (new), `packages/api/drizzle/seed.backup.ts` (new), `packages/api/drizzle/seed.backup.spec.ts` (new)
+- `packages/api/drizzle/seed.ts` — `--backup`/`--purge`/`--restore` modes + safety-backup wiring + `--with-users` hidden-delete fix
+- `packages/api/drizzle/seed.revert.ts` — activityRules seed-ID targeting + `purgeAllRows()`
+- `packages/api/vitest.config.ts` — include `drizzle/**/*.spec.ts`
+- `packages/api/package.json`, `package.json` — `db:seed:backup`/`db:purge`/`db:restore` scripts
+- `.gitignore` — ignore `packages/api/drizzle/backups/`
+- Docs: `ai-system/repair-system.md`, `memory/project-decisions.md`, `system-architecture.md`, `planning/task-queue.md`, `index/repo-map.md`, `index/dependency-graph.md`, `testing/test-results.md`, `README.md`, `.env.example`
+
+**Next Task:**
+Live-verify sign-in as `admin@homewolves.com` / `Homewolves123!` with `npm run dev` (web alone is now sufficient for auth). First live DB op: `npm run db:seed:backup`, then try `db:seed:revert` and confirm the backup file in `packages/api/drizzle/backups/` restores cleanly via `db:restore`. Commit all changes (currently uncommitted).
+
+**Assumptions Made:**
+- `db:seed`/`db:purge`/`db:restore` could not be live-tested here (Supabase unreachable from this environment: IPv6-only host + WARP DNS latency) — unit-spec coverage only; residual risk logged per QA-gate convention.
+- Root `.env` remains canonical for the whole monorepo; Next's dir-scoped loader never overwrites, so apps/web `.env.local` overrides still work for non-conflicting keys.
+
+**Notes / Blockers:**
+- None blocking. All Session 23 changes are UNCOMMITTED — no git operations were performed.
+
+## Session 24 — 2026-10-20 (execute-feature: run the db migrations)
+
+**Completed:**
+- Applied migrations 0000–0005 to the production Supabase Postgres; verified end-state: journal 6/6 entries, 31 public tables, `User.passwordHash` present, **all 5 seed users now hold the `Homewolves123!` scrypt hash** (migration 0005 backfill). This unblocks seed-user password sign-in (`admin@homewolves.com` / `Homewolves123!`).
+- Root-caused a SILENT migration skip: drizzle-orm's pg migrator decides pending by `journal.when > max(remote created_at)` (not by hash); the runtime-applied 5th journal row (2026-10-14, `Date.now()`-stamped) post-dated 0005's hand-set synthetic `when`, so 0005 was "already applied" forever. Fixed by bumping 0005's `when` (1790116800000 → 1792089600000) in `_journal.json`.
+- Environment fix (no `.env` changes — operator constraint honored): direct DB host is now AAAA-only (IPv6) and Node's getaddrinfo under WARP fails ENOTFOUND fast. Migrations ran through the project pooler `aws-1-eu-west-1.pooler.supabase.com:5432` (session mode, user `postgres.<ref>`, `?sslmode=require`) via command-line `DATABASE_URL` override. Pooler region DISCOVERED by probing Supabase's own fleet (aws-0 all rejected; aws-1 accepted at eu-west-1).
+- Pre-flight `db:seed:backup` was attempted and failed on the then-unreachable DB (fail-hard as designed). Reconciled safety: 0000–0005 scanned — zero destructive SQL (only `ON DELETE` FK clauses; 0004 `IF NOT EXISTS`, 0005 NULL-guarded) — and verified row/tables counts unchanged post-run.
+
+**Files Modified:**
+- `packages/api/drizzle/migrations/meta/_journal.json` — 0005 `when` bump (only tracked code-adjacent change)
+- `ai-system/repair-system.md` — Session 24 entry (silent skip + IPv6/pooler)
+- `ai-system/checkpoints/session-log.md`, `ai-system/summaries/dev-history.md`, `ai-system/planning/task-queue.md`, `ai-system/testing/test-results.md`, `ai-system/memory/lessons-learned.md`, `ai-system/checkpoints/in-progress.md` — updated
+- (temp `packages/api/tmp-probe.mjs`/`tmp-verify.mjs` created and deleted — never committed)
+
+**Next Task:**
+Live-verify seed-user sign-in on the operator machine (`npm run dev` — DB IS reachable from there now via the pooler or direct IPv6). Recommend adding the pooler URL to `.env` as `DATABASE_URL` local connector OR keeping direct-with-IPv6. Optionally commit the journal `when` fix.
+
+**Assumptions Made:**
+- Running migrations over the pooler (session mode) is equivalent to direct for DDL; `drizzle-kit`'s `prepare:false`-compatible session mode chosen over transaction-6543 to avoid prepared-statement pitfalls (repair-system 20d).
+- The runtime journal row (c757cec) represents an older content version of 0004 — its effect (`passwordHash` column) is confirmed present, so no re-application needed; hash mismatch is cosmetic under timestamp-based pending detection.
+
+**Notes / Blockers:**
+- None blocking. Operator should consider committing the `_journal.json` change so future migrate runs stay consistent.

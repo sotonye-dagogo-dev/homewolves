@@ -1,3 +1,24 @@
+/**
+ * Load the repo-root `.env` into `process.env` for the Next.js server runtime.
+ *
+ * Next.js only auto-loads `apps/web/.env*` — the repo-root `.env` (where
+ * DATABASE_URL, JWT_SECRET and friends actually live, shared with the API
+ * package and drizzle scripts) was never visible to route handlers in local
+ * dev, so the local auth route (`app/api/v1/auth/[action]`) 503'd with
+ * "Auth requires DATABASE_URL" even when fully configured.
+ *
+ * dotenv NEVER overrides keys already present in process.env, so shell exports
+ * and Vercel dashboard env vars stay authoritative in every environment.
+ * (next.config.js is evaluated by Node before compilation, so route handlers
+ * in the same server process see these values.)
+ */
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+} catch {
+  // dotenv missing or .env absent — harmless; request-time coded errors cover it.
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['@hw/types'],

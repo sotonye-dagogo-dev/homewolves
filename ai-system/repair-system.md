@@ -1,8 +1,8 @@
 # Repair System — Error Knowledge Base
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-21
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-24
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: individual entries may be stale if the code has changed around them — verify fix still applies before reusing
 
 > **Overview:** Living knowledge base of errors encountered during development, their root causes, and how they were fixed. Agents must search this before diagnosing new errors and log every fixed bug to prevent recurrence.
@@ -244,6 +244,56 @@ Every schema.ts change must ship with a generated migration (`drizzle-kit genera
 **Files Affected:**
 `packages/api/drizzle/migrations/0004_stale_starjammers.sql` (new), `packages/api/drizzle/migrations/meta/0004_snapshot.json` (new), `packages/api/drizzle/migrations/meta/_journal.json`, `apps/web/app/api/v1/auth/[action]/route.ts`
 **Date:** 2026-10-14
+**Status:** Active
+
+### Migrations silently skipped — hand-forged journal timestamps predate runtime Date.now() entries (execute-feature Session 24, 2026-10-20)
+
+**Symptom:**
+`npm run db:migrate` reported `✓ migrations applied successfully!` but the newest migration (`0005` seed password-hash backfill) had NOT run: `drizzle.__drizzle_migrations` still showed 5 entries and all seed users' `passwordHash` remained NULL. The failure was silent — no error, no "up to date" distinction.
+
+**Root Cause (verified against drizzle-orm 0.45 source):**
+1. drizzle-orm's pg migrator applies a migration only when `migration.folderMillis > max(remote created_at)` — it compares the LOCAL journal `when` against the remote DB's max `created_at`, NOT by hash.
+2. The remote's 5th row (hash `c757cec…`, an older content version of `0004`) was applied 2026-10-14T16:34:56Z by a RUNTIME migrator boot that stamps `Date.now()`. Entries 1–4 applied by drizzle-kit copy the local journal `when` verbatim (verified: remote timestamps equal local values exactly).
+3. `0005`'s `when` in `_journal.json` was a hand-set synthetic value (1790116800000 ≈ 2026-09-22) that PREDATES the runtime's 2026-10-14 timestamp ⇒ the migrator classified `0005` as already applied and skipped it forever.
+4. Adjacent environment finding: the direct Supabase host (`db.ltxseuwzxbothxevcmwd.supabase.co`) now resolves **AAAA-only** (no A record), and Node's `getaddrinfo` under Cloudflare WARP fails fast with ENOTFOUND. The project's pooler lives on the newer `aws-1-eu-west-1.pooler.supabase.com` fleet (not `aws-0-*`) with username `postgres.<project-ref>`. Related: a hand-set `when` must never be allowed to trail a runtime Date.now() row — and Get-FileHash confusion is easy when comparing against `URL.host` semantics (kit hash = sha256 of raw file content, matched exactly for entries 0001–0003).
+
+**Fix Applied:**
+- Diagnosed via read-only probes: connectivity (ENOTFOUND), raw `created_at` dump (found the Date.now() row), local-vs-remote comparison using drizzle-orm's own `readMigrationFiles` (proved no migration `when` exceeded remote max).
+- Bumped `0005_wild_hellion`'s `when` in `_journal.json` from 1790116800000 → **1792089600000** (> remote max 1791995696495) — pure pending-detection metadata; ordering is index-based.
+- Ran `drizzle-kit migrate` via command-line `DATABASE_URL` override (pooler `aws-1-eu-west-1.pooler.supabase.com:5432` session mode, user `postgres.<ref>`, `?sslmode=require`) — `.env` NOT modified (operator constraint).
+- Post-verify: journal 6/6, `User.passwordHash` populated on all 5 seed users (`scrypt:b84dc5f8db524…`), 31 tables intact, row counts unchanged (no destructive SQL anywhere in 0000–0005; scanned with DROP/DELETE/TRUNCATE regex — only ON DELETE FK clauses matched).
+
+**Prevention:**
+- NEVER hand-set synthetic journal `when` values below a runtime-applied row; if a migration must be forced through, set `when` above the remote `max(created_at)` (raw value, not a date guess — convert carefully).
+- "migrations applied successfully" is NOT proof of state; always verify `SELECT count(*) FROM drizzle.__drizzle_migrations` + actual data effects after running migrate.
+- IPv6-only DB host on a WARP/IPv4-tunnelled machine is unresolvable by Node (ENOTFOUND); the project pooler URL (Supabase dashboard → Database → Connection string) is the supported local fallback.
+
+**Files Affected:**
+`packages/api/drizzle/migrations/meta/_journal.json` (only tracked change; `when` of 0005)
+**Date:** 2026-10-20
+**Status:** Active
+
+### Auth sign-in constant fast 500 — split-brain routing + root `.env` invisible to Next (Session 23, 2026-10-16)
+
+**Symptom:**
+Sign-in (including seed demo users) fails with a constant internal server error that returns so fast the operator believed the request never completed. Reproduced environment state: no servers running (instant connection-refused) and `DATABASE_URL` host resolving IPv6-only behind Cloudflare WARP with ~5.4s DNS / ~8.5s TCP latency.
+
+**Root Cause (three findings):**
+1. `getApiBase()` sent ALL browser `/auth/*` calls on localhost directly to `http://localhost:4000` (NestJS), bypassing the Next.js local auth route built for graceful handling. API not running → instant connection-refused; API running but DB unreachable → opaque 500 in milliseconds. The request never reached a working auth path — matching the operator's "not even being made" intuition.
+2. Next.js only auto-loads `apps/web/.env*` — the repo-root `.env` (holding `DATABASE_URL`, `JWT_SECRET`) was never loaded into the Next server runtime, so even the correctly-routed local auth route would 503 ("Auth requires DATABASE_URL") in local dev.
+3. Seed-revert bug (separate but adjacent): `db:seed:revert` without `--with-users` logged "Skipping seed users revert" and then deleted the seed users anyway via a hidden fallback call; `activityRules` revert deleted by shared business keys instead of seed- IDs.
+
+**Fix Applied:**
+- `authApiBase()` (`apps/web/lib/api-base.ts`) — browser always uses same-origin `/api/v1` for `/auth/*`; consumed by `use-auth.ts` (12 call sites) and `lib/google-auth.ts`. Auth now always flows through the Next auth route (proxy-or-local, coded JSON errors).
+- `apps/web/next.config.js` loads the repo-root `.env` via dotenv (non-overriding — shell/Vercel env stays authoritative) before compilation, so route handlers see `DATABASE_URL`/`JWT_SECRET` in local dev.
+- Seed protection: new `drizzle/table.registry.ts` (31 tables, parents-first + children-first orders + per-table seed-scope predicates) + `drizzle/seed.backup.ts` (seed/full JSON backups to gitignored `drizzle/backups/`, restore with `ON CONFLICT DO NOTHING`); revert now backs up first and genuinely skips seed users without `--with-users`; activityRules revert targets `seed-` IDs only; new `db:seed:backup`, `db:purge -- --yes` (refuses without confirmation), `db:restore -- <file>`.
+
+**Prevention:**
+Browser auth must never depend on a direct hop to the API process — keep `/auth/*` same-origin so the Next route can proxy-or-fallback. Any new server runtime (route handlers, middleware, workers) that needs env vars must load the root `.env` itself — Next does not. Destructive data operations ship backup-first: backup failure aborts the run; full wipes require an explicit confirmation flag.
+
+**Files Affected:**
+`apps/web/lib/api-base.ts`, `apps/web/hooks/use-auth.ts`, `apps/web/hooks/use-auth.test.ts`, `apps/web/lib/google-auth.ts`, `apps/web/next.config.js`, `packages/api/drizzle/table.registry.ts` (new), `packages/api/drizzle/seed.backup.ts` (new), `packages/api/drizzle/seed.backup.spec.ts` (new), `packages/api/drizzle/seed.revert.ts`, `packages/api/drizzle/seed.ts`, `packages/api/vitest.config.ts`, `packages/api/package.json`, `package.json`, `.gitignore`
+**Date:** 2026-10-16
 **Status:** Active
 
 ### Register-password 500, round 3 — pooler prepared-statements + seed NULL hashes + opaque errors (fix-build Session 20d, 2026-10-15)

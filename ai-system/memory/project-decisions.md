@@ -1,8 +1,8 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-21
-> - last-verified-against-code: 2026-10-15
+> - last-updated-by: execute-feature-session-23
+> - last-verified-against-code: 2026-10-16
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Log of significant architectural, technical, and product decisions. Agents consult this before proposing changes to avoid contradicting prior reasoning. Uses supersedes/superseded-by links so contradictory entries are explicitly resolved rather than both appearing equally valid.
@@ -33,6 +33,30 @@
 ---
 
 ## Decisions
+
+## Browser auth always same-origin (authApiBase)
+
+**Decision:** All browser `/auth/*` requests use a same-origin base (`authApiBase()` → `/api/v1`) in every environment — local dev included. The Next.js route `app/api/v1/auth/[action]/route.ts` is the single auth ingress: it proxies to the NestJS API when one is configured (`API_PROXY_URL` / external `NEXT_PUBLIC_API_URL`) and otherwise handles auth locally against Postgres with coded JSON errors. The repo-root `.env` is loaded into the Next server runtime via dotenv in `next.config.js` (non-overriding).
+
+**Date:** 2026-10-16
+**Made by:** execute-feature Session 23 (operator sign-off)
+**Supersedes:** localhost-direct-to-`:4000` auth routing (the `getApiBase()` localhost branch applied to auth calls)
+**Superseded by:** None
+
+**Reason:**
+The old localhost behaviour fired auth requests directly at the NestJS port, so sign-in died with instant connection-refused (API not running) or opaque 500s (API running, DB unreachable) — a failure class that never existed in production (where auth is same-origin). Routing auth through the Next route in all environments makes local behaviour identical to production and decouples sign-in from the API process. Root `.env` loading fixes the route's env invisibility (Next only auto-loads `apps/web/.env*`).
+
+**Alternatives Considered:**
+- Keep direct-to-API in dev: rejected — inconsistent with prod, fails instantly when the API is down.
+- Health-probe fallback (try API, fall back to local): rejected — added complexity and retry latency for no behavioural gain; the auth route already proxy-then-falls-back server-side.
+- Moving `.env` into `apps/web/`: rejected — root `.env` is canonical for the whole monorepo (API, drizzle scripts); duplicating secrets invites drift.
+
+**Implications:**
+- `authApiBase()` is the required base for any new auth endpoint client code; `getApiBase()` remains for non-auth API calls.
+- `next.config.js` must keep the dotenv load; new server runtimes needing env vars must load the root `.env` themselves.
+- Ops: destructive seed commands are backup-protected (`db:seed:backup`, `db:purge -- --yes`, `db:restore -- <file>`; backups in gitignored `drizzle/backups/`, override via `SEED_BACKUP_DIR`).
+
+---
 
 ## NestJS over Express/Fastify
 
