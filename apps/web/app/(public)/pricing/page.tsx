@@ -5,6 +5,7 @@ import { Check } from 'lucide-react';
 import { usePlans, useInitiateCheckout, useMySubscription } from '@/hooks/use-subscriptions';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
+import { toNumber } from '@/lib/format';
 
 const FALLBACK_PLANS = [
   {
@@ -173,16 +174,16 @@ export default function PricingPage() {
 
                   <div className="flex items-baseline gap-1 mb-1">
                     <span className="text-3xl font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>
-                      ₦{Number(price).toLocaleString()}
+                      ₦{toNumber(price).toLocaleString()}
                     </span>
-                    {Number(price) > 0 && (
+                    {toNumber(price) > 0 && (
                       <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
                         /{annual ? 'yr' : 'mo'}
                       </span>
                     )}
                   </div>
 
-                  {Number(price) === 0 && (
+                  {toNumber(price) === 0 && (
                     <div className="text-sm font-semibold mb-1" style={{ color: 'var(--color-brand-accent)' }}>
                       Free forever
                     </div>
@@ -203,7 +204,7 @@ export default function PricingPage() {
                       opacity: isCurrent ? 0.5 : 1,
                     }}
                   >
-                    {isCurrent ? 'Current Plan' : Number(price) === 0 ? 'Get Started' : 'Subscribe'}
+                    {isCurrent ? 'Current Plan' : toNumber(price) === 0 ? 'Get Started' : 'Subscribe'}
                   </button>
 
                   <div className="space-y-3">
@@ -211,7 +212,7 @@ export default function PricingPage() {
                       const label = typeof feat === 'string' ? feat : feat?.label ?? String(feat);
                       return (
                       <div key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                        <Check className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                        <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--color-status-active)' }} />
                         {label}
                       </div>
                     );})}

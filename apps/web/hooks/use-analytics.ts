@@ -8,6 +8,7 @@ import {
   fetchAgentAnalytics,
   fetchFunnel,
   fetchTopListings,
+  fetchAdminSummary,
 } from '@/lib/analytics';
 
 export function useMyAnalytics(days?: number) {
@@ -37,6 +38,15 @@ export function useFunnel(days?: number) {
   return useQuery({
     queryKey: ['funnel', days],
     queryFn: () => fetchFunnel(days),
+  });
+}
+
+export function useAdminSummary() {
+  return useQuery({
+    queryKey: ['admin-summary'],
+    queryFn: fetchAdminSummary,
+    refetchInterval: 60_000,
+    retry: 1,
   });
 }
 

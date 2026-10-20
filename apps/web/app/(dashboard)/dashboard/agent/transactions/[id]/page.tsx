@@ -23,7 +23,21 @@ import {
 import { useEntityAudit } from '@/hooks/use-audit';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { HwButton, HwBadge, HwInput } from '@/components/ui';
-import { PartyPopper, Paperclip } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  Image as ImageIcon,
+  Paperclip,
+  PartyPopper,
+  PenLine,
+  X,
+} from 'lucide-react';
+import { formatCurrency, formatFileSize, safeText, toNumber } from '@/lib/format';
+import { emitToast, errorMessage } from '@/lib/toast';
+import { statusToneStyle } from '@/lib/status';
 
 function getTxApi() { return `${getApiBase()}/transactions`; }
 
@@ -152,13 +166,23 @@ export default function TransactionDetailPage() {
   const handleAddPayment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    await addPayment.mutateAsync({
-      transactionId: id,
-      amount: parseFloat(fd.get('amount') as string),
-      type: fd.get('type') as any,
-      evidenceUrl: (fd.get('evidenceUrl') as string) || undefined,
-    });
-    setShowPayment(false);
+    const amount = toNumber(fd.get('amount'));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      emitToast('Enter a valid payment amount greater than zero.', 'error');
+      return;
+    }
+    try {
+      await addPayment.mutateAsync({
+        transactionId: id,
+        amount,
+        type: fd.get('type') as any,
+        evidenceUrl: (fd.get('evidenceUrl') as string) || undefined,
+      });
+      emitToast('Payment added', 'success');
+      setShowPayment(false);
+    } catch (error) {
+      emitToast(errorMessage(error, 'Could not add the payment.'), 'error');
+    }
   };
 
   const handleSendSignature = async () => {
@@ -176,23 +200,14 @@ export default function TransactionDetailPage() {
     <div className="max-w-5xl mx-auto">
       {/* Page Header */}
       <div className="flex items-center gap-3 px-4 py-4 md:py-6">
-        <button onClick={() => router.back()} className="w-11 h-11 flex items-center justify-center rounded-full shrink-0 transition-all" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)' }}>
-          <span style={{ color: 'var(--color-text-primary)' }}>←</span>
+        <button onClick={() => router.back()} aria-label="Go back" className="w-11 h-11 flex items-center justify-center rounded-full shrink-0 transition-all" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)' }}>
+          <ArrowLeft className="w-5 h-5" style={{ color: 'var(--color-text-primary)' }} />
         </button>
         <div>
           <h1 className="text-xl md:text-2xl font-bold font-display" style={{ color: 'var(--color-brand-primary)' }}>Deal Overview</h1>
           <div className="flex items-center gap-2 mt-1">
-            <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-0.5 rounded-full"
-              style={{
-                background: tx.status === 'COMPLETED' ? 'var(--color-success-bg)' :
-                  tx.status === 'IN_PROGRESS' ? 'var(--color-warning-bg)' :
-                  tx.status === 'REJECTED' ? 'var(--color-error-bg)' : 'var(--color-bg-base)',
-                color: tx.status === 'COMPLETED' ? 'var(--color-status-active)' :
-                  tx.status === 'IN_PROGRESS' ? 'var(--color-status-pending)' :
-                  tx.status === 'REJECTED' ? 'var(--color-status-rejected)' : 'var(--color-text-muted)',
-              }}
-            >
-              {tx.status}
+            <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-0.5 rounded-full" style={statusToneStyle(tx.status)}>
+              {safeText(tx.status, 'UNKNOWN').replace(/_/g, ' ')}
             </span>
             {activeStep > 0 && activeStep <= 8 && (
               <span className="text-xs font-semibold px-3 py-0.5 rounded-full"
@@ -227,11 +242,11 @@ export default function TransactionDetailPage() {
                       background: isCur ? 'rgba(255,255,255,0.25)' : isDone ? 'var(--color-success)' : 'transparent',
                       color: 'var(--color-text-inverse)',
                     }}>
-                    {isDone ? '✓' : i + 1}
+                    {isDone ? <Check className="w-3 h-3" aria-label="Completed" /> : i + 1}
                   </span>
                   {step.label}
                 </div>
-                {i < steps.length - 1 && <span style={{ color: 'var(--color-border-default)' }} className="text-xs">›</span>}
+                {i < steps.length - 1 && <ChevronRight className="w-4 h-4" style={{ color: 'var(--color-border-default)' }} />}
               </div>
             );
           })}
@@ -264,7 +279,7 @@ export default function TransactionDetailPage() {
                         background: isDone ? 'var(--color-status-active)' : isCur ? 'var(--color-status-pending)' : isRej ? 'var(--color-status-rejected)' : 'transparent',
                         color: isDone || isCur || isRej ? 'var(--color-text-inverse)' : 'var(--color-text-muted)',
                       }}>
-                        {isDone ? '✓' : i + 1}
+                        {isDone ? <Check className="w-3 h-3" aria-label="Completed" /> : i + 1}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold" style={{
@@ -319,7 +334,7 @@ export default function TransactionDetailPage() {
               <div>
                 {showUploadZone ? (
                   <div className="mb-6 p-6 rounded-xl text-center transition-all" style={{ border: '2px dashed var(--color-border-strong)', background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)' }}>
-                    <div className="text-4xl mb-3 opacity-70">📄</div>
+                    <FileText className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--color-text-muted)' }} />
                     <div className="text-md font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>Upload Document</div>
                     <div className="text-sm mb-4" style={{ color: 'var(--color-text-muted)' }}>PDF, images, or office documents</div>
                     <input
@@ -351,7 +366,7 @@ export default function TransactionDetailPage() {
                     className="w-full mb-6 p-8 rounded-xl text-center cursor-pointer transition-all hover:border-brand-secondary"
                     style={{ border: '2px dashed var(--color-border-strong)', background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)' }}
                   >
-                    <div className="text-4xl mb-3 opacity-70">📄</div>
+                    <FileText className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--color-text-muted)' }} />
                     <div className="text-md font-semibold" style={{ color: 'var(--color-text-primary)' }}>Upload Document</div>
                     <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Tap or click to upload files</div>
                   </button>
@@ -362,19 +377,27 @@ export default function TransactionDetailPage() {
                     <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>Uploaded Documents</h3>
                     {docs.map((doc: any) => (
                       <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg border" style={{ background: 'var(--color-bg-base)', borderColor: 'var(--color-border-subtle)' }}>
-                        <span className="text-2xl shrink-0">
-                          {doc.type === 'pdf' ? '📄' : doc.type?.match(/png|jpg|jpeg|gif|webp/i) ? '🖼️' : '📎'}
-                        </span>
+                        {safeText(doc.type, '').match(/png|jpg|jpeg|gif|webp/i) ? (
+                          <ImageIcon className="w-6 h-6 shrink-0" style={{ color: 'var(--color-text-muted)' }} />
+                        ) : (
+                          <FileText className="w-6 h-6 shrink-0" style={{ color: 'var(--color-text-muted)' }} />
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{doc.name}</div>
                           <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                            {doc.size ? `${(doc.size / 1024).toFixed(1)} KB` : ''}
-                            {doc.virusScanStatus === 'clean' && <span className="ml-2 text-emerald-600">✓ Verified</span>}
+                            {formatFileSize(doc.size)}
+                            {doc.virusScanStatus === 'clean' && (
+                              <span className="ml-2 inline-flex items-center gap-1" style={{ color: 'var(--color-status-active)' }}>
+                                <Check className="w-3.5 h-3.5" /> Verified
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <button onClick={() => setPreviewDoc(doc)} className="px-3 py-1 text-xs font-semibold rounded-full" style={{ background: 'var(--color-bg-elevated)', color: 'var(--color-brand-secondary)' }}>View</button>
-                          <button onClick={() => deleteDoc.mutate(doc.id)} className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded">✕</button>
+                          <button onClick={() => deleteDoc.mutate(doc.id)} aria-label="Delete document" className="px-2 py-1 rounded" style={{ color: 'var(--color-status-rejected)' }}>
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -393,14 +416,14 @@ export default function TransactionDetailPage() {
                       {docs.map((doc: any) => (
                         <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border mb-2" style={{ background: 'var(--color-bg-base)', borderColor: 'var(--color-border-subtle)' }}>
                           <div className="flex items-center gap-3">
-                            <span className="text-lg">📄</span>
+                            <FileText className="w-5 h-5" style={{ color: 'var(--color-text-muted)' }} />
                             <div>
                               <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{doc.name}</div>
-                              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{doc.signedUrl ? '✓ Signed' : 'Pending signature'}</div>
+                              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{doc.signedUrl ? 'Signed' : 'Pending signature'}</div>
                             </div>
                           </div>
                           {doc.signedUrl ? (
-                            <HwBadge className="bg-emerald-100 text-emerald-700">Signed</HwBadge>
+                            <HwBadge style={statusToneStyle('COMPLETED')}>Signed</HwBadge>
                           ) : (
                             <HwButton variant="primary" size="sm" onClick={() => setSignDocumentId(doc.id)}>
                               Sign Document
@@ -431,13 +454,17 @@ export default function TransactionDetailPage() {
                     <div className="p-3 rounded-lg" style={{ background: 'var(--color-bg-base)' }}>
                       <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>Property Price</div>
                       <div className="text-lg font-display font-bold" style={{ color: 'var(--color-text-accent)' }}>
-                        ₦{tx.listing?.price ? Number(tx.listing.price).toLocaleString() : '—'}
+                        {tx.listing?.price ? formatCurrency(tx.listing.price) : '—'}
                       </div>
                     </div>
                     <div className="p-3 rounded-lg" style={{ background: 'var(--color-bg-base)' }}>
                       <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>Deposit Paid</div>
                       <div className="text-lg font-display font-bold" style={{ color: 'var(--color-text-accent)' }}>
-                        ₦{tx.payments.filter((p: any) => p.status === 'confirmed').reduce((s: number, p: any) => s + Number(p.amount), 0).toLocaleString()}
+                        {formatCurrency(
+                          tx.payments
+                            .filter((p: any) => p.status === 'confirmed')
+                            .reduce((sum: number, p: any) => sum + toNumber(p.amount), 0),
+                        )}
                       </div>
                     </div>
                   </div>
@@ -447,16 +474,18 @@ export default function TransactionDetailPage() {
                     <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border" style={{ background: 'var(--color-bg-base)', borderColor: 'var(--color-border-subtle)' }}>
                       <div>
                         <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{p.type}</div>
-                        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{p.currency} {Number(p.amount).toLocaleString()}</div>
+                        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{safeText(p.currency, 'NGN')} {formatCurrency(p.amount).replace(/^[^\d]+/, '')}</div>
                       </div>
                       <div className="flex items-center gap-2">
                         {p.evidenceUrl ? (
-                          <a href={p.evidenceUrl} target="_blank" rel="noreferrer" className="text-xs text-amber-600 hover:underline">📎 Evidence</a>
+                          <a href={p.evidenceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs hover:underline" style={{ color: 'var(--color-status-pending)' }}>
+                            <Paperclip className="w-3.5 h-3.5" /> Evidence
+                          </a>
                         ) : p.status === 'pending' && (
-                          <button onClick={() => { setEvidencePaymentId(p.id); setEvidenceUrl(''); }} className="text-xs text-gray-400 hover:text-gray-600">+ Attach</button>
+                          <button onClick={() => { setEvidencePaymentId(p.id); setEvidenceUrl(''); }} className="text-xs" style={{ color: 'var(--color-text-muted)' }}>+ Attach</button>
                         )}
-                        <HwBadge className={p.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}>
-                          {p.status}
+                        <HwBadge style={statusToneStyle(p.status)}>
+                          {safeText(p.status, 'PENDING').replace(/_/g, ' ')}
                         </HwBadge>
                       </div>
                     </div>
@@ -476,7 +505,7 @@ export default function TransactionDetailPage() {
                 <div className="complete-steps-summary" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 'var(--space-6)', marginTop: 'var(--space-6)' }}>
                   {steps.map((s: any) => (
                     <span key={s.id} className="complete-step-chip" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 'var(--text-sm)', color: 'var(--color-status-active)' }}>
-                      ✓ {s.label}
+                      <Check className="w-4 h-4" /> {s.label}
                     </span>
                   ))}
                 </div>
@@ -493,8 +522,8 @@ export default function TransactionDetailPage() {
                   {advance.isPending ? 'Advancing...' : 'Advance to Next Step'}
                 </HwButton>
                 <HwButton variant="outline" onClick={() => setShowPayment(true)}>Add Payment</HwButton>
-                <HwButton variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setShowReject(true)}>Reject</HwButton>
-                <HwButton variant="ghost" className="text-gray-400 hover:text-gray-600" onClick={handleCancel}>Cancel</HwButton>
+                <HwButton variant="ghost" style={{ color: 'var(--color-status-rejected)' }} onClick={() => setShowReject(true)}>Reject</HwButton>
+                <HwButton variant="ghost" style={{ color: 'var(--color-text-muted)' }} onClick={handleCancel}>Cancel</HwButton>
               </div>
             )}
           </div>
@@ -508,11 +537,11 @@ export default function TransactionDetailPage() {
                   <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur)', borderColor: 'var(--color-border-glass)' }}>
                     <div>
                       <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{p.type}</div>
-                      <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{p.currency} {Number(p.amount).toLocaleString()}</div>
+                      <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{safeText(p.currency, 'NGN')} {formatCurrency(p.amount).replace(/^[^\d]+/, '')}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {p.evidenceUrl && <a href={p.evidenceUrl} target="_blank" rel="noreferrer" className="text-amber-600 hover:underline" aria-label="Evidence"><Paperclip className="w-4 h-4" /></a>}
-                      <HwBadge className={p.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}>{p.status}</HwBadge>
+                      {p.evidenceUrl && <a href={p.evidenceUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--color-status-pending)' }} aria-label="Evidence"><Paperclip className="w-4 h-4" /></a>}
+                      <HwBadge style={statusToneStyle(p.status)}>{safeText(p.status, 'PENDING').replace(/_/g, ' ')}</HwBadge>
                     </div>
                   </div>
                 ))}
@@ -531,8 +560,8 @@ export default function TransactionDetailPage() {
                       <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{sig.signerName}</div>
                       <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{sig.signerEmail}</div>
                     </div>
-                    <HwBadge className={sig.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>
-                      {sig.status}
+                    <HwBadge style={statusToneStyle(sig.status === 'completed' ? 'COMPLETED' : 'PENDING')}>
+                      {safeText(sig.status, 'pending')}
                     </HwBadge>
                   </div>
                 ))}
@@ -547,12 +576,20 @@ export default function TransactionDetailPage() {
               <div className="space-y-2">
                 {docs.map((doc: any) => (
                   <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg border" style={{ background: 'var(--color-bg-glass)', borderColor: 'var(--color-border-glass)' }}>
-                    <span className="text-xl">{doc.type === 'pdf' ? '📄' : '📎'}</span>
+                    {safeText(doc.type, '').match(/png|jpg|jpeg|gif|webp/i) ? (
+                      <ImageIcon className="w-5 h-5" style={{ color: 'var(--color-text-muted)' }} />
+                    ) : (
+                      <FileText className="w-5 h-5" style={{ color: 'var(--color-text-muted)' }} />
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{doc.name}</div>
                       <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                        {doc.signedUrl && <span className="text-emerald-600 mr-2">✓ Signed</span>}
-                        {doc.size ? `${(doc.size / 1024).toFixed(1)} KB` : ''}
+                        {doc.signedUrl && (
+                          <span className="mr-2 inline-flex items-center gap-1" style={{ color: 'var(--color-status-active)' }}>
+                            <Check className="w-3.5 h-3.5" /> Signed
+                          </span>
+                        )}
+                        {formatFileSize(doc.size)}
                       </div>
                     </div>
                     <button onClick={() => setPreviewDoc(doc)} className="px-3 py-1 text-xs font-semibold rounded-full" style={{ background: 'var(--color-bg-elevated)', color: 'var(--color-brand-secondary)' }}>Preview</button>
@@ -572,9 +609,9 @@ export default function TransactionDetailPage() {
           style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)' }}
         >
           <span className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-            📋 Audit Trail ({auditList.length} events)
+            <ClipboardList className="w-4 h-4" /> Audit Trail ({auditList.length} events)
           </span>
-          <span className="text-sm transition-transform" style={{ transform: showAuditPanel ? 'rotate(180deg)' : 'none' }}>▼</span>
+          <ChevronRight className="w-4 h-4 transition-transform" style={{ transform: showAuditPanel ? 'rotate(90deg)' : 'none' }} />
         </button>
         {showAuditPanel && (
           <div className="mt-2 p-4 rounded-lg overflow-x-auto" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--color-border-glass)' }}>
@@ -620,7 +657,7 @@ export default function TransactionDetailPage() {
             />
             <div className="flex gap-3 justify-end">
               <HwButton variant="ghost" onClick={() => setShowReject(false)}>Cancel</HwButton>
-              <HwButton variant="primary" className="bg-red-500 hover:bg-red-600" onClick={handleReject} disabled={!rejectReason.trim() || reject.isPending}>Reject</HwButton>
+              <HwButton variant="primary" style={{ background: 'var(--color-status-rejected)' }} onClick={handleReject} disabled={!rejectReason.trim() || reject.isPending}>Reject</HwButton>
             </div>
           </div>
         </div>
@@ -680,14 +717,16 @@ export default function TransactionDetailPage() {
           <div className="w-full max-w-2xl p-6 space-y-4 rounded-xl" style={{ background: 'var(--color-bg-elevated)' }} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>Sign Document (DocuSeal)</h2>
-              <button onClick={() => setSignDocumentId(undefined)} className="text-2xl" style={{ color: 'var(--color-text-muted)' }}>×</button>
+              <button onClick={() => setSignDocumentId(undefined)} aria-label="Close" style={{ color: 'var(--color-text-muted)' }}>
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
               The signing interface will be embedded here. Signers will receive an email with a secure link.
             </p>
             <div className="w-full h-80 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-bg-base)' }}>
               <div className="text-center">
-                <div className="text-4xl mb-3">✍️</div>
+                <PenLine className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--color-text-muted)' }} />
                 <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>DocuSeal Signing Widget</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>Signature request will be sent to the buyer via email</p>
                 <div className="mt-4 flex gap-3 justify-center">
@@ -706,11 +745,14 @@ export default function TransactionDetailPage() {
           <div className="w-full max-w-2xl max-h-[80vh] overflow-auto p-6 rounded-xl" style={{ background: 'var(--color-bg-elevated)' }} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>{previewDoc.name}</h3>
-              <button onClick={() => setPreviewDoc(null)} className="text-2xl" style={{ color: 'var(--color-text-muted)' }}>×</button>
+              <button onClick={() => setPreviewDoc(null)} aria-label="Close" style={{ color: 'var(--color-text-muted)' }}>
+                <X className="w-5 h-5" />
+              </button>
             </div>
             {previewDoc.signedUrl && (
               <div className="mb-4 px-4 py-2 rounded-lg flex items-center gap-2" style={{ background: 'var(--color-success-bg)' }}>
-                <span style={{ color: 'var(--color-success)' }}>✓ Signed electronically</span>
+                <Check className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+                <span style={{ color: 'var(--color-success)' }}>Signed electronically</span>
               </div>
             )}
             {previewDoc.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (

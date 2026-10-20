@@ -1,7 +1,7 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-24
+> - last-updated-by: execute-feature-session-25
 > - last-verified-against-code: 2026-10-20
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
@@ -443,6 +443,41 @@ Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeo
 
 **Apply When:**
 - Writing any new destructive script (seed revert/purge, fixture reset, data migration with deletes), or reviewing one for safety.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Serverless deployments cannot host WebSockets — make realtime opt-in
+
+**Context:**
+2026-10-20 execute-feature — every page logged `wss://homewolves.com/socket.io/?userId=…&EIO=4&transport=websocket failed`. The web app deploys to Vercel serverless, which cannot terminate long-lived WebSocket connections, and the client hardcoded the production socket origin instead of the configured API origin (and omitted the `/ws` namespace).
+
+**What We Learned:**
+- Treat realtime as a deployment capability, not a default: gate it behind `NEXT_PUBLIC_REALTIME_ENABLED` and default to `false` on serverless. Provide REST writes + polling reads so the product is fully functional without sockets.
+- One shared socket layer (`lib/realtime.ts`) with ref-counted acquire/release prevents duplicate connections and gives hooks a single place to respect the flag.
+- Derive the socket origin from the API base and append the `/ws` namespace; never hardcode a production host in client code.
+
+**Apply When:**
+- Adding any Socket.io/WebSocket feature, or debugging repeated console connection errors on a serverless host.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Accessible names are part of the test contract
+
+**Context:**
+2026-10-20 execute-feature — role-aware navigation changed the profile link to `aria-label="Open dashboard"` / `"Sign in"` and the mobile post button to `"Sign in to post a property"`, breaking tests that queried `getByRole('link', { name: 'Profile' })` and `'Post property'` even though the visual UI was correct.
+
+**What We Learned:**
+- Tests encode user-facing accessible names; changing an `aria-label` is a behavioral API change. Prefer stable labels (`Profile`, `Post property`) and make the destination/label variant explicit through `href`/rendered state instead of renaming the control per role.
+- When a role-aware control must change copy, update component tests in the same change and keep one obvious selector per control.
+
+**Apply When:**
+- Modifying nav/CTA labels, icon-only button `aria-label`s, or any component covered by Testing Library role queries.
 
 **Supersedes:** None
 **Superseded by:** None

@@ -1,8 +1,8 @@
 # Architecture History
 
 > **Metadata**
-> - last-updated-by: bootstrap-project
-> - last-verified-against-code: 2026-08-13
+> - last-updated-by: execute-feature-session-25
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: historical entries do not go stale — only the current architecture (in system-architecture.md) needs re-verification
 
 > **Overview:** Chronological record of how the system architecture has evolved. Useful for understanding why things are structured the way they are, and for identifying patterns in how the codebase has grown.
@@ -74,3 +74,13 @@ Verify-work audit pass — clickable/interactive elements now navigate, SPA nav 
 ---
 
 [New entries added here as architecture evolves]
+
+---
+
+### 2026-10-20 — Realtime opt-in + platform hardening (Session 25)
+
+**State:**
+Realtime became a deployment capability: `NEXT_PUBLIC_REALTIME_ENABLED` defaults off because the web app runs on Vercel serverless, with `/ws` namespace support and REST/polling fallbacks. Messaging gained a REST send endpoint and hydrated participant profiles. A role-scoped analytics module now exposes agent/listing/funnel data plus an ADMIN summary endpoint. The web UI completed a design-token/role-awareness pass across public, client, agent, and admin surfaces, with real data replacing placeholders.
+
+**Rationale:**
+Serverless hosting cannot terminate WebSockets; hardcoding a production socket origin produced guaranteed console failures. Making realtime opt-in preserves the Socket.io architecture for future long-lived hosting without blocking current functionality. Wiring real analytics and role guards closes the gap between the documented RBAC/metadata model and the shipped UI.

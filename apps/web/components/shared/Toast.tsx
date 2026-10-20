@@ -68,7 +68,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             }}
           >
             <span className="mt-0.5">
-              {t.type === 'success' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : t.type === 'error' ? <AlertCircle className="w-5 h-5 text-red-600" /> : <Info className="w-5 h-5 text-blue-600" />}
+              {t.type === 'success' ? (
+                <CheckCircle className="w-5 h-5" style={{ color: 'var(--color-status-active)' }} />
+              ) : t.type === 'error' ? (
+                <AlertCircle className="w-5 h-5" style={{ color: 'var(--color-status-rejected)' }} />
+              ) : (
+                <Info className="w-5 h-5" style={{ color: 'var(--color-brand-primary)' }} />
+              )}
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium leading-snug">{t.message}</p>

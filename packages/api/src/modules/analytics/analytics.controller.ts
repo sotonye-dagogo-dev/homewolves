@@ -64,6 +64,13 @@ export class AnalyticsController {
     return this.analyticsService.getFunnel(days ? parseInt(days) : undefined);
   }
 
+  @Get('admin-summary')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  getAdminSummary() {
+    return this.analyticsService.getAdminSummary();
+  }
+
   @Get('overview')
   @UseGuards(JwtGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')

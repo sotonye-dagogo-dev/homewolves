@@ -90,7 +90,7 @@ export default function BlogPostPage() {
 
         <div className="flex flex-wrap gap-2 mb-4">
           {post.categories?.map((cat: string) => (
-            <HwBadge key={cat} className="bg-white/10 text-white/60">{cat}</HwBadge>
+            <HwBadge key={cat} style={{ background: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)' }}>{cat}</HwBadge>
           ))}
         </div>
 

@@ -2,17 +2,14 @@
 
 import { useState } from 'react';
 import { Bug, ChevronDown, Trash2 } from 'lucide-react';
-import { HwButton, HwBadge, HwCard } from '@/components/ui';
+import { EmptyState } from '@/components/shared/empty-state';
+import { formatDate, fullName, safeText } from '@/lib/format';
+import { statusToneStyle } from '@/lib/status';
+import { HwButton, HwBadge } from '@/components/ui';
 import { useBugReports, useUpdateBugReportStatus, useBatchUpdateBugReports, useDeleteBugReport } from '@/hooks/use-bug-reports';
 import { useBatchSelection } from '@/hooks/use-batch-selection';
 import { HwBatchBar, type BatchAction } from '@/components/ui/hw-batch-bar';
 import { useToast } from '@/components/shared/Toast';
-
-const STATUS_COLORS: Record<string, string> = {
-  OPEN: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-  UNDER_REVIEW: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-  CLOSED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-};
 
 const TYPE_LABELS: Record<string, string> = {
   BUG: 'Bug',
@@ -99,8 +96,8 @@ export default function AdminBugReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Bug Reports</h1>
-        <p className="text-sm text-white/50 mt-1">Manage user-submitted bug reports</p>
+        <h1 className="text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>Bug Reports</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Manage user-submitted bug reports</p>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -108,21 +105,23 @@ export default function AdminBugReportsPage() {
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="appearance-none pl-3 pr-8 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+            className="appearance-none rounded-lg py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+            style={{ background: 'var(--color-bg-input)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-primary)' }}
           >
             <option value="">All Statuses</option>
             <option value="OPEN">Open</option>
             <option value="UNDER_REVIEW">Under Review</option>
             <option value="CLOSED">Closed</option>
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: 'var(--color-text-muted)' }} />
         </div>
 
         <div className="relative">
           <select
             value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-            className="appearance-none pl-3 pr-8 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+            className="appearance-none rounded-lg py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+            style={{ background: 'var(--color-bg-input)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-primary)' }}
           >
             <option value="">All Types</option>
             <option value="BUG">Bug</option>
@@ -131,70 +130,70 @@ export default function AdminBugReportsPage() {
             <option value="PERFORMANCE">Performance</option>
             <option value="OTHER">Other</option>
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: 'var(--color-text-muted)' }} />
         </div>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-20 rounded-xl bg-white/5 animate-pulse" />
+            <div key={i} className="skeleton h-20 rounded-xl" />
           ))}
         </div>
       ) : reports.length === 0 ? (
-        <HwCard className="p-12 text-center">
-          <Bug className="w-12 h-12 text-white/20 mx-auto mb-3" />
-          <p className="text-white/50 text-lg">No bug reports found</p>
-          <p className="text-sm text-white/30 mt-1">
-            {statusFilter || typeFilter ? 'Try adjusting your filters' : 'Users can submit bug reports from the support page'}
-          </p>
-        </HwCard>
+        <EmptyState
+          icon={Bug}
+          title="No bug reports found"
+          description={
+            statusFilter || typeFilter
+              ? 'Try adjusting your filters.'
+              : 'Users can submit bug reports from the support page.'
+          }
+        />
       ) : (
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--color-border-default)' }}>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-3 px-3 text-white/50 font-medium">ID</th>
-                  <th className="text-left py-3 px-3 text-white/50 font-medium">Type</th>
-                  <th className="text-left py-3 px-3 text-white/50 font-medium">Description</th>
-                  <th className="text-left py-3 px-3 text-white/50 font-medium">User</th>
-                  <th className="text-left py-3 px-3 text-white/50 font-medium">Status</th>
-                  <th className="text-left py-3 px-3 text-white/50 font-medium">Date</th>
-                  <th className="text-right py-3 px-3 text-white/50 font-medium">Actions</th>
+                <tr style={{ borderBottom: '1px solid var(--color-border-default)' }}>
+                  {['ID', 'Type', 'Description', 'User', 'Status', 'Date'].map((h) => (
+                    <th key={h} className="px-3 py-3 text-left font-medium" style={{ color: 'var(--color-text-muted)' }}>{h}</th>
+                  ))}
+                  <th className="px-3 py-3 text-right font-medium" style={{ color: 'var(--color-text-muted)' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {reports.map((report: any) => (
-                  <tr key={report.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                    <td className="py-3 px-3 text-white/40 font-mono text-xs">{String(report.id ?? '').slice(0, 8)}</td>
-                    <td className="py-3 px-3">
-                      <span className="text-white/70 text-xs">{TYPE_LABELS[report.type] ?? report.type}</span>
+                  <tr key={report.id} className="transition-colors" style={{ borderBottom: '1px solid var(--color-border-subtle)' }}>
+                    <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--color-text-muted)' }}>{String(report.id ?? '').slice(0, 8)}</td>
+                    <td className="px-3 py-3">
+                      <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{TYPE_LABELS[report.type] ?? safeText(report.type, 'Other')}</span>
                     </td>
-                    <td className="py-3 px-3 max-w-xs">
-                      <p className="text-white/80 truncate">{report.description}</p>
-                      {report.screenshots && Array.isArray(report.screenshots) && report.screenshots.length > 0 && (
-                        <p className="text-xs text-white/30 mt-0.5">{report.screenshots.length} screenshot(s)</p>
+                    <td className="max-w-xs px-3 py-3">
+                      <p className="truncate" style={{ color: 'var(--color-text-primary)' }}>{safeText(report.description, 'No description')}</p>
+                      {Array.isArray(report.screenshots) && report.screenshots.length > 0 && (
+                        <p className="mt-0.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>{report.screenshots.length} screenshot(s)</p>
                       )}
                     </td>
-                    <td className="py-3 px-3 text-white/60">
-                      {report.user?.firstName} {report.user?.lastName}
+                    <td className="px-3 py-3" style={{ color: 'var(--color-text-secondary)' }}>
+                      {fullName(report.user?.firstName, report.user?.lastName, 'Unknown')}
                     </td>
-                    <td className="py-3 px-3">
-                      <HwBadge className={STATUS_COLORS[report.status] ?? ''}>
-                        {String(report.status ?? 'OPEN').replace('_', ' ')}
+                    <td className="px-3 py-3">
+                      <HwBadge style={statusToneStyle(report.status)}>
+                        {safeText(report.status, 'OPEN').replace('_', ' ')}
                       </HwBadge>
                     </td>
-                    <td className="py-3 px-3 text-white/40 text-xs">
-                      {new Date(report.createdAt).toLocaleDateString()}
+                    <td className="px-3 py-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      {formatDate(report.createdAt)}
                     </td>
-                    <td className="py-3 px-3 text-right">
+                    <td className="px-3 py-3 text-right">
                       {editingId === report.id ? (
                         <div className="flex items-center gap-2 justify-end">
                           <select
                             value={editStatus}
                             onChange={(e) => setEditStatus(e.target.value)}
-                            className="appearance-none px-2 py-1 rounded bg-white/10 border border-white/20 text-xs text-white focus:outline-none"
+                            className="appearance-none rounded px-2 py-1 text-xs focus:outline-none"
+                            style={{ background: 'var(--color-bg-input)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-primary)' }}
                           >
                             <option value="OPEN">Open</option>
                             <option value="UNDER_REVIEW">Under Review</option>
@@ -205,7 +204,8 @@ export default function AdminBugReportsPage() {
                             value={editNote}
                             onChange={(e) => setEditNote(e.target.value)}
                             placeholder="Note (optional)"
-                            className="w-32 px-2 py-1 rounded bg-white/10 border border-white/20 text-xs text-white placeholder:text-white/30 focus:outline-none"
+                            className="w-32 rounded px-2 py-1 text-xs focus:outline-none"
+                            style={{ background: 'var(--color-bg-input)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-primary)' }}
                           />
                           <HwButton variant="primary" size="sm" onClick={() => saveEdit(report.id)} disabled={updateStatus.isPending}>
                             Save
@@ -228,7 +228,7 @@ export default function AdminBugReportsPage() {
 
           {total > 25 && (
             <div className="flex items-center justify-between">
-              <p className="text-sm text-white/40">
+              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
                 Showing {(page - 1) * 25 + 1}–{Math.min(page * 25, total)} of {total}
               </p>
               <div className="flex gap-2">

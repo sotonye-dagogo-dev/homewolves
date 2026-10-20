@@ -1,8 +1,8 @@
 # Design System
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-20
-> - last-verified-against-code: 2026-10-14
+> - last-updated-by: execute-feature-session-25
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: re-verify if UI components or styling dependencies change
 
 > **Overview:** Homewolves uses a glassmorphism + bento grid aesthetic inspired by JamesEdition. The design communicates trust, luxury, and clarity for the African real estate market. All tokens are defined as CSS custom properties in `apps/web/app/globals.css` (and DESIGN.md in `ai-system/docs/`). This file is a quick-reference summary — agents building UI must read DESIGN.md in full before writing frontend code. The colour, typography, and spacing tables below are the **single source of truth** for design tokens (per `standards/engineering-principles.md` §5) — components must consume these tokens rather than redeclaring values.
@@ -81,6 +81,12 @@ Each wrapper: imports shadcn primitive → applies design tokens via `cn()` → 
 - **Mobile:** Bottom tab bar (glass, 80px + safe area) — 5 tabs, amber active indicator
 - **Dashboard (tablet/desktop):** Side nav (64px collapsed / 240px expanded), glass surface, role-aware nav items
 - **Admin:** 240px glass side nav with SVG icons, badges, footer avatar
+
+### Theming, Status & Empty States
+- **Global theme control:** `components/shared/theme-toggle.tsx` is mounted once in `app/layout.tsx`. It cycles light → dark → high-contrast with lucide `Sun`/`Moon`/`Contrast`, respects safe-area insets, and is the only theme toggle in the app (do not add per-page toggles).
+- **Status badges:** use `lib/status.ts` (`statusTone`, `statusToneStyle`) with the `--color-status-*` / `--color-*-bg` tokens; never hardcode green/amber/red Tailwind classes for status.
+- **Empty/error states:** use `components/shared/empty-state.tsx` (`EmptyState`, centered by default) with a lucide icon, title, description, and an action/CTA. Loading skeletons are acceptable only where content shape is known.
+- **Token rule (2026-10-20 audit):** feature surfaces use `--color-text-*`/`--color-bg-*`/`--color-border-*`; no `text-white`/`bg-white` except over-image overlays (`ad-banner`, transparent-hero nav), email-preview iframes, and the configured brand-logo disc. Icons are lucide-react, not emoji.
 
 ### Cards / Containers
 - **Property Card:** 16:9 image, glass strip pinned to bottom with price + meta, hover lift `translateY(-4px)`

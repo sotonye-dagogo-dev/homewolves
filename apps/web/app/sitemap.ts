@@ -14,7 +14,9 @@ function resolveServerApiBase(): string {
         // Apex vs www — server fetch can follow redirect, but align to site origin
         return `${new URL(siteRaw).origin}/api/v1`;
       }
-    } catch {}
+    } catch {
+      // Invalid URL configured — fall through to the raw env value.
+    }
     return env;
   }
   return 'http://localhost:4000/api/v1';

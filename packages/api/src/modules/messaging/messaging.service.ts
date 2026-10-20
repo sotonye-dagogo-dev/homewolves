@@ -13,8 +13,24 @@ export class MessagingService {
     private analyticsService: AnalyticsService,
   ) {}
 
+  private async participantProfiles(participantIds: string[]) {
+    const ids = Array.from(new Set(participantIds.filter(Boolean)));
+    if (ids.length === 0) return [];
+    return this.db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+        avatar: users.avatar,
+        phone: users.phone,
+      })
+      .from(users)
+      .where(inArray(users.id, ids));
+  }
+
   async getConversations(userId: string) {
-    return this.db.query.conversations.findMany({
+    const rows = await this.db.query.conversations.findMany({
       where: sql`${conversations.participantIds} @> ARRAY[${userId}]`,
       orderBy: desc(conversations.lastMessageAt),
       with: {
@@ -25,6 +41,13 @@ export class MessagingService {
         },
       },
     });
+
+    if (rows.length === 0) return rows;
+    const participants = await this.participantProfiles(rows.flatMap((c) => c.participantIds));
+    return rows.map((conversation) => ({
+      ...conversation,
+      participants: participants.filter((p) => conversation.participantIds.includes(p.id)),
+    }));
   }
 
   async getConversationById(id: string, userId: string) {
@@ -41,7 +64,8 @@ export class MessagingService {
     if (!conversation.participantIds.includes(userId)) {
       throw new ForbiddenException('Not a participant');
     }
-    return conversation;
+    const participants = await this.participantProfiles(conversation.participantIds);
+    return { ...conversation, participants };
   }
 
   async createConversation(participantIds: string[], propertyId?: string, creatorId?: string) {

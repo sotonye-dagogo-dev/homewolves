@@ -23,6 +23,14 @@ export function TopNav() {
   const avatarInitials = user?.firstName || user?.lastName
     ? `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`.toUpperCase()
     : null;
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const isStaff =
+    user?.role === 'AGENT' ||
+    user?.role === 'DEVELOPER' ||
+    user?.role === 'HOMEOWNER' ||
+    isAdmin;
+  const profileHref = !user ? '/dashboard/client' : isStaff ? '/dashboard' : '/dashboard/client';
+  const canPost = !user || isStaff;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 100);
@@ -98,9 +106,11 @@ export function TopNav() {
           >
             Pricing
           </Link>
-          <HwButton variant="primary" size="sm" className="hidden lg:inline-flex" onClick={() => { if (requireAuth('Posting a property')) router.push('/dashboard/agent/listings/new'); }}>
-            Post Property
-          </HwButton>
+          {canPost ? (
+            <HwButton variant="primary" size="sm" className="hidden lg:inline-flex" onClick={() => { if (requireAuth('Posting a property')) router.push('/dashboard/agent/listings/new'); }}>
+              {isAdmin ? 'Manage Listings' : 'Post Property'}
+            </HwButton>
+          ) : null}
 
           <Link
             href="/dashboard/notifications"
@@ -113,7 +123,7 @@ export function TopNav() {
           </Link>
 
           <Link
-            href="/dashboard/client"
+            href={profileHref}
             className="w-9 h-9 rounded-full bg-accent grid place-items-center text-inverse text-xs font-semibold border-2 border-transparent hover:border-accent transition-colors duration-fast shrink-0 overflow-hidden"
             aria-label="Profile"
           >
@@ -156,9 +166,15 @@ export function TopNav() {
                 Messages
               </Link>
             </div>
-            <button onClick={() => { setMobileOpen(false); if (requireAuth('Posting a property')) router.push('/dashboard/agent/listings/new'); }} className="w-full text-center rounded-full py-3 text-sm font-semibold bg-accent text-accent-foreground">
-              Post Property
-            </button>
+            {canPost ? (
+              <button onClick={() => { setMobileOpen(false); if (requireAuth('Posting a property')) router.push('/dashboard/agent/listings/new'); }} className="w-full text-center rounded-full py-3 text-sm font-semibold bg-accent text-accent-foreground">
+                {isAdmin ? 'Manage Listings' : 'Post Property'}
+              </button>
+            ) : (
+              <Link href="/dashboard/client" onClick={() => setMobileOpen(false)} className="w-full text-center rounded-full py-3 text-sm font-semibold bg-accent text-accent-foreground">
+                My Dashboard
+              </Link>
+            )}
             <div className="flex gap-2 pt-2 border-t border-[var(--color-border-subtle)]">
               <Link href="/about" onClick={() => setMobileOpen(false)} className="flex-1 text-center text-sm py-2 text-secondary">
                 About
