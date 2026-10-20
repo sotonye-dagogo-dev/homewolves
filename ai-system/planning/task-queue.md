@@ -1,9 +1,9 @@
 # Development Task Queue
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-23
-> - last-verified-against-code: 2026-10-16
-> - last-synced: 2026-10-16 (Session 23 — auth same-origin routing + root .env load; seed backup/purge/restore safety)
+> - last-updated-by: execute-feature-session-24
+> - last-verified-against-code: 2026-10-20
+> - last-synced: 2026-10-20 (Session 24 — db migrations applied; silent journal-timestamp skip fixed; pooler region discovered)
 > - staleness-policy: re-verify before each session
 
 > **Overview:** Sprint-level task queue with complexity tagging. Agents execute tasks top to bottom within the current sprint. Each task is sized so it can be completed in a single session. Sprint 1–3 are complete; the current focus is hardening, Backlog items, and the next scheduled phase.
@@ -49,6 +49,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 | [BUG] | Vercel build fix (Session 18: `postgres` Module not found on auth route — declare dep on @hw/web + serverExternal) | [x] |
 | [BUG] | Auth sign-in constant fast-500 fix (Session 23: `authApiBase()` same-origin `/auth/*` in all envs + root `.env` loaded into Next runtime via next.config.js) | [x] |
 | [M] | Seed data protection (Session 23: backup-before-revert/purge (`drizzle/seed.backup.ts` → gitignored `drizzle/backups/`), `db:seed:backup`/`db:purge --yes`/`db:restore` commands, fixed hidden `--with-users` delete bug, activityRules revert by `seed-` ID, 31-table registry) | [x] |
+| [BUG] | Run db migrations (Session 24: 0000–0005 applied via pooler `aws-1-eu-west-1` after direct host went AAAA-only; fixed silent skip — hand-set 0005 `when` predated runtime Date.now() journal row; seed-user password hashes backfilled + verified) | [x] |
 
 ---
 

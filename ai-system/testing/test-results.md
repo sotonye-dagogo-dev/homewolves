@@ -1,8 +1,8 @@
 # Test Results
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-23
-> - last-verified-against-code: 2026-10-16
+> - last-updated-by: execute-feature-session-24
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: overwritten on every test run — always current
 
 > **Overview:** Latest test run results. Updated by agents after running tests. Gives a quick snapshot of current project health.
@@ -60,3 +60,4 @@
 | 2026-10-15 | 314 | 0 | fix-build Session 20d: web vitest 155/155 (21 files), api vitest 159/159 (17 files); web + api tsc 0 errors |
 | 2026-10-15 | — | 0 | fix-build Session 22: no unit tests touched (build-config fix). Verified `npm run vercel-build` green from BOTH cwds — `apps/web` (direct `next build`, full route table incl. products/services) and repo root (migrate-skip + turbo + `Verified Next.js output at apps/web/.next`); `findRepoRoot()` resolves repo root from either cwd; `npm run --workspace=@hw/web vercel-build` resolves (was `Missing script`) |
 | 2026-10-16 | 328 | 0 | execute-feature Session 23: api 173/173 (18 files — +`drizzle/seed.backup.spec.ts` 14/14), web 155/155 (21 files); typecheck 4/4, lint 0 errors (auth.service:290 error gone), `next build` 38/38 pages; E2E not run |
+| 2026-10-20 | — | 0 | execute-feature Session 24: no unit tests needed (only file change: `migrations/meta/_journal.json` `when` value — no source code). QA = live DB verification: migrations 0000–0005 applied via pooler, journal 6/6, 31 tables intact, all 5 seed users' `passwordHash` backfilled (0005). Pre-flight `db:seed:backup` attempted, failed on then-unreachable DB; reconciled by destructive-SQL scan (none) + row/table-count parity post-run |

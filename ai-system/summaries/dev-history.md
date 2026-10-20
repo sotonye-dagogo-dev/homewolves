@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-23
-> - last-verified-against-code: 2026-10-16
+> - last-updated-by: execute-feature-session-24
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: historical entries do not go stale
 
 > **Overview:** Chronological log of completed development work. Each sprint ends with a summary entry. Agents add entries after completing tasks. Useful for understanding what has been built, when decisions were made, and what patterns have emerged.
@@ -495,3 +495,21 @@ Fixed the recurring seed-user sign-in failure (constant, near-instant 500) by ma
 
 **Next Sprint Focus:**
 Live-verify sign-in (`admin@homewolves.com` / `Homewolves123!`) with `npm run dev`; first live DB op should be `npm run db:seed:backup`, then exercise revert + restore round-trip; commit the (currently uncommitted) Session 23 changes.
+
+## 2026-10-20 — execute-feature: db migrations applied + silent-skip fixed (Session 24)
+
+**Summary:**
+Ran the pending db migrations against production Supabase. Diagnosed and fixed a silent migration skip (hand-forged journal timestamps predate a runtime Date.now() journal row), bypassed a new IPv6-only DNS wall via pooler-region discovery, and verified the end state: journal 6/6, 31 tables, and all 5 seed users backfilled with the demo password hash — seed-user password sign-in is now unblocked end-to-end.
+
+**Completed:**
+- Migrations 0000–0005 applied via `drizzle-kit migrate` through pooler `aws-1-eu-west-1.pooler.supabase.com:5432` (session mode) with CLI env override (`.env` untouched)
+- `_journal.json`: 0005 `when` 1790116800000 → 1792089600000 (pending-detection fix; migrator compares journal `when` vs remote max `created_at`)
+- Verified: 6/6 journal entries, `User.passwordHash` populated for all seed users, 31 tables, row counts unchanged (zero destructive SQL in the whole migration set — scanned)
+- Docs: repair-system Session 24 entry, lessons-learned (journal timestamp discipline), task-queue/test-results/session-log/dev-history
+
+**Key Changes:**
+- Rule: NEVER hand-set synthetic journal `when` values below a runtime-applied row — the migrator tracks "applied" by timestamp comparison, not hash; "applied successfully" must always be confirmed against `drizzle.__drizzle_migrations`
+- Ops knowledge: project pooler = `aws-1-eu-west-1.pooler.supabase.com` (user `postgres.<ref>`; ports 5432 session / 6543 transaction); direct host is IPv6-only and Node/WARP fails ENOTFOUND
+
+**Next Sprint Focus:**
+Operator live-verifies seed-user sign-in; optionally commit the `_journal.json` `when` fix.

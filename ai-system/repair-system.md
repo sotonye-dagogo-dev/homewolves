@@ -1,8 +1,8 @@
 # Repair System — Error Knowledge Base
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-23
-> - last-verified-against-code: 2026-10-16
+> - last-updated-by: execute-feature-session-24
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: individual entries may be stale if the code has changed around them — verify fix still applies before reusing
 
 > **Overview:** Living knowledge base of errors encountered during development, their root causes, and how they were fixed. Agents must search this before diagnosing new errors and log every fixed bug to prevent recurrence.
@@ -244,6 +244,33 @@ Every schema.ts change must ship with a generated migration (`drizzle-kit genera
 **Files Affected:**
 `packages/api/drizzle/migrations/0004_stale_starjammers.sql` (new), `packages/api/drizzle/migrations/meta/0004_snapshot.json` (new), `packages/api/drizzle/migrations/meta/_journal.json`, `apps/web/app/api/v1/auth/[action]/route.ts`
 **Date:** 2026-10-14
+**Status:** Active
+
+### Migrations silently skipped — hand-forged journal timestamps predate runtime Date.now() entries (execute-feature Session 24, 2026-10-20)
+
+**Symptom:**
+`npm run db:migrate` reported `✓ migrations applied successfully!` but the newest migration (`0005` seed password-hash backfill) had NOT run: `drizzle.__drizzle_migrations` still showed 5 entries and all seed users' `passwordHash` remained NULL. The failure was silent — no error, no "up to date" distinction.
+
+**Root Cause (verified against drizzle-orm 0.45 source):**
+1. drizzle-orm's pg migrator applies a migration only when `migration.folderMillis > max(remote created_at)` — it compares the LOCAL journal `when` against the remote DB's max `created_at`, NOT by hash.
+2. The remote's 5th row (hash `c757cec…`, an older content version of `0004`) was applied 2026-10-14T16:34:56Z by a RUNTIME migrator boot that stamps `Date.now()`. Entries 1–4 applied by drizzle-kit copy the local journal `when` verbatim (verified: remote timestamps equal local values exactly).
+3. `0005`'s `when` in `_journal.json` was a hand-set synthetic value (1790116800000 ≈ 2026-09-22) that PREDATES the runtime's 2026-10-14 timestamp ⇒ the migrator classified `0005` as already applied and skipped it forever.
+4. Adjacent environment finding: the direct Supabase host (`db.ltxseuwzxbothxevcmwd.supabase.co`) now resolves **AAAA-only** (no A record), and Node's `getaddrinfo` under Cloudflare WARP fails fast with ENOTFOUND. The project's pooler lives on the newer `aws-1-eu-west-1.pooler.supabase.com` fleet (not `aws-0-*`) with username `postgres.<project-ref>`. Related: a hand-set `when` must never be allowed to trail a runtime Date.now() row — and Get-FileHash confusion is easy when comparing against `URL.host` semantics (kit hash = sha256 of raw file content, matched exactly for entries 0001–0003).
+
+**Fix Applied:**
+- Diagnosed via read-only probes: connectivity (ENOTFOUND), raw `created_at` dump (found the Date.now() row), local-vs-remote comparison using drizzle-orm's own `readMigrationFiles` (proved no migration `when` exceeded remote max).
+- Bumped `0005_wild_hellion`'s `when` in `_journal.json` from 1790116800000 → **1792089600000** (> remote max 1791995696495) — pure pending-detection metadata; ordering is index-based.
+- Ran `drizzle-kit migrate` via command-line `DATABASE_URL` override (pooler `aws-1-eu-west-1.pooler.supabase.com:5432` session mode, user `postgres.<ref>`, `?sslmode=require`) — `.env` NOT modified (operator constraint).
+- Post-verify: journal 6/6, `User.passwordHash` populated on all 5 seed users (`scrypt:b84dc5f8db524…`), 31 tables intact, row counts unchanged (no destructive SQL anywhere in 0000–0005; scanned with DROP/DELETE/TRUNCATE regex — only ON DELETE FK clauses matched).
+
+**Prevention:**
+- NEVER hand-set synthetic journal `when` values below a runtime-applied row; if a migration must be forced through, set `when` above the remote `max(created_at)` (raw value, not a date guess — convert carefully).
+- "migrations applied successfully" is NOT proof of state; always verify `SELECT count(*) FROM drizzle.__drizzle_migrations` + actual data effects after running migrate.
+- IPv6-only DB host on a WARP/IPv4-tunnelled machine is unresolvable by Node (ENOTFOUND); the project pooler URL (Supabase dashboard → Database → Connection string) is the supported local fallback.
+
+**Files Affected:**
+`packages/api/drizzle/migrations/meta/_journal.json` (only tracked change; `when` of 0005)
+**Date:** 2026-10-20
 **Status:** Active
 
 ### Auth sign-in constant fast 500 — split-brain routing + root `.env` invisible to Next (Session 23, 2026-10-16)

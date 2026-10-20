@@ -1,8 +1,8 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-23
-> - last-verified-against-code: 2026-10-16
+> - last-updated-by: execute-feature-session-24
+> - last-verified-against-code: 2026-10-20
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Practical knowledge accumulated during Homewolves development — things that worked well, things that didn't, and patterns worth repeating. Different from `repair-system.md` (tracks errors); this file tracks development process insights and architectural wisdom. Uses supersedes/superseded-by links for evolving practices.
@@ -388,6 +388,25 @@ Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeo
 
 **Apply When:**
 - Any script Vercel executes that touches the network — bound it, log the bound, and continue to the main build on failure.
+
+**Supersedes:** None
+**Superseded by:** None
+
+---
+
+## Migration journals track "applied" by timestamp ordering — synthetic timestamps can silently disable migrations
+
+**Context:**
+2026-10-20 execute-feature — `db:migrate` reported success but migration `0005` (seed password-hash backfill) never applied. drizzle-orm's pg migrator compares each local journal `when` against `max(remote created_at)`; the remote's newest row had been written by a runtime migrator boot with `Date.now()` (2026-10-14), while `0005`'s hand-set synthetic `when` pointed at 2026-09-22 → perpetually classified as applied.
+
+**What We Learned:**
+- `__drizzle_migrations` rows are comparisons, not registries: kit copies the local journal `when` + content sha256 when IT applies, but other runtimes (server boots etc.) store `Date.now()`. A journal timestamp older than any such row makes a migration unreachable — no error, no warning.
+- "✓ migrations applied successfully" is a UI string, not a state proof. Verify `select count(*) from drizzle.__drizzle_migrations` AND the migration's actual data effect before claiming completion.
+- Hand-fixing ordering is safe reading: bump the affected entry's `when` above the remote numeric max (use the raw ms value; convert dates carefully — a ms value of 1791331200000 is 2026-10-07, not Oct 21 as mental math suggested).
+- Read-only probing beats guesswork: dumping raw `created_at` values + running drizzle-orm's own `readMigrationFiles` locally reproduces the decision exactly.
+
+**Apply When:**
+- Any migration that was written/edited by hand (hand-set `when`), any scenario mixing `drizzle-kit migrate` with runtime migrator boots, and any post-migrate verification step.
 
 **Supersedes:** None
 **Superseded by:** None
