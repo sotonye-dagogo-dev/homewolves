@@ -596,9 +596,8 @@ export default function MessagesPage() {
                           <span
                             className="mt-1 flex items-center justify-end gap-1 text-[11px]"
                             style={{
-                              color: isSelf
-                                ? 'rgba(255,255,255,0.75)'
-                                : 'var(--color-text-muted)',
+                              color: 'var(--color-text-inverse)',
+                              opacity: isSelf ? 0.75 : 1,
                             }}
                           >
                             {msg.createdAt ? formatTime(msg.createdAt, '') : ''}

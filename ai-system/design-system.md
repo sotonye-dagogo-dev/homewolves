@@ -1,8 +1,5 @@
-# Design System
-
-> **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+- last-updated-by: execute-feature-session-26
+> - last-verified-against-code: 2026-10-21
 > - staleness-policy: re-verify if UI components or styling dependencies change
 
 > **Overview:** Homewolves uses a glassmorphism + bento grid aesthetic inspired by JamesEdition. The design communicates trust, luxury, and clarity for the African real estate market. All tokens are defined as CSS custom properties in `apps/web/app/globals.css` (and DESIGN.md in `ai-system/docs/`). This file is a quick-reference summary — agents building UI must read DESIGN.md in full before writing frontend code. The colour, typography, and spacing tables below are the **single source of truth** for design tokens (per `standards/engineering-principles.md` §5) — components must consume these tokens rather than redeclaring values.
@@ -104,6 +101,14 @@ Each wrapper: imports shadcn primitive → applies design tokens via `cn()` → 
 - `--radius-full`, `--text-xs`, `--font-semibold`
 - Sale: blue, Rent: green, Shortlet: amber, Land: purple
 - Verified: green, Pending: amber, Complete: blue, Rejected: red
+
+### Map Surfaces (HwMap) — keyless stack (2026-10-21)
+- **Contract:** `components/map/hw-map.tsx` is the only map entry point (`maplibre-gl` + `react-map-gl/maplibre` underneath; never import either directly in feature code). Rendering config comes from PlatformConfig `map_config` (`useMapConfig()`), toggled by the `map_view` feature flag.
+- **Tokens (added 2026-10-21):** `--color-accent-overlay` (white/black translucent overlay over accent surfaces — properties "All" pill, unread pills, transaction steppers), `--color-tag`/`--color-tag-bg` (blog/category chips), `--color-focus-ring` (shared translucent focus ring — replaces hardcoded `rgba(45,106,159,0.35)`); dark + high-contrast now override ALL status pairs (`--color-success/warning/error/info` + `-bg` + `--color-status-*`) and `--color-border-glass`/`--color-border-brand`.
+- **Pins:** price-tag chips on `--color-bg-elevated` with `--color-brand-primary` border (exact), config `markerColor`/`markerBorder` (Lagos default `#C8813A`/`#1A3A5C`) for icon pins; approximate (geocoded) pins surface "Approximate location" in popups via `--color-warning`.
+- **Popups/controls:** MapLibre chrome is tokenized in `globals.css` (`.maplibregl-popup-content` → `--color-bg-elevated` + `--color-text-primary`; attribution → `--color-bg-glass` + `--color-text-secondary`), so popups stay readable in dark/high-contrast.
+- **Fall back, never break:** style step-down vector → raster chain → token-styled `MapLocationFallback` card (glass surface, OpenStreetMap outbound link). Skeleton (`--color-bg-canvas` + `--color-text-muted`) while dynamic-loading. `darkTheme` style choice observed via `data-theme` MutationObserver.
+- **Accessibility:** map containers always carry `aria-label`; pins are real `<button>`s with listing-name labels; surroundings retain normal text on tokens.
 
 ---
 

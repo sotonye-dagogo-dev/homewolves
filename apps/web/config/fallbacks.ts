@@ -81,6 +81,32 @@ export const FALLBACK_FEATURE_FLAGS: FeatureFlag[] = [
   { id: 'referral_system', enabled: true, rolloutPercentage: 100, roles: ['AGENT'] as UserRole[] },
 ];
 
+export const FALLBACK_MAP_CONFIG: MapConfig = {
+  vectorStyles: {
+    light: 'https://tiles.openfreemap.org/styles/liberty',
+    dark: 'https://tiles.openfreemap.org/styles/liberty',
+  },
+  rasterFallbacks: {
+    light: [
+      'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    ],
+    dark: [
+      'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    ],
+  },
+  darkCanvasFilter: 'none',
+  defaultCenter: { lat: 6.5244, lng: 3.3792 },
+  defaultZoom: 11,
+  detailZoom: 15,
+  attribution: '© OpenFreeMap · © OpenStreetMap contributors',
+  geocode: { endpoint: '/api/v1/maps/geocode', limit: 5, cacheTtlSec: 300 },
+  maxMarkers: 200,
+  markerColor: '#C8813A',
+  markerBorder: '#1A3A5C',
+};
+
 export const FALLBACK_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'free', name: 'Free', description: 'List up to 3 properties', price: { amount: 0, currency: 'NGN' },
@@ -153,7 +179,7 @@ export const FALLBACK_LISTINGS: Array<{
     verified: true,
     featured: true,
     viewCount: 142,
-    locationJson: { city: 'Lagos', state: 'Lagos', area: 'Lekki Phase 1', address: 'Admiralty Way, Lekki' },
+    locationJson: { city: 'Lagos', state: 'Lagos', area: 'Lekki Phase 1', latitude: '6.4457', longitude: '3.471' },
     amenityIds: ['parking', 'security', 'generator', 'cctv'],
     metadata: { beds: 4, baths: 4, size: 420 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
@@ -177,7 +203,7 @@ export const FALLBACK_LISTINGS: Array<{
     verified: true,
     featured: false,
     viewCount: 89,
-    locationJson: { city: 'Lagos', state: 'Lagos', area: 'Yaba', address: 'Herbert Macaulay Way, Yaba' },
+    locationJson: { city: 'Lagos', state: 'Lagos', area: 'Yaba', latitude: '6.5095', longitude: '3.3711' },
     amenityIds: ['parking', 'water-supply', 'security'],
     metadata: { beds: 2, baths: 2, size: 85 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
@@ -200,7 +226,7 @@ export const FALLBACK_LISTINGS: Array<{
     verified: true,
     featured: true,
     viewCount: 210,
-    locationJson: { city: 'Lagos', state: 'Lagos', area: 'Victoria Island', address: 'Adeola Odeku, VI' },
+    locationJson: { city: 'Lagos', state: 'Lagos', area: 'Victoria Island', latitude: '6.4281', longitude: '3.4219' },
     amenityIds: ['wifi', 'gym', 'swimming-pool', 'elevator'],
     metadata: { beds: 3, baths: 3, size: 180 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
@@ -223,7 +249,7 @@ export const FALLBACK_LISTINGS: Array<{
     verified: false,
     featured: false,
     viewCount: 34,
-    locationJson: { city: 'Lagos', state: 'Lagos', area: 'Epe', address: 'Epe-Ijebu Ode Road' },
+    locationJson: { city: 'Lagos', state: 'Lagos', area: 'Epe', latitude: '6.5868', longitude: '3.9842' },
     amenityIds: ['security', 'water-supply'],
     metadata: { size: 600 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8).toISOString(),
@@ -242,7 +268,7 @@ export const FALLBACK_LISTINGS: Array<{
     verified: false,
     featured: false,
     viewCount: 67,
-    locationJson: { city: 'Abuja', state: 'FCT', area: 'Wuye', address: 'Wuye District, Abuja' },
+    locationJson: { city: 'Abuja', state: 'FCT', area: 'Wuye', latitude: '9.065', longitude: '7.44' },
     amenityIds: ['parking', 'gym', 'security', 'generator'],
     metadata: { beds: 3, baths: 3, size: 280 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
@@ -261,7 +287,7 @@ export const FALLBACK_LISTINGS: Array<{
     verified: true,
     featured: false,
     viewCount: 52,
-    locationJson: { city: 'Lagos', state: 'Lagos', area: 'Ikeja GRA', address: 'Oduduwa Crescent, Ikeja' },
+    locationJson: { city: 'Lagos', state: 'Lagos', area: 'Ikeja GRA', latitude: '6.5836', longitude: '3.355' },
     amenityIds: ['wifi', 'parking', 'water-supply'],
     metadata: { beds: 1, baths: 1, size: 45 },
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),

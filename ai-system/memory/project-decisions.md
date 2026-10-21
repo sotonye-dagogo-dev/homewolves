@@ -1,8 +1,8 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-26
+> - last-verified-against-code: 2026-10-21
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Log of significant architectural, technical, and product decisions. Agents consult this before proposing changes to avoid contradicting prior reasoning. Uses supersedes/superseded-by links so contradictory entries are explicitly resolved rather than both appearing equally valid.
@@ -922,3 +922,23 @@ Role-aware labels (`Open dashboard`, `Sign in to post a property`) broke the Tes
 
 **Implications:**
 When a control truly needs different copy, update its component test in the same change and document the exception.
+
+---
+
+**Decision:** Maps render through a keyless stack — OpenFreeMap vector styles (liberty) primary, keyless CARTO/OSM raster styles as step-down, and geocoding exclusively through the server-proxied `app/api/v1/maps/geocode` route (Photon primary, Nominatim fallback). No API keys belong to map rendering or geocoding.
+**Date:** 2026-10-21
+**Made by:** execute-feature (Session 26), directive from product owner (adapt along-app approach)
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+Zero vendor lock-in and zero billing risk; upstream tile/geocode providers are swappable per environment via `map_config` PlatformConfig without code changes. Mirrors the proven approach from along-app.
+
+**Alternatives Considered:**
+- Google Maps/Mapbox SDKs with keys (rejected: keys + billing on the hottest public surface; violates keyless-first).
+- Browser-direct Nominatim calls (rejected: policy violates acceptable-use; needs proper UA + caching on a trusted server context).
+
+**Implications:**
+- Map style failures must step down (vector → raster chain → styled fallback card), never render a broken tile grid.
+- Listing pins accept submitted `latitude`/`longitude` (exact) or geocoded city/area text (marked approximate); seeds ship Lagos coordinates.
+- Deps: `maplibre-gl@^4.7.1`, `react-map-gl@^7.1.9` (import from `react-map-gl/maplibre`).

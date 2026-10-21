@@ -1,8 +1,8 @@
 # Project Context
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-26
+> - last-verified-against-code: 2026-10-21
 > - staleness-policy: re-verify if >10 sessions old or after major scope changes
 
 > **Overview:** Homewolves is a multi-sided PropTech marketplace, agent CRM, and transaction management platform for the African real estate market. It connects property buyers, renters, agents, developers, and homeowners in a single operating system — from property discovery through to deal close. The platform is Nigeria-first with a pan-African expansion roadmap.
@@ -95,3 +95,5 @@ Current state: `apps/web` and `packages/api` build clean; 173 API + 155 web unit
 | Sentry | Error tracking, performance monitoring | DSN (.env) |
 | Google OAuth (via Supabase Auth) | Social authentication | Provider creds in Supabase dashboard; `SUPABASE_JWT_SECRET` (.env) verifies tokens |
 | Apple OAuth | Social authentication | OAuth client ID (.env) |
+| OpenFreeMap / CARTO / OSM tiles | Keyless basemaps (no API key by design) | none — swappable via `map_config` |
+| Photon / Nominatim | Keyless geocoding (server-proxied only) | none — server route owns UA + cache |

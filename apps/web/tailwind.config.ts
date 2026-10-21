@@ -11,6 +11,22 @@ const config: Config = {
       colors: {
         background: 'var(--color-bg-base)',
         foreground: 'var(--color-text-primary)',
+        /* Raw design tokens that feature code consumes as semantic
+           utilities (bg-elevated, border-subtle, bg-canvas, …). Mapping
+           them here keeps them theme-reactive instead of silently
+           generating no CSS. */
+        elevated: 'var(--color-bg-elevated)',
+        canvas: 'var(--color-bg-canvas)',
+        glass: 'var(--color-bg-glass)',
+        overlay: 'var(--color-bg-overlay)',
+        subtle: 'var(--color-border-subtle)',
+        strong: 'var(--color-border-strong)',
+        brand: {
+          primary: 'var(--color-brand-primary)',
+          secondary: 'var(--color-brand-secondary)',
+          accent: 'var(--color-brand-accent)',
+          'accent-alt': 'var(--color-brand-accent-alt)',
+        },
         primary: {
           DEFAULT: 'var(--color-brand-primary)',
           foreground: 'var(--color-text-inverse)',

@@ -20,7 +20,7 @@ function readReferralCode(search: string): string {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const inputCls =
-  'w-full min-h-[52px] px-4 py-3 font-body text-base rounded-md shadow-xs transition-all duration-fast outline-none focus:ring-2 focus:ring-[rgba(45,106,159,0.35)] focus:border-[var(--color-brand-secondary)] border border-[var(--color-border-default)] placeholder:text-[var(--color-text-muted)]';
+  'w-full min-h-[52px] px-4 py-3 font-body text-base rounded-md shadow-xs transition-all duration-fast outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:border-[var(--color-brand-secondary)] border border-[var(--color-border-default)] placeholder:text-[var(--color-text-muted)]';
 const inputStyle = {
   ...FORM_FIELD_SURFACE_STYLE,
   colorScheme: 'light dark',

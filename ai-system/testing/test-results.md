@@ -1,8 +1,8 @@
 # Test Results
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-26
+> - last-verified-against-code: 2026-10-21
 > - staleness-policy: overwritten on every test run — always current
 
 > **Overview:** Latest test run results. Updated by agents after running tests. Gives a quick snapshot of current project health.
@@ -11,18 +11,21 @@
 
 ## Last Run
 
-**Date:** 2026-10-20
-**Run by:** execute-feature (Session 25 — QA gate)
+**Date:** 2026-10-21
+**Run by:** execute-feature (Session 26 — QA gate)
 
 **Results:**
 | Suite | Passed | Failed | Skipped |
 |-------|--------|--------|---------|
 | API unit (vitest, @hw/api) | 173 | 0 | 0 |
-| Web unit/component (vitest, @hw/web) | 155 | 0 | 0 |
+| Web unit/component (vitest, @hw/web) | 172 | 0 | 0 |
 | E2E (Playwright, @hw/web) | not run | — | — |
-| Web production build (`next build`) | 38 pages | 0 | — |
+| Web production build (`next build`) | 47 routes | 0 | — |
 
-**Overall Status:** Green — API 173/173 (18 files), web 155/155 (21 files), `npm run typecheck` 4/4 (0 TS errors), `npm run lint` 4/4 (0 errors, 0 warnings), `npm run build` 38/38 static pages + nest build clean.
+**Overall Status:** Green — API 173/173 (18 files), web 172/172 (23 files, +17 map tests), `npm run typecheck` 4/4 (0 TS errors), `npm run lint` 4/4 (0 errors, 0 warnings), `npm run build` 47 static routes + nest build clean.
+
+**API unit test files (18):** including auth, listing, rate-limit, sms, storage, docuseal, health, app.e2e.spec + `drizzle/seed.backup.spec.ts`.
+**Web unit test files (23):** including property-filters (21 tests), auth-local (15), messaging, use-auth, top-nav, mobile-bar, hero-section, hw-button, post-form, `lib/map/config.test.ts` (11), `components/map/hw-map.test.tsx` (6).
 
 **API unit test files (18):** including auth, listing, rate-limit, sms, storage, docuseal, health, app.e2e.spec + `drizzle/seed.backup.spec.ts`.
 **Web unit test files (21):** including property-filters (21 tests), auth-local (15), messaging, use-auth, top-nav, mobile-bar, hero-section, hw-button, post-form.
@@ -62,3 +65,4 @@
 | 2026-10-16 | 328 | 0 | execute-feature Session 23: api 173/173 (18 files — +`drizzle/seed.backup.spec.ts` 14/14), web 155/155 (21 files); typecheck 4/4, lint 0 errors (auth.service:290 error gone), `next build` 38/38 pages; E2E not run |
 | 2026-10-20 | — | 0 | execute-feature Session 24: no unit tests needed (only file change: `migrations/meta/_journal.json` `when` value — no source code). QA = live DB verification: migrations 0000–0005 applied via pooler, journal 6/6, 31 tables intact, all 5 seed users' `passwordHash` backfilled (0005). Pre-flight `db:seed:backup` attempted, failed on then-unreachable DB; reconciled by destructive-SQL scan (none) + row/table-count parity post-run |
 | 2026-10-20 | 328 | 0 | execute-feature Session 25: API 173/173 (18 files), web 155/155 (21 files); typecheck 4/4, lint 4/4 (0 warnings), `next build` 38/38 pages; E2E not run |
+| 2026-10-21 | 345 | 0 | execute-feature Session 26: api 173/173 (18 files), web 172/172 (23 files — +17 map tests: `lib/map/config.test.ts` 11, `components/map/hw-map.test.tsx` 6); typecheck 4/4, lint 4/4 (0 warnings), `next build` 47 routes green; E2E not run |

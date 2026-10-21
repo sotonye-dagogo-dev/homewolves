@@ -22,7 +22,7 @@ const BASE =
   'text-[var(--color-text-primary)] bg-[var(--color-bg-input)] ' +
   'border border-[var(--color-border-default)] ' +
   'placeholder:text-[var(--color-text-muted)] ' +
-  'focus:ring-2 focus:ring-[rgba(45,106,159,0.35)] focus:border-[var(--color-brand-secondary)] ' +
+  'focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:border-[var(--color-brand-secondary)] ' +
   'disabled:bg-[var(--color-bg-input-disabled)] disabled:text-[var(--color-text-muted)] disabled:cursor-not-allowed ' +
   'aria-[invalid=true]:border-[var(--color-error)]';
 

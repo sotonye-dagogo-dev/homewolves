@@ -1,8 +1,8 @@
 # System Architecture
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-26
+> - last-verified-against-code: 2026-10-21
 > - staleness-policy: re-verify before trusting if any architecture-affecting commits have been made since last-verified-against-code
 
 > **Overview:** Homewolves is a multi-sided PropTech marketplace + Agent CRM + Transaction Management Platform targeting the Nigerian/African market. It uses a modular monolith architecture (Next.js 14 frontend + NestJS backend + PostgreSQL) designed to decompose into microservices as the platform scales. The system is metadata-driven — all configurable UI elements and business rules are stored in the database via `PlatformConfig`, with hardcoded fallbacks in `packages/config/src/fallbacks.ts`.
@@ -126,6 +126,20 @@ Component requests config (e.g. filter pills)
     → Return to component
 ```
 
+### Keyless Map Flow (Session 26)
+```
+HwMap / ListingMapSection / properties map view
+  → useMapConfig() → PlatformConfig map_config → FALLBACK_MAP_CONFIG
+  → markers: resolveListingCoords (exact submitted lat/lng) else geocoded area text (approximate)
+  → render: react-map-gl/maplibre; style stack [OpenFreeMap vector] → CARTO/OSM raster styles on error
+    → exhausted → token-styled MapLocationFallback card (OSM outbound link)
+Geocode (server-only):
+  → Browser fetch GET /api/v1/maps/geocode?q=…&limit=5 (keyless, no API key in client)
+    → route validates + rate-caps + TTL-caches (in-memory, 5 min, max 500)
+      → Photon POST (primary) → Nominatim search (fallback) with proper User-Agent
+      → upstream failure → { results: [] } (never throws to the UI)
+```
+
 ### Transactional Email Flow
 ```
 Business event (e.g. transaction created)
@@ -145,6 +159,7 @@ Business event (e.g. transaction created)
 |------------|---------|----------|---------|
 | `amenities` | Property amenity icons and labels | PlatformConfig table | FALLBACK_AMENITIES |
 | `filter_pills` | Search filter options | PlatformConfig table | FALLBACK_FILTER_PILLS |
+| `map_config` | Keyless map rendering stack (vector styles, raster fallback chain, geocode endpoint/caches, marker colors, marker cap) — consumed via `useMapConfig()` | PlatformConfig table | FALLBACK_MAP_CONFIG (both config fallbacks) |
 | `nav_items` | Navigation menu structure | PlatformConfig table | FALLBACK_NAV_ITEMS |
 | `subscription_plans` | Agent subscription tiers and pricing | PlatformConfig table | FALLBACK_PLANS |
 | `feature_flags` | Feature toggles with role/rollout gates | PlatformConfig table | FALLBACK_FLAGS |

@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { Bell, Calendar, Link2, BarChart3, Plus } from 'lucide-react';
 import { formatPrice } from '@/lib/format-price';
 import { formatCurrency, formatDate, safeText, toArray, toNumber } from '@/lib/format';
+import { tierBadgeStyle } from '@/lib/status';
 import { statusToneStyle } from '@/lib/status';
 
 function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
@@ -175,7 +176,7 @@ export default function AgentDashboardPage() {
         <div className="lg:col-span-1 rounded-xl p-5 transition-all hover:-translate-y-0.5" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Activity Points</span>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase" style={{ background: activityStats?.tier === 'diamond' ? '#8B5CF6' : activityStats?.tier === 'platinum' ? '#6366F1' : activityStats?.tier === 'gold' ? '#F59E0B' : activityStats?.tier === 'silver' ? '#9CA3AF' : '#D97706', color: '#fff' }}>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase" style={tierBadgeStyle(activityStats?.tier)}>
               {activityStats?.tier ?? 'bronze'}
             </span>
           </div>

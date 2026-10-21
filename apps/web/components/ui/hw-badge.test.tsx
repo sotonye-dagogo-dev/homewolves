@@ -11,7 +11,7 @@ describe('HwBadge', () => {
   it('applies variant-specific classes', () => {
     render(<HwBadge variant="sale">For Sale</HwBadge>);
     const badge = screen.getByText('For Sale');
-    expect(badge).toHaveClass('bg-[#DBEAFE]', 'text-[#1D4ED8]');
+    expect(badge).toHaveClass('bg-[var(--color-info-bg)]', 'text-[var(--color-info)]');
   });
 
   it('defaults to the default variant', () => {

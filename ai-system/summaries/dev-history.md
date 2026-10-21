@@ -535,3 +535,24 @@ Closed the platform-wide WebSocket console failure by making realtime opt-in and
 
 **Next Sprint Focus:**
 Remaining backlog: WhatsApp integration, PWA/offline, push notifications, referral system; optionally enable realtime once the API has a long-lived WebSocket host.
+
+## 2026-10-21 — execute-feature: design-token readability/visibility hardening + end-to-end keyless map feature (Session 26)
+
+**Summary:**
+Completed the design-token compliance directive (readability/visibility conflicts resolved; several semantic colors silently generated no CSS) and shipped the map feature end-to-end using the keyless approach employed in along-app (MapLibre GL JS + OpenFreeMap + server-proxied geocoding, zero API keys).
+
+**Completed:**
+- Token infrastructure: tailwind added the used-but-unmapped colors (`elevated`, `canvas`, `glass`, `overlay`, `subtle`, `strong`, `brand` group) — these class names appeared 111/118/134/96/18 times while generating no CSS; new tokens `--color-accent-overlay`, `--color-tag/-bg`, `--color-focus-ring`; dark + high-contrast themes now override all status tokens (`success/warning/error/info` + bg tints, `status-*`, `danger` aliases) and `border-glass`/`border-brand`
+- Tokenized hardcoded hex maps: hw-badge variants, CRM client pages (`chipToneStyle`/`CLIENT_STATUS_TONE`), dashboard tier badges (`tierBadgeStyle`), properties pills; fixed dark-illegible overlays (messages timestamps, client unread pill, transactions stepper, properties "All" pill, inspection chips, form focus rings)
+- Map stack (keyless): `MapConfig`/`MapGeocodeConfig` types (packages/types), `FALLBACK_MAP_CONFIG` in both config fallbacks, `map_config` PlatformConfig key + `useMapConfig()`, `map_view` feature flag; `lib/map/config.ts` pure helpers (style stack builder, raster style builder, coordinate resolver, query text, marker builder); `components/map/map-canvas.tsx` (react-map-gl/maplibre, style step-down on error, price pins, popups, pick mode); `components/map/hw-map.tsx` (dynamic ssr:false, `data-theme` MutationObserver, skeleton, token-styled fallback card); `app/api/v1/maps/geocode` (Photon → Nominatim proxy, TTL cache, empty-on-failure); `hooks/use-listing-pin.ts` + `hooks/use-property-map-markers.ts` (exact coords first, geocode → approximate)
+- Integrations: ListingMapSection on property detail (Zone 7), properties map view with selection-coupled card strip, MapPinPicker on ListingForm (search + click-to-set + use-my-location, flag-gated), JSON-LD `geo`/`hasMap`, Lagos coordinates seeded in FALLBACK_LISTINGS + API seeds
+- QA: typecheck 4/4, lint 4/4, tests 172 passed web (23 files; 17 new) + API suite, `next build` 47 routes
+
+**Key Changes:**
+- Rule: geocoder upstreams (Photon/Nominatim) are never called browser-direct — server proxy with proper UA + cache; map style failures step down vector → raster → styled fallback card, never a broken white tile grid
+- Rule: dark theme must override every status/status-bg token, not assume light values survive; "token exists in :root" ≠ "reachable" — tailwindmapped-ness is verified by class governance, not naming
+- Deps added: `maplibre-gl@^4.7.1`, `react-map-gl@^7.1.9` (versions verified against along-app; import via `react-map-gl/maplibre`)
+- MapLibre popups/controls are token-styled in globals.css (`--color-bg-elevated` surface); `attributionControl` prop is boolean-typed in v7 — CSS compaction instead
+
+**Next Sprint Focus:**
+Backlog unchanged: WhatsApp, PWA/offline, push notifications, referral system; realtime enable once long-lived WS host exists.

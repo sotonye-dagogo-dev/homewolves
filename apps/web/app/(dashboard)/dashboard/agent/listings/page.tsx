@@ -93,10 +93,10 @@ export default function AgentListingsPage() {
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
                             listing.status === 'ACTIVE'
-                              ? 'bg-[rgba(34,197,94,0.15)] text-[var(--color-success)]'
+                              ? 'bg-[var(--color-success-bg)] text-[var(--color-success)]'
                               : listing.status === 'DRAFT'
-                                ? 'bg-[rgba(107,114,128,0.15)] text-[var(--color-text-tertiary)]'
-                                : 'bg-[rgba(234,179,8,0.15)] text-[var(--color-warning,#ca8a04)]'
+                                ? 'bg-[var(--color-border-subtle)] text-[var(--color-text-tertiary)]'
+                                : 'bg-[var(--color-warning-bg)] text-[var(--color-warning)]'
                           }`}
                         >
                           {listing.status}
