@@ -239,7 +239,7 @@ export default function TransactionDetailPage() {
                   }}>
                   <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                     style={{
-                      background: isCur ? 'rgba(255,255,255,0.25)' : isDone ? 'var(--color-success)' : 'transparent',
+                      background: isCur ? 'var(--color-accent-overlay)' : isDone ? 'var(--color-success)' : 'transparent',
                       color: 'var(--color-text-inverse)',
                     }}>
                     {isDone ? <Check className="w-3 h-3" aria-label="Completed" /> : i + 1}

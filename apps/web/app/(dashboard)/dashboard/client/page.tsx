@@ -95,7 +95,7 @@ export default function ClientDashboardPage() {
                 <span
                   className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
                   style={{
-                    background: selected ? 'rgba(255,255,255,0.3)' : 'var(--color-brand-accent)',
+                    background: selected ? 'var(--color-accent-overlay)' : 'var(--color-brand-accent)',
                     color: 'var(--color-text-inverse)',
                   }}
                 >

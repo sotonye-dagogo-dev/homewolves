@@ -1,8 +1,8 @@
 # Development Task Queue
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-26
+> - last-verified-against-code: 2026-10-21
 > - last-synced: 2026-10-20 (Session 25 — realtime opt-in, design-token/role-aware UI pass, admin analytics, QA green)
 > - staleness-policy: re-verify before each session
 
@@ -49,6 +49,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 | [BUG] | Vercel build fix (Session 18: `postgres` Module not found on auth route — declare dep on @hw/web + serverExternal) | [x] |
 | [BUG] | Auth sign-in constant fast-500 fix (Session 23: `authApiBase()` same-origin `/auth/*` in all envs + root `.env` loaded into Next runtime via next.config.js) | [x] |
 | [M] | Seed data protection (Session 23: backup-before-revert/purge (`drizzle/seed.backup.ts` → gitignored `drizzle/backups/`), `db:seed:backup`/`db:purge --yes`/`db:restore` commands, fixed hidden `--with-users` delete bug, activityRules revert by `seed-` ID, 31-table registry) | [x] |
+| [L] | Map feature end-to-end + design-token readability pass (Session 26: used-but-unmapped tailwind colors mapped, status/status-bg tokens themed in dark + high-contrast, hardcoded hex maps tokenized, keyless MapLibre stack (OpenFreeMap → CARTO/OSM step-down) with server-proxied Photon/Nominatim geocode proxy, ListingMapSection + properties map view + MapPinPicker + JSON-LD geo + seeded Lagos coords) | [x] |
 | [BUG] | Run db migrations (Session 24: 0000–0005 applied via pooler `aws-1-eu-west-1` after direct host went AAAA-only; fixed silent skip — hand-set 0005 `when` predated runtime Date.now() journal row; seed-user password hashes backfilled + verified) | [x] |
 
 ---
@@ -85,6 +86,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 | Task | Completed |
 |------|-----------|
 | Platform hardening + design-system pass (Session 25) — Socket.io opt-in via `NEXT_PUBLIC_REALTIME_ENABLED` (+ REST/polling fallback, `/ws`), REST message send + participant profiles, role-aware nav/dashboards/admin guard, admin summary analytics, saved-listing hydration, tokenized admin/agent/client surfaces, real property map view, full legal pages, 173 API + 155 web tests green, 38-page build | [x] |
+| Design-token readability/visibility hardening + keyless map feature (Session 26) — tailwind semantic color mappings (elevated/canvas/glass/overlay/subtle/strong/brand), themed status tokens in dark + high-contrast, `chipToneStyle`/`tierBadgeStyle`, `HwMap`/`MapCanvas`/`MapPinPicker`/`ListingMapSection`, `app/api/v1/maps/geocode` proxy, `map_config` config + `map_view` flag, JSON-LD geo, seeded Lagos coords, typecheck/lint 4/4 + 172 web tests + 47-route build green | [x] |
 | Sprint 1 — Core Marketplace MVP (scaffolding, auth, listings, feed, detail, save/recent) | [x] |
 | Sprint 2 — Agent & Communication (CRM, dashboard bento, messaging, notifications) | [x] |
 | Sprint 3 — Transactions & Client Portal (deal stepper, payments, activity points, moderation, blog) | [x] |

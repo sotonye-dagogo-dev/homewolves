@@ -1,8 +1,8 @@
 # Project Plan
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-26
+> - last-verified-against-code: 2026-10-21
 > - staleness-policy: re-verify if project scope or phase changes
 
 > **Overview:** High-level feature checklist organized by development phase, derived from ROADMAP.md (§9). See `planning/task-queue.md` for granular, sprint-level tasks.
@@ -116,3 +116,4 @@
 - [x] Sprint 2 — Agent & Communication (CRM, dashboard, messaging, notifications)
 - [x] Sprint 3 — Transactions & Client Portal (deal stepper, payments, activity points, moderation, blog)
 - [x] Sprint 4 — Platform-wide design-token pass, role-aware dashboards, realtime opt-in + REST fallback, analytics wiring, legal pages, property map view (2026-10-20)
+- [x] Sprint 5 — Design-token readability/visibility hardening (mapped-throughtokens, themed status pairs) + end-to-end keyless map feature: HwMap stack (OpenFreeMap → CARTO/OSM step-down), server-proxied geocoding, property detail/listing-form/properties-map integrations, JSON-LD geo, seeded Lagos coords (2026-10-21)

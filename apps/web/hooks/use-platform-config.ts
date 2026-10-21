@@ -45,3 +45,8 @@ export function useGoogleOauth() {
     enabled: Boolean(data?.enabled && data.clientId),
   };
 }
+
+/** Map rendering config (admin-editable via PlatformConfig `map_config`). */
+export function useMapConfig() {
+  return usePlatformConfig<MapConfig>('map_config');
+}

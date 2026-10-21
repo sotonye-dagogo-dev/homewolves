@@ -516,6 +516,34 @@ FAB:       amber circle, 56px, --shadow-xl, fixed bottom-right on mobile
 .badge-rejected   { background: #FEE2E2; color: #991B1B; }
 ```
 
+> **Runtime note (2026-10-21):** categories/status on real surfaces resolve through
+> `lib/status.ts` (`chipToneStyle`, `tierBadgeStyle`) against themed tokens
+> (`--color-*-bg` + `--color-*`) overridden per theme (light/dark/high-contrast);
+> the hex values above are the light-theme floor, not hardcoded component classes.
+
+---
+
+### 3.9 Map Surfaces (HwMap — keyless, 2026-10-21)
+
+```css
+/* Pin: price-tag chip on elevated surface; fallback card: tokenized glass */
+.hw-map-pin       { background: var(--color-bg-elevated); color: var(--color-text-primary);
+                    border: 1.5px solid var(--color-brand-primary); border-radius: var(--radius-full); }
+.hw-map-popup     { background: var(--color-bg-elevated); color: var(--color-text-primary);
+                    border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); }
+.hw-map-fallback  { background: var(--color-bg-glass); border: 1px solid var(--color-border-default); }
+```
+
+- Contract: `components/map/hw-map.tsx` is the only map entry point; config via
+  `map_config` PlatformConfig (`useMapConfig()`), gated by the `map_view` feature flag.
+- Style step-down: vector (OpenFreeMap liberty) → keyless raster chain (CARTO light/dark,
+  OSM) → token-styled `MapLocationFallback` card with an outbound OpenStreetMap link.
+- Dark theme: the basemap uses the same light tiles in every theme
+  (`darkCanvasFilter: 'none'` — light tiles verified clearer than tint/invert); popups and
+  attribution chrome are tokenized in `globals.css`.
+- New overlay tokens: `--color-accent-overlay` (translucent over accent surfaces),
+  `--color-tag`/`--color-tag-bg`, `--color-focus-ring`.
+
 ---
 
 ## 4. Page-by-Page Design Directives

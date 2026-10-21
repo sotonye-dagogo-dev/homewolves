@@ -11,6 +11,7 @@
 /// <reference path="./entities/email.types.ts" />
 /// <reference path="./config/platform-config.types.ts" />
 /// <reference path="./config/filter.types.ts" />
+/// <reference path="./config/map-config.types.ts" />
 /// <reference path="./config/subscription.types.ts" />
 /// <reference path="./api/trpc.types.ts" />
 /// <reference path="./api/rest.types.ts" />

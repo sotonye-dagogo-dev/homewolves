@@ -3,16 +3,17 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useClient, useClientNotes, useAddNote, useClientRatings, useAddRating, useInspections, useCreateInspection, useUpdateClient } from '@/hooks/use-crm';
+import { chipToneStyle, CLIENT_STATUS_TONE } from '@/lib/status';
 import { useListings } from '@/hooks/use-listings';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 
-const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
-  active: { bg: '#E8F7EE', color: '#1A7A4A', label: 'Active' },
-  pending: { bg: '#FEF3C7', color: '#B45309', label: 'Pending' },
-  documentation: { bg: '#DBEAFE', color: '#1D4ED8', label: 'Documentation' },
-  closed: { bg: '#F3E8FF', color: '#6B21A8', label: 'Closed' },
-  rejected: { bg: '#FEE2E2', color: '#991B1B', label: 'Rejected' },
+const statusLabels: Record<string, string> = {
+  active: 'Active',
+  pending: 'Pending',
+  documentation: 'Documentation',
+  closed: 'Closed',
+  rejected: 'Rejected',
 };
 
 export default function ClientDetailPage() {
@@ -105,8 +106,8 @@ export default function ClientDetailPage() {
             <h1 className="text-xl font-bold" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>
               {client.buyer?.firstName} {client.buyer?.lastName}
             </h1>
-            <span className="px-3 py-0.5 rounded-full text-xs font-semibold" style={{ background: statusConfig[client.status]?.bg ?? '#F3F4F6', color: statusConfig[client.status]?.color ?? '#6B7280' }}>
-              {statusConfig[client.status]?.label ?? client.status}
+            <span className="px-3 py-0.5 rounded-full text-xs font-semibold" style={{ ...chipToneStyle(CLIENT_STATUS_TONE[client.status] ?? 'neutral') }}>
+              {statusLabels[client.status] ?? client.status}
             </span>
           </div>
           <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{client.buyer?.email} · {client.buyer?.phone ?? 'No phone'}</p>
@@ -119,18 +120,17 @@ export default function ClientDetailPage() {
           {/* Status changer */}
           <div className="mt-3 flex items-center gap-2">
             <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Change status:</span>
-            {Object.entries(statusConfig).map(([key, cfg]) => (
+            {Object.entries(statusLabels).map(([key, label]) => (
               <button
                 key={key}
                 onClick={() => updateClient.mutate({ status: key })}
                 className="text-xs font-semibold px-2.5 py-1 rounded-full transition-opacity hover:opacity-80"
                 style={{
-                  background: cfg.bg,
-                  color: cfg.color,
+                  ...chipToneStyle(CLIENT_STATUS_TONE[key] ?? 'neutral'),
                   opacity: client.status === key ? 1 : 0.6,
                 }}
               >
-                {cfg.label}
+                {label}
               </button>
             ))}
           </div>
@@ -334,10 +334,9 @@ export default function ClientDetailPage() {
                     </p>
                     {insp.notes && <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>{insp.notes}</p>}
                   </div>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0 ml-3" style={{
-                    background: insp.status === 'completed' ? '#E8F7EE' : insp.status === 'ongoing' ? '#FEF3C7' : '#DBEAFE',
-                    color: insp.status === 'completed' ? '#1A7A4A' : insp.status === 'ongoing' ? '#B45309' : '#1D4ED8',
-                  }}>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0 ml-3" style={chipToneStyle(
+                    insp.status === 'completed' ? 'success' : insp.status === 'ongoing' ? 'warning' : 'info',
+                  )}>
                     {insp.status}
                   </span>
                 </div>

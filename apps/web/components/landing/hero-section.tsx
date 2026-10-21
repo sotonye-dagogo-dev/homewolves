@@ -41,7 +41,7 @@ export function HeroSection() {
           }}
           className="flex items-center gap-3 bg-[var(--color-bg-glass)] backdrop-blur-[var(--glass-blur)] border border-[var(--color-border-glass)] rounded-full px-6 py-3 shadow-glass w-full max-w-[560px]"
         >
-          <Search className="w-5 h-5 text-white/70 shrink-0" aria-hidden="true" />
+          <Search className="w-5 h-5 text-[var(--color-text-tertiary)] shrink-0" aria-hidden="true" />
           <input
             type="text"
             name="search"
@@ -49,7 +49,7 @@ export function HeroSection() {
             aria-label="Search properties"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 bg-transparent border-none outline-none font-body text-base text-[var(--color-text-inverse)] placeholder:text-white/55 py-2"
+            className="flex-1 bg-transparent border-none outline-none font-body text-base text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] py-2"
           />
           <button
             type="submit"
