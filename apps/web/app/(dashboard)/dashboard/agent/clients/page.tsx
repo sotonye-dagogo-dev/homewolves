@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, EllipsisVertical } from 'lucide-react';
 import { useClients } from '@/hooks/use-crm';
+import { chipToneStyle, CLIENT_STATUS_TONE } from '@/lib/status';
 
-const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
-  active: { bg: '#E8F7EE', color: '#1A7A4A', label: 'Active' },
-  pending: { bg: '#FEF3C7', color: '#B45309', label: 'Pending' },
-  documentation: { bg: '#DBEAFE', color: '#1D4ED8', label: 'Documentation' },
-  closed: { bg: '#F3E8FF', color: '#6B21A8', label: 'Closed' },
-  rejected: { bg: '#FEE2E2', color: '#991B1B', label: 'Rejected' },
+const statusLabels: Record<string, string> = {
+  active: 'Active',
+  pending: 'Pending',
+  documentation: 'Documentation',
+  closed: 'Closed',
+  rejected: 'Rejected',
 };
 
 export default function ClientsPage() {
@@ -98,8 +99,8 @@ export default function ClientsPage() {
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: statusConfig[client.status]?.bg ?? '#F3F4F6', color: statusConfig[client.status]?.color ?? '#6B7280' }}>
-                    {statusConfig[client.status]?.label ?? client.status}
+                  <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ ...chipToneStyle(CLIENT_STATUS_TONE[client.status] ?? 'neutral') }}>
+                    {statusLabels[client.status] ?? client.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>

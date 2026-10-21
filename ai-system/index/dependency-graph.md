@@ -1,8 +1,8 @@
 # Dependency Graph
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-26
+> - last-verified-against-code: 2026-10-21
 > - staleness-policy: auto-regenerable — can be derived from import analysis tools. Manual content only for conventions and rules that cannot be inferred from code.
 
 > **Overview:** Maps how modules depend on each other in the Homewolves NestJS backend. Agents consult this before modifying a module to understand the impact radius. This file is **auto-regenerable** — prefer tool-based import analysis for ground truth, and treat manual entries as supplementary.
@@ -117,6 +117,8 @@ apps/web (Next.js 14)
   → lib/realtime — opt-in ref-counted Socket.io client (`NEXT_PUBLIC_REALTIME_ENABLED`, namespace `/ws`); REST + polling fallback when disabled
   → lib/messaging — REST send/read + socket hybrid
   → lib/analytics — agent/admin analytics REST clients
+  → lib/map/config — keyless map stack helpers (style-step-down chain, coordinate resolver) consumed by components/map + hooks
+  → components/map — HwMap wrapper → dynamic(map-canvas) → react-map-gl/maplibre + maplibre-gl; `app/api/v1/maps/geocode` proxies upstreams (server-side only)
   → Tailwind CSS (styling with CSS variable tokens)
 
 apps/mobile (React Native / Expo)
@@ -144,6 +146,10 @@ apps/mobile (React Native / Expo)
 | Sentry | Error tracking, performance | Backend modules |
 | Google OAuth | Social auth | Auth |
 | Apple OAuth | Social auth | Auth |
+| OpenFreeMap (vector tiles) | Keyless basemap styles (`tiles.openfreemap.org/styles/*`) | apps/web components/map |
+| CARTO / OSM raster tiles | Keyless step-down basemaps on vector style failure | apps/web components/map |
+| Photon (geocoding) | Keyless forward-geocode primary — proxied via `app/api/v1/maps/geocode`, never browser-direct | apps/web API route |
+| Nominatim (geocoding) | Keyless forward-geocode fallback (proper User-Agent required) — same proxy | apps/web API route |
 
 ---
 
@@ -167,3 +173,4 @@ apps/mobile (React Native / Expo)
 - **Seed/ops specs** (`drizzle/*.spec.ts`, included via vitest.config) → vitest + minimal structural fake DB; file I/O uses `os.tmpdir()` fixtures
 - **Web lib tests** (`lib/*.test.ts`) → vitest + stubbed `fetch` via `vi.stubGlobal`; token from `useAuth` store (zustand) or `hw-auth` localStorage
 - **E2E specs** (`e2e/*.spec.ts`) → Playwright; API stubbed with `page.route`, sessions seeded via `addInitScript` writing `hw-auth`
+- **Map components** (`components/map/*`) → `lib/map/config` helpers (pure, unit-testable) + `react-map-gl/maplibre`; geocoder upstreams are NEVER imported/called from client code — only `app/api/v1/maps/geocode` reaches Photon/Nominatim

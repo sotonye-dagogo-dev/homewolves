@@ -65,3 +65,46 @@ export function statusToneStyle(status?: string | null): CSSProperties {
     border: `1px solid ${tone.borderColor}`,
   };
 }
+
+/** Extra tone families beyond the status statuses (tokens defined in globals.css). */
+const EXTRA_TONES: Record<string, StatusTone> = {
+  tag: {
+    background: 'var(--color-tag-bg)',
+    color: 'var(--color-tag)',
+    borderColor: 'var(--color-tag)',
+  },
+};
+
+export type ChipTone = keyof typeof TONES | keyof typeof EXTRA_TONES;
+
+/** Style helper for semantic chip families (success/warning/info/error/neutral/tag). */
+export function chipToneStyle(tone: ChipTone | string): CSSProperties {
+  const t = (EXTRA_TONES[tone] ?? TONES[tone] ?? TONES.neutral) as StatusTone;
+  return {
+    background: t.background,
+    color: t.color,
+    border: `1px solid ${t.borderColor}`,
+  };
+}
+
+/** Client-CRM record states → tone family (token-driven, theme-reactive). */
+export const CLIENT_STATUS_TONE: Record<string, ChipTone> = {
+  active: 'success',
+  pending: 'warning',
+  documentation: 'info',
+  closed: 'tag',
+  rejected: 'error',
+};
+
+/** Tier badges have dark surfaces + light text so they stay AA in every theme. */
+export const TIER_BADGE_STYLE: Record<string, CSSProperties> = {
+  diamond: { background: '#4C1D95', color: '#E9D5FF' },
+  platinum: { background: '#312E81', color: '#C7D2FE' },
+  gold: { background: '#78350F', color: '#FDE68A' },
+  silver: { background: '#374151', color: '#E5E7EB' },
+  bronze: { background: '#7C2D12', color: '#FED7AA' },
+};
+
+export function tierBadgeStyle(tier?: string | null): CSSProperties {
+  return (TIER_BADGE_STYLE[(tier ?? '').toLowerCase()] ?? TIER_BADGE_STYLE.bronze)!;
+}

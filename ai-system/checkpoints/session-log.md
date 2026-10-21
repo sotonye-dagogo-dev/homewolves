@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-26
+> - last-verified-against-code: 2026-10-21
 > - staleness-policy: append-only — never modify past entries
 
 > **Overview:** Append-only running log of development sessions. Each entry records what was completed, what comes next, and which files were modified. Agents write here at the end of every session so work can be resumed without re-reading the entire codebase. This file is the **append-only historical record** — use `checkpoints/in-progress.md` for current in-progress work.
@@ -855,3 +855,30 @@ Remaining backlog: WhatsApp integration, PWA/offline support, push notifications
 
 **Notes / Blockers:**
 - None blocking. E2E (Playwright) was not run in this session; unit/component + typecheck/lint/build are green.
+
+## Session 26 — 2026-10-21 (execute-feature: design-token readability pass + end-to-end keyless map)
+
+**Completed:**
+- Design-token compliance (readability/visibility directive):
+  - Tailwind `colors` gained the used-but-unmapped semantic values (`elevated`, `canvas`, `glass`, `overlay`, `subtle`, `strong`, `brand` group) — these classes had 111/118/134/96/18 usages generating no CSS
+  - New tokens: `--color-accent-overlay`, `--color-tag`/`--color-tag-bg`, `--color-focus-ring`; dark + high-contrast override ALL status tokens (`success/warning/error/info` + bg + `status-*` + `danger` aliases, `border-glass`, `border-brand`)
+  - Hardcoded hex maps tokenized via `lib/status.ts` helpers (`chipToneStyle`, `tierBadgeStyle`, `CLIENT_STATUS_TONE`): hw-badge variants, CRM clients pages, agent dashboard tier badge, properties pills; dark-illegible overlays fixed (messages timestamps, client unread pill, transactions stepper, properties All-pill, hero search text, form focus rings)
+  - Documented allowed exceptions (`text-white` over hero/ad images, brand-logo disc) kept per design-system §89
+- Map feature end-to-end (keyless, adapted from along-app):
+  - Config: `MapConfig`/`MapGeocodeConfig` types (packages/types), `FALLBACK_MAP_CONFIG` (packages/config + web fallbacks), `map_config` platform-config key, `useMapConfig()`, `map_view` feature flag
+  - Components: `components/map/map-canvas.tsx` (react-map-gl/maplibre + maplibre-gl.css, style step-down on error, price pins with token colors, popups, crosshair pick mode), `components/map/hw-map.tsx` (dynamic ssr:false, `data-theme` MutationObserver, skeleton, MapLocationFallback card), `components/listings/listing-map.tsx` (ListingMapSection), `components/listings/map-pin-picker.tsx` (ListingForm search + click-to-set + use-my-location)
+  - Server: `app/api/v1/maps/geocode/route.ts` (Photon → Nominatim proxy, UA + 8s timeout, in-memory TTL cache 5min/500, graceful empty)
+  - Hooks: `use-listing-pin.ts`, `use-property-map-markers.ts` (exact coords → approximate geocode, marker cap)
+  - Data: JSON-LD `geo`/`hasMap` on property detail; Lagos coordinates seeded in FALLBACK_LISTINGS + `packages/api/drizzle/seed.data.ts`; maplibre popup/attribution token CSS in globals.css
+- QA: typecheck 4/4, lint 4/4 (0 warnings), npm test green (API 173, web 172 — 17 new map tests), `next build` 47 routes
+- update-ai-system deep sync: repo-map, dep-graph (map deps + providers + rules), system-architecture (map_config + keyless map flow), design-system.md §Map Surfaces, docs/DESIGN.md §3.9, task-queue, lessons-learned (×2), project-decisions, test-results, dev-history, session-log; in-progress cleared
+
+**Next Task:**
+Backlog: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when long-lived WS host exists.
+
+**Assumptions Made:**
+- Approximate pins (city/area-geocoded) are acceptable for listings without submitted coordinates, surfaced honestly with an "Approximate location" badge.
+- In-memory geocode cache is adequate at current traffic; a shared Redis cache is a future optimization.
+
+**Notes / Blockers:**
+- E2E (Playwright) not run; unit/component + typecheck/lint/build green. Map tiles need a live browser to be visually verified (WebGL absent in jsdom).

@@ -1,8 +1,8 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-26
+> - last-verified-against-code: 2026-10-21
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Practical knowledge accumulated during Homewolves development — things that worked well, things that didn't, and patterns worth repeating. Different from `repair-system.md` (tracks errors); this file tracks development process insights and architectural wisdom. Uses supersedes/superseded-by links for evolving practices.
@@ -481,3 +481,36 @@ Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeo
 
 **Supersedes:** None
 **Superseded by:** None
+
+---
+
+## §Ensure every "used" CSS token is actually mapped — naming a class doesn't generate CSS
+
+**Context:**
+2026-10-21 execute-feature (Session 26) — semantic tailwind colors (`bg-elevated` ×111 uses, `border-subtle` ×118, `bg-glass` ×134, `border-glass` ×96, `bg-canvas` ×18, `bg-overlay`, `border-strong`) appeared across all surfaces while the `colors` map in `tailwind.config.ts` never defined them: the classes rendered nothing, so surfaces silently fell back to default backgrounds. Separately, status tokens (`--color-success/warning/error/info` + bg tints) existed in `:root` but were never overridden in `[data-theme='dark']`/`high-contrast`, leaving pale-light chips and translucent-white overlays illegible in dark theme.
+
+**What We Learned:**
+- "Token exists" and "token reaches the DOM" are different properties — a class name matching a token's naming pattern is not proof the utility is generated.
+- Theming floors must include every status pair (`success/warning/error/info` + `-bg` + `status-*`); translucent-white overlays over accent surfaces (timestamps, unread pills, steppers) need dedicated tokens (`--color-accent-overlay`, `--color-text-inverse`) instead of hardcoded `rgba(255,255,255,x)`.
+- Component-level hex maps should be centralized through helpers (`lib/status.ts`: `chipToneStyle`, `tierBadgeStyle`) so both flags on a brand accent flip in one place.
+
+**Apply When:**
+- Introducing a new semantic token: map it in `tailwind.config.ts` (per theme), grep existing usages for silent non-generation, and verify in dark + high-contrast.
+- Reviewing a dark-mode bug where text/pills "look pale": check for hardcoded white-translucents or a status token that never changed.
+
+---
+
+## §Keyless-first map stack: fail down a style chain, never call geocoder upstreams browser-direct
+
+**Context:**
+2026-10-21 execute-feature (Session 26) — product directive to implement the map feature adapting the along-app approach (zero API keys). MapLibre styles are fetched at runtime; Nominatim explicitly requires a proper identifying User-Agent.
+
+**What We Learned:**
+- Plain raster tile-template URLs are NOT valid MapLibre styles — build style JSON objects (`version`, raster `sources` with `tiles`, a raster layer) for each step-down entry.
+- Client onError should walk a stack `[vectorStyleUrl, ...rasterStyles]`, finally surfacing a token-styled fallback card (outbound OSM link) rather than an empty/broken canvas.
+- react-map-gl v7's `attributionControl` prop is boolean-typed for maplibre; compact styling is CSS territory (tokenize `.maplibregl-popup-content/-tip/-ctrl-attrib` in globals.css so popups stay readable in dark/high-contrast).
+- `react-map-gl/maplibre` subpath + `maplibre-gl@4.7.1` is the proven pairing (verified against along-app); jsdom tests must mock `react-map-gl/maplibre` and `next/dynamic` since WebGL doesn't exist there.
+
+**Apply When:**
+- Touching `components/map/*`, `lib/map/config.ts`, `app/api/v1/maps/geocode`, or swapping tile/geocode providers.
+- Any new client-side third-party API call: first ask "which key-less server proxy can own caching + UA + fail-soft semantics?"

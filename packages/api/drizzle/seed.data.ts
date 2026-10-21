@@ -176,7 +176,7 @@ export const SEED_LISTINGS = [
     featured: true,
     ownerId: SEED_IDS.users.agent1,
     agentId: SEED_IDS.users.agent1,
-    locationJson: { city: 'Lagos', area: 'Lekki Phase 1', address: 'Admiralty Way, Lekki' },
+    locationJson: { city: 'Lagos', area: 'Lekki Phase 1', latitude: 6.4457, longitude: 3.471 },
     amenityIds: ['parking', 'security', 'generator', 'cctv'],
   },
   {
@@ -191,7 +191,7 @@ export const SEED_LISTINGS = [
     featured: false,
     ownerId: SEED_IDS.users.agent1,
     agentId: SEED_IDS.users.agent1,
-    locationJson: { city: 'Lagos', area: 'Yaba', address: 'Herbert Macaulay Way, Yaba' },
+    locationJson: { city: 'Lagos', area: 'Yaba', latitude: 6.5095, longitude: 3.3711 },
     amenityIds: ['parking', 'water-supply', 'security'],
   },
   {
@@ -206,7 +206,7 @@ export const SEED_LISTINGS = [
     featured: true,
     ownerId: SEED_IDS.users.agent2,
     agentId: SEED_IDS.users.agent2,
-    locationJson: { city: 'Lagos', area: 'Victoria Island', address: 'Adeola Odeku, VI' },
+    locationJson: { city: 'Lagos', area: 'Victoria Island', latitude: 6.4281, longitude: 3.4219 },
     amenityIds: ['wifi', 'gym', 'swimming-pool', 'elevator'],
   },
   {
@@ -221,7 +221,7 @@ export const SEED_LISTINGS = [
     featured: false,
     ownerId: SEED_IDS.users.agent2,
     agentId: SEED_IDS.users.agent2,
-    locationJson: { city: 'Lagos', area: 'Epe', address: 'Epe-Ijebu Ode Road' },
+    locationJson: { city: 'Lagos', area: 'Epe', latitude: 6.5868, longitude: 3.9842 },
     amenityIds: ['security', 'water-supply'],
   },
   {
@@ -236,7 +236,7 @@ export const SEED_LISTINGS = [
     featured: false,
     ownerId: SEED_IDS.users.agent1,
     agentId: SEED_IDS.users.agent1,
-    locationJson: { city: 'Abuja', area: 'Wuye', address: 'Wuye District, Abuja' },
+    locationJson: { city: 'Abuja', area: 'Wuye', latitude: 9.065, longitude: 7.44 },
     amenityIds: ['parking', 'gym', 'security', 'generator'],
   },
   {
@@ -251,7 +251,7 @@ export const SEED_LISTINGS = [
     featured: false,
     ownerId: SEED_IDS.users.agent2,
     agentId: SEED_IDS.users.agent2,
-    locationJson: { city: 'Lagos', area: 'Ikeja GRA', address: 'Oduduwa Crescent, Ikeja' },
+    locationJson: { city: 'Lagos', area: 'Ikeja GRA', latitude: 6.5836, longitude: 3.355 },
     amenityIds: ['wifi', 'parking', 'water-supply'],
   },
 ];

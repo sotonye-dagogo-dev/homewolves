@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { usePropertyTypes, useAmenities } from '@/hooks/use-platform-config';
+import { usePropertyTypes, useAmenities, useFeatureFlag } from '@/hooks/use-platform-config';
 import { useCreateListing } from '@/hooks/use-listings';
 import { CreateListingPayload } from '@/lib/listings';
+import { MapPinPicker } from '@/components/listings/map-pin-picker';
 
 type ListingCategory = 'SALE' | 'RENT' | 'SHORTLET' | 'LAND';
 
@@ -53,6 +54,7 @@ const categories: { value: ListingCategory; label: string }[] = [
 
 export function ListingForm({ onComplete }: { onComplete?: () => void }) {
   const [step, setStep] = useState(0);
+  const { enabled: mapViewEnabled } = useFeatureFlag('map_view');
   const [form, setForm] = useState<FormData>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const createListing = useCreateListing();
@@ -350,6 +352,17 @@ export function ListingForm({ onComplete }: { onComplete?: () => void }) {
                   />
                 </div>
               </div>
+              {mapViewEnabled && (
+                <MapPinPicker
+                  lat={form.latitude}
+                  lng={form.longitude}
+                  initialHint={[form.city, form.state].filter(Boolean).join(', ') || undefined}
+                  onPick={(pickedLat, pickedLng) => {
+                    update('latitude', pickedLat);
+                    update('longitude', pickedLng);
+                  }}
+                />
+              )}
             </div>
           </>
         )}
@@ -395,7 +408,7 @@ export function ListingForm({ onComplete }: { onComplete?: () => void }) {
                           onClick={() => setPrimary(i)}
                           className={`px-2 py-1 rounded text-[10px] font-medium ${img.isPrimary ? '' : ''}`}
                           style={{
-                            background: img.isPrimary ? 'var(--color-brand-accent)' : 'rgba(255,255,255,0.9)',
+                            background: img.isPrimary ? 'var(--color-brand-accent)' : 'var(--color-bg-elevated)',
                             color: img.isPrimary ? 'var(--color-text-inverse)' : 'var(--color-text-primary)',
                           }}
                         >

@@ -41,14 +41,16 @@ homewolves/
 │   │   ├── components/
 │   │   │   ├── ui/              ← Hw* wrappers (HwButton, HwInput, HwSelect, HwTextarea, etc.) — the only import for UI primitives
 │   │   │   ├── landing/         ← Landing page zones (HeroSection, StatsStrip, CategoryBento, etc.)
-│   │   │   ├── listings/        ← Property card, gallery, filter bar, forms
+│   │   │   ├── map/             ← Keyless MapLibre stack: hw-map.tsx wrapper (dynamic import, theme observer, fallback card) + map-canvas.tsx (react-map-gl/maplibre, style step-down, pins/popups)
+│   │   │   ├── listings/        ← Property card, gallery, filter bar, forms (ListingForm uses MapPinPicker; PropertyDetailClient uses ListingMapSection)
 │   │   │   ├── dashboard/       ← Bento grid cells, KPI widgets, charts
 │   │   │   ├── transactions/    ← Stepper, document upload, audit trail
 │   │   │   └── shared/          ← Layouts, ThemeProvider, loaders, EmptyState, ThemeToggle
-│   │   ├── hooks/               ← Custom React hooks (use-crm, use-messaging, use-notifications, use-analytics, etc.)
-│   │   ├── lib/                 ← API clients (crm, messaging, notifications, analytics, transactions, blog), realtime socket layer (`realtime.ts`), data layers (`messaging.ts`, `status.ts`, `toast.ts`), null-safe formatters (`format.ts`) + server helpers (`lib/server/auth-local.ts`, `lib/property-filters.ts`, `lib/format-price.ts`) + colocated `*.test.ts`
+│   │   ├── hooks/               ← Custom React hooks (use-crm, use-messaging, use-notifications, use-analytics, use-listing-pin, use-property-map-markers, etc.)
+│   │   ├── lib/                 ← API clients (crm, messaging, notifications, analytics, transactions, blog), realtime socket layer (`realtime.ts`), data layers (`messaging.ts`, `status.ts`, `toast.ts`), keyless map helpers (`lib/map/config.ts`), null-safe formatters (`format.ts`) + server helpers (`lib/server/auth-local.ts`, `lib/property-filters.ts`, `lib/format-price.ts`) + colocated `*.test.ts`
 │   │   ├── e2e/                 ← Playwright E2E journeys (smoke, guest, auth, agent-dashboard, admin-journey, transaction-stepper)
 │   │   ├── app/api/v1/auth/     ← Local email/OTP auth route (proxies NestJS when backendOrigin set; imports `postgres` — declared on this package)
+│   │   ├── app/api/v1/maps/     ← Keyless geocode proxy route (geocode/route.ts: Photon → Nominatim, never called browser-direct)
 │   │   ├── config/              ← fallbacks.ts (web re-export)
 │   │   ├── next.config.js       ← images/rewrites + experimental.serverComponentsExternalPackages: ['postgres']
 │   │   └── public/              ← Static assets

@@ -77,7 +77,19 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 function jsonLd(listing: any) {
-  const location = (listing.locationJson ?? {}) as Record<string, string>;
+  const location = (listing.locationJson ?? {}) as Record<string, unknown>;
+  // Structured geo (schema.org): only when valid submitted coordinates exist.
+  // Accepts number (API jsonb) or string (fallback config) latitude/longitude.
+  const latRaw = location?.latitude;
+  const lngRaw = location?.longitude;
+  const lat = typeof latRaw === 'number' ? latRaw : Number.parseFloat(String(latRaw ?? ''));
+  const lng = typeof lngRaw === 'number' ? lngRaw : Number.parseFloat(String(lngRaw ?? ''));
+  const hasGeo =
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lng) <= 180 &&
+    (lat !== 0 || lng !== 0);
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -86,6 +98,12 @@ function jsonLd(listing: any) {
     image: listing.media?.map((m: any) => m.url) ?? [],
     sku: listing.id,
     brand: { '@type': 'Brand', name: 'Homewolves' },
+    ...(hasGeo
+      ? {
+          geo: { '@type': 'GeoCoordinates', latitude: lat, longitude: lng },
+          hasMap: `https://www.google.com/maps?q=${lat},${lng}`,
+        }
+      : {}),
     offers: {
       '@type': 'Offer',
       price: listing.price,

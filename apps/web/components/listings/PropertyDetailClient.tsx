@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Search, Share2, Heart, Home, BedDouble, Bath, Maximize2, Calendar, Map, Check, Zap, ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { Search, Share2, Heart, Home, BedDouble, Bath, Maximize2, Calendar, Check, Zap, ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useListing, useListings } from '@/hooks/use-listings';
 import { useCheckSaved, useToggleSave, useRecentViews } from '@/hooks/use-interactions';
 import { useAuth } from '@/hooks/use-auth';
@@ -11,6 +11,7 @@ import { useRequireAuth } from '@/hooks/use-require-auth';
 import { recordView } from '@/lib/interactions';
 import { ScheduleInspectionModal } from '@/components/shared/ScheduleInspectionModal';
 import { formatPrice } from '@/lib/format-price';
+import { ListingMapSection } from '@/components/listings/listing-map';
 import Link from 'next/link';
 
 function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
@@ -368,23 +369,13 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
               )}
             </section>
 
-            {/* ─── §4.3 Zone 7 — Location Map ─── */}
-            <section className="flex flex-col gap-3">
-              <h2 className="font-bold text-2xl" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}>Location</h2>
-              <p className="text-sm flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
-                Neighborhood: <strong style={{ color: 'var(--color-text-primary)' }}>{location?.city ?? '—'}, {location?.state ?? ''}</strong>
-              </p>
-              <div
-                className="w-full rounded-xl overflow-hidden relative flex items-center justify-center"
-                style={{ aspectRatio: '16/9', background: 'linear-gradient(135deg, #E8EDF2 0%, #D5DEE8 100%)' }}
-              >
-                <div className="text-center" style={{ color: 'var(--color-text-muted)' }}>
-                  <div className="flex justify-center mb-2"><Map className="w-10 h-10" /></div>
-                  <p className="text-sm">Map integration</p>
-                  <p className="text-xs mt-1">Powered by Mapbox / Google Maps</p>
-                </div>
-              </div>
-            </section>
+            {/* ─── §4.3 Zone 7 — Location Map (keyless MapLibre stack) ─── */}
+            <ListingMapSection
+              location={location}
+              title={listing?.title ?? ''}
+              price={listing?.price != null ? formatPrice(listing.price, listing.currency) : undefined}
+              listingId={listing?.id}
+            />
 
             {/* ─── §4.3 Zone 9 — Similar Properties ─── */}
             <section className="flex flex-col gap-4">
@@ -547,7 +538,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
                           background: completed ? 'var(--color-status-complete)' : active ? 'var(--color-status-active)' : 'var(--color-bg-elevated)',
                           border: `2px solid ${completed || active ? 'transparent' : 'var(--color-border-default)'}`,
                           color: completed || active ? 'var(--color-text-inverse)' : 'var(--color-text-muted)',
-                          boxShadow: active ? '0 0 0 4px rgba(5,150,105,0.2)' : 'none',
+                          boxShadow: active ? '0 0 0 4px var(--color-success-bg)' : 'none',
                         }}
                       >
                         {completed ? <Check className="w-3 h-3" /> : i + 1}

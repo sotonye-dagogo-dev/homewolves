@@ -5,6 +5,7 @@ import { useListings } from '@/hooks/use-listings';
 import { useFilterPills } from '@/hooks/use-platform-config';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { incrementView } from '@/lib/listings';
+import { chipToneStyle } from '@/lib/status';
 import {
   buildListingParams,
   matchesPillClientSide,
@@ -18,6 +19,9 @@ import { Search, LayoutGrid, List, Map as MapIcon, MapPin, Heart, Share2, X, Che
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BrandLogo } from '@/components/shared/brand-logo';
 import { priceToNumber, formatPrice } from '@/lib/format-price';
+import { HwMap } from '@/components/map/hw-map';
+import { useMapConfig, useFeatureFlag } from '@/hooks/use-platform-config';
+import { usePropertyMapMarkers } from '@/hooks/use-property-map-markers';
 
 type ViewMode = 'grid' | 'list' | 'map';
 type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'most_viewed';
@@ -177,6 +181,15 @@ function PropertiesContent() {
     return Array.from(groups.entries()).sort((a, b) => b[1].length - a[1].length);
   })();
 
+  const { data: mapConfig } = useMapConfig();
+  const { enabled: mapEnabled } = useFeatureFlag('map_view');
+  const [selectedPin, setSelectedPin] = useState<string | null>(null);
+  const markersResult = usePropertyMapMarkers(filteredListings, mapConfig?.maxMarkers);
+  const mapMarkers = markersResult.markers;
+  const selectedListing = mapMarkers.some((m) => m.id === selectedPin)
+    ? filteredListings.find((l: any) => l.id === selectedPin)
+    : undefined;
+
   const activeFilters: { key: string; label: string }[] = [];
   if (activePill !== 'all') {
     const pill = dedupePills(filterPills).find((p: any) => p.id === activePill);
@@ -307,7 +320,7 @@ function PropertiesContent() {
               className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px]"
               style={{
                 background:
-                  activePill === 'all' ? 'rgba(255,255,255,0.2)' : 'var(--color-border-subtle)',
+                  activePill === 'all' ? 'var(--color-accent-overlay)' : 'var(--color-border-subtle)',
               }}
             >
               {data?.total ?? 0}
@@ -454,6 +467,87 @@ function PropertiesContent() {
                 {locationGroups.length} location{locationGroups.length === 1 ? '' : 's'}
               </p>
             </div>
+
+            {/* Real keyless MapLibre map — exact pins + server-geocoded approximates */}
+            {mapEnabled ? (
+              <div
+                className="overflow-hidden rounded-xl"
+                style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-subtle)' }}
+              >
+                <HwMap
+                  markers={mapMarkers}
+                  height={460}
+                  center={mapConfig?.defaultCenter}
+                  zoom={mapConfig?.defaultZoom ?? 11}
+                  selectedId={selectedPin}
+                  onSelect={setSelectedPin}
+                  ariaLabel="Property map with price pins"
+                  testId="properties-map"
+                  fallback={{
+                    title: 'Interactive map unavailable',
+                    description:
+                      'Your connection can’t load map tiles right now — browse by location below instead.',
+                  }}
+                />
+              </div>
+            ) : null}
+
+            {mapMarkers.length > 0 && (
+              <p className="text-xs px-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                Showing {mapMarkers.length} mapped propert{mapMarkers.length === 1 ? 'y' : 'ies'}
+                {' '}· tap a pin to preview, then open the listing
+              </p>
+            )}
+
+            {selectedListing ? (
+              <section
+                className="overflow-hidden rounded-xl"
+                style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-brand-accent)' }}
+                data-testid="selected-listing-card"
+              >
+                <header className="flex items-center justify-between px-4 py-2" style={{ borderBottom: '1px solid var(--color-border-subtle)' }}>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--color-brand-accent)' }}>
+                    Selected property
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPin(null)}
+                    className="text-xs rounded p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    style={{ color: 'var(--color-text-muted)' }}
+                    aria-label="Clear selected property"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </header>
+                <Link
+                  href={`/properties/${selectedListing.id}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-black/[0.02]"
+                >
+                  <div className="h-12 w-16 shrink-0 overflow-hidden rounded-lg" style={{ background: 'var(--color-bg-base)' }}>
+                    {selectedListing.media?.[0]?.url ? (
+                      <Image
+                        src={selectedListing.media[0].url}
+                        alt=""
+                        width={64}
+                        height={48}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                      {selectedListing.title}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      {selectedListing.propertyType} · {selectedListing.category}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold" style={{ color: 'var(--color-text-accent)' }}>
+                    {formatPrice(selectedListing.price)}
+                  </span>
+                </Link>
+              </section>
+            ) : null}
 
             {locationGroups.map(([label, group]) => (
               <section
@@ -703,14 +797,14 @@ function PropertyCard({ listing, onClick }: { listing: any; onClick: () => void 
         <div className="flex gap-1 mt-2 flex-wrap">
           <span
             className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: '#DBEAFE', color: '#1D4ED8' }}
+            style={chipToneStyle('info')}
           >
             {listing.category}
           </span>
           {listing.verified && (
             <span
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-              style={{ background: '#D1FAE5', color: '#065F46' }}
+              style={chipToneStyle('success')}
             >
               <Check className="w-3 h-3" /> Verified
             </span>
@@ -812,12 +906,12 @@ function PropertyCardHorizontal({ listing, onClick }: { listing: any; onClick: (
         <div className="flex gap-1 mt-2">
           <span
             className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: '#DBEAFE', color: '#1D4ED8' }}
+            style={chipToneStyle('info')}
           >
             {listing.category}
           </span>
           {listing.verified && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: '#D1FAE5', color: '#065F46' }}>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={chipToneStyle('success')}>
               <Check className="w-3 h-3" /> Verified
             </span>
           )}

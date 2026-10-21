@@ -7,10 +7,10 @@ const hwBadgeVariants = cva(
   {
     variants: {
       variant: {
-        sale: 'bg-[#DBEAFE] text-[#1D4ED8]',
-        rent: 'bg-[#D1FAE5] text-[#065F46]',
-        verified: 'bg-[#D1FAE5] text-[#065F46]',
-        pending: 'bg-[#FEF3C7] text-[#B45309]',
+        sale: 'bg-[var(--color-info-bg)] text-[var(--color-info)]',
+        rent: 'bg-[var(--color-success-bg)] text-[var(--color-success)]',
+        verified: 'bg-[var(--color-success-bg)] text-[var(--color-success)]',
+        pending: 'bg-[var(--color-warning-bg)] text-[var(--color-warning)]',
         default: 'bg-muted text-muted-foreground',
       },
     },

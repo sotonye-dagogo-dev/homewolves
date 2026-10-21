@@ -81,6 +81,32 @@ export const FALLBACK_FEATURE_FLAGS: FeatureFlag[] = [
   { id: 'referral_system', enabled: true, rolloutPercentage: 100, roles: ['AGENT'] as UserRole[] },
 ];
 
+export const FALLBACK_MAP_CONFIG: MapConfig = {
+  vectorStyles: {
+    light: 'https://tiles.openfreemap.org/styles/liberty',
+    dark: 'https://tiles.openfreemap.org/styles/liberty',
+  },
+  rasterFallbacks: {
+    light: [
+      'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    ],
+    dark: [
+      'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    ],
+  },
+  darkCanvasFilter: 'none',
+  defaultCenter: { lat: 6.5244, lng: 3.3792 },
+  defaultZoom: 11,
+  detailZoom: 15,
+  attribution: '© OpenFreeMap · © OpenStreetMap contributors',
+  geocode: { endpoint: '/api/v1/maps/geocode', limit: 5, cacheTtlSec: 300 },
+  maxMarkers: 200,
+  markerColor: '#C8813A',
+  markerBorder: '#1A3A5C',
+};
+
 export const FALLBACK_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'free', name: 'Free', description: 'List up to 3 properties', price: { amount: 0, currency: 'NGN' },
