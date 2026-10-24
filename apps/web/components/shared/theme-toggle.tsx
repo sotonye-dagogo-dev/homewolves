@@ -33,7 +33,9 @@ export function ThemeToggle() {
       title={label}
       className="fixed right-4 z-[150] grid h-11 w-11 place-items-center rounded-full shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:!bottom-6"
       style={{
-        bottom: 'calc(152px + env(safe-area-inset-bottom, 0px))',
+        // Clears the mobile bottom nav (~80px) AND the listing-detail sticky
+        // action bar (top edge ~156px) so it never collides with Chat Agent.
+        bottom: 'calc(208px + env(safe-area-inset-bottom, 0px))',
         background: 'var(--color-bg-elevated)',
         color: 'var(--color-text-secondary)',
         border: '1px solid var(--color-border-default)',

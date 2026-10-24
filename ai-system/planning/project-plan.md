@@ -1,7 +1,7 @@
 # Project Plan
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-27
+> - last-updated-by: execute-feature-session-30
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: re-verify if project scope or phase changes
 
@@ -46,7 +46,7 @@
 - [x] Inspection scheduling
 - [x] Agent Dashboard — bento grid layout
 - [x] Client Dashboard — tabs: transactions, wishlist, recently viewed, documents
-- [x] In-app messaging — real-time Socket.io chat
+- [x] In-app messaging — real-time Socket.io when enabled, REST + Next-local Postgres route on single-service deployments
 - [x] Price drop alerts
 - [x] New listing match alerts (saved search preferences)
 - [x] Activity points system (gamification, configurable)

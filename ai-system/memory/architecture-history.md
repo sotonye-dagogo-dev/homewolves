@@ -1,8 +1,8 @@
 # Architecture History
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-30
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: historical entries do not go stale — only the current architecture (in system-architecture.md) needs re-verification
 
 > **Overview:** Chronological record of how the system architecture has evolved. Useful for understanding why things are structured the way they are, and for identifying patterns in how the codebase has grown.
@@ -84,3 +84,14 @@ Realtime became a deployment capability: `NEXT_PUBLIC_REALTIME_ENABLED` defaults
 
 **Rationale:**
 Serverless hosting cannot terminate WebSockets; hardcoding a production socket origin produced guaranteed console failures. Making realtime opt-in preserves the Socket.io architecture for future long-lived hosting without blocking current functionality. Wiring real analytics and role guards closes the gap between the documented RBAC/metadata model and the shipped UI.
+
+
+---
+
+### 2026-10-24 — Next-local domain routes for single-service deployments (Session 30)
+
+**State:**
+The web app now owns a second domain API locally: `app/api/v1/messaging/[...path]/route.ts` serves directory, conversations, messages, read receipts, and unread counts against Postgres when no off-site NestJS API is configured, proxying otherwise. Both auth and messaging share `apps/web/lib/server/local-db.ts` (lazy `postgres` client, pooler-safe options, DB error predicates, backend-origin detection) and domain modules (`auth-local.ts`, `messaging-local.ts`). Browser messaging calls switched to `sameOriginApiBase()`.
+
+**Rationale:**
+The actual deployment is a single Next.js service. Without a Next-local handler, messaging fell through to the `/api/v1/[...path]` catch-all (502 `API not configured` for mutations, non-array fallbacks for GETs), which the UI surfaced as a toast and an empty member directory. Local auth had already proven the pattern; sharing the server helpers keeps the two domains consistent and makes proxy-vs-local switching non-breaking.

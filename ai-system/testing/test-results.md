@@ -1,8 +1,8 @@
 # Test Results
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-26
-> - last-verified-against-code: 2026-10-21
+> - last-updated-by: execute-feature-session-30
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: overwritten on every test run — always current
 
 > **Overview:** Latest test run results. Updated by agents after running tests. Gives a quick snapshot of current project health.
@@ -11,24 +11,21 @@
 
 ## Last Run
 
-**Date:** 2026-10-21
-**Run by:** execute-feature (Session 26 — QA gate)
+**Date:** 2026-10-24
+**Run by:** execute-feature (Session 30 — QA gate)
 
 **Results:**
 | Suite | Passed | Failed | Skipped |
 |-------|--------|--------|---------|
-| API unit (vitest, @hw/api) | 173 | 0 | 0 |
-| Web unit/component (vitest, @hw/web) | 172 | 0 | 0 |
+| API unit (vitest, @hw/api) | not run (last known 180) | — | — |
+| Web unit/component (vitest, @hw/web) | 197 | 0 | 0 |
 | E2E (Playwright, @hw/web) | not run | — | — |
-| Web production build (`next build`) | 47 routes | 0 | — |
+| Web production build (`next build`) | 48 routes | 0 | — |
 
-**Overall Status:** Green — API 173/173 (18 files), web 172/172 (23 files, +17 map tests), `npm run typecheck` 4/4 (0 TS errors), `npm run lint` 4/4 (0 errors, 0 warnings), `npm run build` 47 static routes + nest build clean.
+**Overall Status:** Green — web 197/197 (26 files, +9 `lib/server/messaging-local` tests), `npm run typecheck` 4/4 (0 TS errors), `npm run lint --workspace=@hw/web` clean, `npm run build --workspace=@hw/web` 48 routes incl. `ƒ /api/v1/messaging/[...path]`. API unit suite untouched in Session 30 (last known 180/180, 19 files).
 
-**API unit test files (18):** including auth, listing, rate-limit, sms, storage, docuseal, health, app.e2e.spec + `drizzle/seed.backup.spec.ts`.
-**Web unit test files (23):** including property-filters (21 tests), auth-local (15), messaging, use-auth, top-nav, mobile-bar, hero-section, hw-button, post-form, `lib/map/config.test.ts` (11), `components/map/hw-map.test.tsx` (6).
-
-**API unit test files (18):** including auth, listing, rate-limit, sms, storage, docuseal, health, app.e2e.spec + `drizzle/seed.backup.spec.ts`.
-**Web unit test files (21):** including property-filters (21 tests), auth-local (15), messaging, use-auth, top-nav, mobile-bar, hero-section, hw-button, post-form.
+**API unit test files (19, last run Session 27):** including auth, listing, rate-limit, sms, storage, docuseal, health, app.e2e.spec, `messaging.service.spec.ts` + `drizzle/seed.backup.spec.ts`.
+**Web unit test files (26):** including property-filters, auth-local, messaging (+ `lib/server/messaging-local.test.ts` ×9), use-auth, top-nav, mobile-bar, hero-section, hw-button, post-form, footer, design-tokens, `lib/map/config.test.ts`, `components/map/hw-map.test.tsx`.
 
 **Notes:**
 - Session 25 QA: realtime/design-token/role-aware changes initially broke 2 web tests (`top-nav`, `mobile-bar`) because accessible names for the profile/post controls had been renamed. Fixed by restoring stable labels (`Profile`, `Post property`) while keeping role-aware `href`/visibility; web suite then green.
@@ -66,3 +63,4 @@
 | 2026-10-20 | — | 0 | execute-feature Session 24: no unit tests needed (only file change: `migrations/meta/_journal.json` `when` value — no source code). QA = live DB verification: migrations 0000–0005 applied via pooler, journal 6/6, 31 tables intact, all 5 seed users' `passwordHash` backfilled (0005). Pre-flight `db:seed:backup` attempted, failed on then-unreachable DB; reconciled by destructive-SQL scan (none) + row/table-count parity post-run |
 | 2026-10-20 | 328 | 0 | execute-feature Session 25: API 173/173 (18 files), web 155/155 (21 files); typecheck 4/4, lint 4/4 (0 warnings), `next build` 38/38 pages; E2E not run |
 | 2026-10-21 | 345 | 0 | execute-feature Session 26: api 173/173 (18 files), web 172/172 (23 files — +17 map tests: `lib/map/config.test.ts` 11, `components/map/hw-map.test.tsx` 6); typecheck 4/4, lint 4/4 (0 warnings), `next build` 47 routes green; E2E not run |
+| 2026-10-24 | 197 | 0 | execute-feature Session 30: web 197/197 (26 files — +9 `lib/server/messaging-local` tests); turbo typecheck 4/4, web lint clean, `next build` 48 routes incl. `/api/v1/messaging/[...path]`; API suite not run; E2E not run |

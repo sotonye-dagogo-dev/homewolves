@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-29
+> - last-updated-by: execute-feature-session-30
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: historical entries do not go stale
 
@@ -612,6 +612,26 @@ Added a reusable, allow-listed design-token resolver so config-driven credit sur
 **Key Changes:**
 - Rule: config-driven colours are token *keys* resolved at render time, never raw colour strings — theme changes are automatic and input stays allow-listed.
 - Rule: extending config objects consumed elsewhere adds optional fields and keeps existing resolver return shapes stable.
+
+**Next Sprint Focus:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable once a long-lived WS host exists.
+
+## 2026-10-24 — execute-feature: single-service messaging end-to-end (Session 30)
+
+**Summary:**
+Fixed the production chat failure where starting a conversation showed "API is not configured" and the member dropdown claimed there was nobody to message. The web app now serves `/api/v1/messaging/*` itself against Postgres when no external NestJS API exists, using the same shared server helpers as local auth, and the floating theme button was raised again so it clears both mobile action bars.
+
+**Completed:**
+- `apps/web/lib/server/local-db.ts`: shared lazy Postgres client (`prepare:false` by default, `PG_PREPARE=true` opt-in, SSL rules), error predicates (missing table/column, unique violation), DB error logging, and backend-origin resolution; auth route refactored onto it (−176 net lines overall while adding the new domain)
+- `apps/web/lib/server/messaging-local.ts`: directory (privacy-safe, caller excluded, search/role/take filters), conversations (last message via `DISTINCT ON`, participants), get, idempotent find-or-create (validates users, supplies UUID/timestamps for raw inserts), messages with senders, send (bumps `lastMessageAt`), mark-read, unread count
+- `apps/web/app/api/v1/messaging/[...path]/route.ts`: JWT auth (refresh rejected), proxy-to-backend with local fallback on network error/5xx (4xx passed through), endpoint validation (take 1–50, role enum, participant count/length, content 1–4000, type enum, http(s) media URL ≤2048), coded 401/503/500 responses
+- `sameOriginApiBase()` added and messaging client switched to it; theme toggle mobile offset raised 152px → 208px to clear the mobile nav bar and listing-detail sticky action bar
+- Tests: new `messaging-local.test.ts` (9 tests) and updated messaging client mock; QA = turbo typecheck 4/4, web lint 0 warnings, web 197 tests / 26 files, `next build` 48 routes (new dynamic messaging route registered)
+
+**Key Changes:**
+- Rule: on single-service deployments every browser-facing domain needs a Next-local route; the `/api/v1/[...path]` catch-all returns 502/`API not configured` for mutations and non-array fallbacks for GETs, so it cannot stand in for a real domain API.
+- Rule: local handlers share `lib/server/local-db.ts` and mirror the Nest services' validation/privacy/response contract; raw SQL inserts must set client-side defaults (`id`, timestamps) explicitly.
+- Rule: browser clients use `sameOriginApiBase()` so traffic reaches the Next-local route; proxy failures fall back locally rather than surfacing as empty data.
 
 **Next Sprint Focus:**
 Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable once a long-lived WS host exists.
