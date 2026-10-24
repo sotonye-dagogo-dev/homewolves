@@ -123,6 +123,8 @@ export default function MapCanvas({
         initialViewState={initialViewState}
         mapStyle={mapStyle}
         style={{ width: '100%', height: '100%' }}
+        // Provider credit lives in the README, not on the map surface.
+        attributionControl={false}
         onError={handleMapError}
         onClick={onPick ? (e) => onPick({ lat: e.lngLat.lat, lng: e.lngLat.lng }) : undefined}
         cursor={onPick ? 'crosshair' : undefined}

@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards, Req, Query } from '@nestjs/common';
 import { MessagingService } from './messaging.service';
 import { JwtGuard } from '../auth/jwt.guard';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthenticatedRequest } from '../../common/types/request.types';
+import { UserRole } from '../../drizzle/schema';
 import { z } from 'zod';
 
 const createConversationSchema = z
@@ -20,10 +21,27 @@ const sendMessageSchema = z
   })
   .strict();
 
+const directoryQuerySchema = z
+  .object({
+    search: z.string().trim().max(64).optional(),
+    role: z.enum(Object.keys(UserRole) as [keyof typeof UserRole, ...(keyof typeof UserRole)[]]).optional(),
+    take: z.coerce.number().int().positive().max(50).optional(),
+  })
+  .strict();
+
 @Controller('messaging')
 @UseGuards(JwtGuard)
 export class MessagingController {
   constructor(private messagingService: MessagingService) {}
+
+  @Get('directory')
+  getDirectory(
+    @Query(new ZodValidationPipe(directoryQuerySchema))
+    query: { search?: string; role?: keyof typeof UserRole; take?: number },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.messagingService.getDirectory({ ...query, excludeUserId: req.user.sub });
+  }
 
   @Get('conversations')
   getConversations(@Req() req: AuthenticatedRequest) {

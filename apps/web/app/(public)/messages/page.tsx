@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   Check,
@@ -18,10 +18,10 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { useConversations, useMessages, useMessaging } from '@/hooks/use-messaging';
+import { useConversations, useMessages, useMessaging, useMessagingDirectory } from '@/hooks/use-messaging';
 import { createConversation, fetchConversation, markConversationRead } from '@/lib/messaging';
 import { EmptyState } from '@/components/shared/empty-state';
-import { HwButton } from '@/components/ui';
+import { HwButton, HwSelect } from '@/components/ui';
 import { emitToast, errorMessage } from '@/lib/toast';
 import { formatTime, fullName, initials, safeText, toArray } from '@/lib/format';
 
@@ -32,6 +32,7 @@ interface Participant {
   role?: string | null;
   avatar?: string | null;
   phone?: string | null;
+  verified?: boolean | null;
 }
 
 interface ConversationMessage {
@@ -61,9 +62,27 @@ interface Message {
   readAt?: string | null;
 }
 
+// `useSearchParams` requires a Suspense boundary for static prerendering.
 export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            Loading messages…
+          </p>
+        </div>
+      }
+    >
+      <MessagesPageContent />
+    </Suspense>
+  );
+}
+
+function MessagesPageContent() {
   const { user, accessToken, hydrated } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeConvoId, setActiveConvoId] = useState<string | null>(null);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [messageInput, setMessageInput] = useState('');
@@ -73,6 +92,7 @@ export default function MessagesPage() {
   const [showInfo, setShowInfo] = useState(false);
   const [showAttach, setShowAttach] = useState(false);
   const [sending, setSending] = useState(false);
+  const handledLinkRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -111,6 +131,76 @@ export default function MessagesPage() {
 
   const conversationList = useMemo(() => toArray<Conversation>(conversations), [conversations]);
   const messageList = useMemo(() => toArray<Message>(messages), [messages]);
+
+  // ─── Deep link from property listings: /messages?to=<userId>&property=<id>&context=<title>
+  // Reuses an existing conversation with that member (matched exactly) or
+  // creates one (API is find-or-create), then prefills the composer with an
+  // editable listing-context draft — nothing is sent automatically.
+  const pendingTo = searchParams.get('to');
+  const pendingProperty = searchParams.get('property');
+  const pendingContext = searchParams.get('context');
+  const pendingKey = useMemo(
+    () => (pendingTo ? `${pendingTo}|${pendingProperty ?? ''}|${pendingContext ?? ''}` : null),
+    [pendingTo, pendingProperty, pendingContext],
+  );
+
+  useEffect(() => {
+    if (!pendingKey || !hydrated || !accessToken || convosLoading) return;
+    if (handledLinkRef.current === pendingKey) return;
+    handledLinkRef.current = pendingKey;
+    // Consume the URL first so the flow is processed exactly once per link.
+    router.replace('/messages', { scroll: false });
+
+    const [to, property, context] = pendingKey.split('|');
+    if (!to) return;
+    if (to === user?.id) {
+      emitToast("You can't start a conversation with yourself.", 'info');
+      setShowCompose(true);
+      return;
+    }
+
+    const contextTitle = context || undefined;
+    const sameParticipants = (c: Conversation) => {
+      const ids = c.participantIds ?? [];
+      return (
+        Array.isArray(ids) && ids.length === 2 && ids.includes(to) && ids.includes(user?.id ?? '')
+      );
+    };
+    const match = conversationList.find(
+      (c) => sameParticipants(c) && (c.propertyId ?? null) === (property || null),
+    );
+
+    const finish = (id: string) => {
+      setActiveConvoId(id);
+      setShowMobileChat(true);
+      setShowInfo(false);
+      if (contextTitle) {
+        setMessageInput(
+          `Hi! I'm interested in "${contextTitle}". Is it still available?`,
+        );
+      }
+    };
+
+    if (match?.id) {
+      finish(match.id);
+      return;
+    }
+
+    createConversation([to], property || undefined)
+      .then((conversation) => {
+        const newId = (conversation as { id?: string })?.id;
+        if (!newId) throw new Error('Conversation could not be created.');
+        void refetchConversations();
+        finish(newId);
+      })
+      .catch((error) => {
+        emitToast(
+          errorMessage(error, 'Could not start that conversation. Try again from Messages.'),
+          'error',
+        );
+        setShowCompose(true);
+      });
+  }, [pendingKey, hydrated, accessToken, convosLoading, conversationList, user?.id, router, refetchConversations]);
 
   const otherParticipant = useCallback(
     (conversation: Conversation | null): Participant | null => {
@@ -327,7 +417,7 @@ export default function MessagesPage() {
                 description={
                   searchQuery
                     ? 'Try a different name or message.'
-                    : 'Start a conversation from a property listing or with a user ID.'
+                    : 'Start a conversation from a property listing or with a member from the directory.'
                 }
                 actionLabel={searchQuery ? undefined : 'New conversation'}
                 onAction={searchQuery ? undefined : () => setShowCompose(true)}
@@ -693,6 +783,16 @@ export default function MessagesPage() {
   );
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  GUEST: 'Guest',
+  BUYER: 'Buyer',
+  AGENT: 'Agent',
+  DEVELOPER: 'Developer',
+  HOMEOWNER: 'Homeowner',
+  ADMIN: 'Admin',
+  SUPER_ADMIN: 'Admin',
+};
+
 function ComposeModal({
   onClose,
   onCreated,
@@ -705,11 +805,23 @@ function ComposeModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Directory-backed recipient picker: users pick people, not raw IDs.
+  // Falls back to a manual (advanced) input when the directory is unavailable.
+  const {
+    data: directory,
+    isLoading: directoryLoading,
+    isError: directoryError,
+    refetch: refetchDirectory,
+  } = useMessagingDirectory({ take: 50 });
+  const directoryOptions = useMemo(() => toArray<Participant>(directory), [directory]);
+
+  const selectedParticipant = directoryOptions.find((p) => p.id === participantId) ?? null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const id = participantId.trim();
     if (!id) {
-      setError('Enter the user ID you want to message.');
+      setError('Select who you want to message.');
       return;
     }
     setSubmitting(true);
@@ -734,21 +846,112 @@ function ComposeModal({
     <ModalShell title="New conversation" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="compose-user" className="mb-1 block text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-            Recipient user ID
+          <label
+            htmlFor="compose-user"
+            className="mb-1 block text-sm font-semibold"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            Who are you messaging?
           </label>
-          <input
-            id="compose-user"
-            value={participantId}
-            onChange={(e) => setParticipantId(e.target.value)}
-            placeholder="e.g. seed-user-agent-0001"
-            className="w-full rounded-md px-4 py-3 text-sm outline-none"
-            style={{ background: 'var(--color-bg-input)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-primary)' }}
-            autoFocus
-          />
+          {directoryLoading ? (
+            <div
+              className="w-full rounded-md px-4 py-3 text-sm"
+              style={{
+                background: 'var(--color-bg-input)',
+                border: '1px solid var(--color-border-default)',
+                color: 'var(--color-text-muted)',
+              }}
+            >
+              Loading directory…
+            </div>
+          ) : directoryError ? (
+            <div className="space-y-2">
+              <p
+                role="alert"
+                className="text-sm font-medium"
+                style={{ color: 'var(--color-error)' }}
+              >
+                The member directory could not be loaded.
+              </p>
+              <div className="flex items-center gap-2">
+                <HwButton type="button" variant="ghost" onClick={() => void refetchDirectory()}>
+                  Try again
+                </HwButton>
+                <input
+                  id="compose-user"
+                  value={participantId}
+                  onChange={(e) => setParticipantId(e.target.value)}
+                  placeholder="Advanced: paste a user ID"
+                  className="min-w-0 flex-1 rounded-md px-4 py-3 text-sm outline-none"
+                  style={{
+                    background: 'var(--color-bg-input)',
+                    border: '1px solid var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                  autoFocus
+                />
+              </div>
+            </div>
+          ) : directoryOptions.length === 0 ? (
+            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              No other members are available to message yet. You can still start conversations
+              from a property listing.
+            </p>
+          ) : (
+            <HwSelect
+              id="compose-user"
+              value={participantId}
+              onChange={(e) => setParticipantId(e.target.value)}
+              aria-label="Message recipient"
+              className="w-full"
+              autoFocus
+            >
+              <option value="">Select a member…</option>
+              {directoryOptions.map((p) => {
+                const name = fullName(p.firstName, p.lastName, p.id);
+                const role = safeText(p.role, 'Member');
+                return (
+                  <option key={p.id} value={p.id}>
+                    {name} — {ROLE_LABELS[role] ?? role}
+                  </option>
+                );
+              })}
+            </HwSelect>
+          )}
         </div>
+        {selectedParticipant ? (
+          <div
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm"
+            style={{
+              background: 'var(--color-bg-glass)',
+              border: '1px solid var(--color-border-subtle)',
+              color: 'var(--color-text-secondary)',
+            }}
+            aria-live="polite"
+          >
+            <span
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold"
+              style={{ background: 'var(--color-brand-primary)', color: 'var(--color-text-inverse)' }}
+            >
+              {initials(selectedParticipant.firstName, selectedParticipant.lastName, '?')}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                {fullName(selectedParticipant.firstName, selectedParticipant.lastName, 'Member')}
+              </span>
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {ROLE_LABELS[safeText(selectedParticipant.role, 'Member')] ?? safeText(selectedParticipant.role, 'Member')}
+                {selectedParticipant.verified ? ' · Verified' : ''}
+              </span>
+            </span>
+          </div>
+        ) : null}
         <div>
-          <label htmlFor="compose-property" className="mb-1 block text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+          <label
+            htmlFor="compose-property"
+            className="mb-1 block text-sm font-semibold"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
             Property ID <span className="font-normal">(optional)</span>
           </label>
           <input
@@ -761,7 +964,7 @@ function ComposeModal({
           />
         </div>
         <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          Tip: open a property listing and choose “Message agent” to start with context.
+          Tip: open a property listing and choose “Chat Agent” to start with context.
         </p>
         {error ? (
           <p role="alert" className="text-sm font-medium" style={{ color: 'var(--color-error)' }}>

@@ -1,8 +1,8 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-26
-> - last-verified-against-code: 2026-10-21
+> - last-updated-by: execute-feature-session-27
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Practical knowledge accumulated during Homewolves development — things that worked well, things that didn't, and patterns worth repeating. Different from `repair-system.md` (tracks errors); this file tracks development process insights and architectural wisdom. Uses supersedes/superseded-by links for evolving practices.
@@ -514,3 +514,7 @@ Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeo
 **Apply When:**
 - Touching `components/map/*`, `lib/map/config.ts`, `app/api/v1/maps/geocode`, or swapping tile/geocode providers.
 - Any new client-side third-party API call: first ask "which key-less server proxy can own caching + UA + fail-soft semantics?"
+
+---
+
+**Session 27 (2026-10-24) — `useSearchParams` + static prerender:** adding query-param consumption to an existing `'use client'` page breaks `next build` prerendering unless the component is wrapped in a `<Suspense>` boundary (Next 14 requirement, exact-typo-class errors). Pattern: export a thin default-export wrapper with Suspense + a text fallback, move the real page to an inner component. Batch the whole query object into a single memoized string key and guard with a ref so the deep link resolves exactly once per navigation.

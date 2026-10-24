@@ -1,8 +1,8 @@
 # System Architecture
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-26
-> - last-verified-against-code: 2026-10-21
+> - last-updated-by: execute-feature-session-27
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: re-verify before trusting if any architecture-affecting commits have been made since last-verified-against-code
 
 > **Overview:** Homewolves is a multi-sided PropTech marketplace + Agent CRM + Transaction Management Platform targeting the Nigerian/African market. It uses a modular monolith architecture (Next.js 14 frontend + NestJS backend + PostgreSQL) designed to decompose into microservices as the platform scales. The system is metadata-driven — all configurable UI elements and business rules are stored in the database via `PlatformConfig`, with hardcoded fallbacks in `packages/config/src/fallbacks.ts`.
@@ -58,7 +58,7 @@
 | `transactions` | Full deal lifecycle stepper, payment evidence, document vault | transactions.service.ts | listings, users, audit, notifications, email, Drizzle |
 | `documents` | Document vault for transactions | documents.service.ts | Drizzle |
 | `signatures` | E-signature workflow | signatures.service.ts | email, Drizzle |
-| `messaging` | Real-time chat via Socket.io `/ws` + REST send fallback, conversation management, hydrated participant profiles | messaging.gateway.ts, messaging.service.ts, messaging.controller.ts | users, listings, Drizzle |
+| `messaging` | Real-time chat via Socket.io `/ws` + REST send fallback, idempotent find-or-create conversation creation (participants validated, creator-only rejected), messagable-user directory, hydrated participant profiles | messaging.gateway.ts, messaging.service.ts, messaging.controller.ts | users, listings, Drizzle |
 | `notifications` | Multi-channel dispatch (WebSocket, email, SMS, WhatsApp) | notifications.service.ts, notifications.gateway.ts | BullMQ, Resend, Termii |
 | `alerts` | Price drop + new listing match alerts | alerts.service.ts | listings, notifications, email, Drizzle |
 | `activity` | Agent gamification — points, tiers, leaderboard | activity.service.ts | users, Drizzle |
@@ -244,6 +244,7 @@ This is the "undo" instinct applied one layer up from data (§22 covers user-fac
 - **Transactional email (2026-08-19)** — `@Global` EmailModule; templates in DB (`emailTemplates`), fallback constants in `packages/config/src/fallbacks.ts`; unset `RESEND_API_KEY` → simulated log-only delivery (by design).
 - **Notifications dispatch synchronously** — BullMQ async queue with retries is planned for production.
 - **Realtime is opt-in on serverless** (2026-10-20) — `NEXT_PUBLIC_REALTIME_ENABLED=false` by default. Messaging writes go through REST (`POST /messaging/conversations/:id/messages`) and reads poll; only set true when the API runs on a long-lived host that can terminate WebSockets. The browser never points at a hardcoded `wss://homewolves.com` socket when the flag is off.
+- **Chat-agent deep-link flow** (2026-10-24) — Chat Agent deep-links `/messages?to=<agentOwner>&property=<listingId>&context=<title>`; the page resolves exactly once per link (ref guard), reuses an exact-match conversation or creates one, and prefills an editable draft (never auto-sends). `POST /messaging/conversations` is find-or-create (participant validation + creator-only rejection, response shape unchanged); `GET /messaging/directory` (JWT, minimal privacy-safe fields, caller excluded, take ≤ 50) powers the compose dropdown. `/messages` wraps `useSearchParams` behind a Suspense boundary.
 - **Analytics endpoints are role-scoped** (2026-10-20) — agent/listing/funnel analytics are self-scoped; `GET /analytics/admin-summary` requires ADMIN/SUPER_ADMIN and aggregates pending/flagged listings, open bug reports, active transactions, and MTD confirmed revenue.
 - **Blog content uses `dangerouslySetInnerHTML`** — must be paired with sanitization in production.
 - **Activity points** — wired into service-layer hooks (9 rules: listing_created, listing_approved, listing_sold, transaction_created/completed, client_added, review_received, inspection_scheduled, message_sent, daily_login); a self-award endpoint (`POST /activity/award/:ruleKey`) remains for the web activity UI (own-account only, cooldowns enforced).

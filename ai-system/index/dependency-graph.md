@@ -1,8 +1,8 @@
 # Dependency Graph
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-26
-> - last-verified-against-code: 2026-10-21
+> - last-updated-by: execute-feature-session-27
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: auto-regenerable — can be derived from import analysis tools. Manual content only for conventions and rules that cannot be inferred from code.
 
 > **Overview:** Maps how modules depend on each other in the Homewolves NestJS backend. Agents consult this before modifying a module to understand the impact radius. This file is **auto-regenerable** — prefer tool-based import analysis for ground truth, and treat manual entries as supplementary.
@@ -58,8 +58,8 @@ SignaturesModule
 
 MessagingModule
   → DrizzleModule (DrizzleService)
-  → UsersModule (participant resolution)
-  → ListingsModule (property context)
+  → ActivityModule (message_sent points award)
+  → AnalyticsModule (listing_enquiry tracking)
 
 NotificationsModule
   → DrizzleModule (DrizzleService)
@@ -115,7 +115,7 @@ apps/web (Next.js 14)
   → TanStack Query (server state)
   → Zustand (client state)
   → lib/realtime — opt-in ref-counted Socket.io client (`NEXT_PUBLIC_REALTIME_ENABLED`, namespace `/ws`); REST + polling fallback when disabled
-  → lib/messaging — REST send/read + socket hybrid
+  → lib/messaging — REST send/read + socket hybrid; deep-link contract `to|property|context` resolved by `/messages` (find-or-create + directory dropdown)
   → lib/analytics — agent/admin analytics REST clients
   → lib/map/config — keyless map stack helpers (style-step-down chain, coordinate resolver) consumed by components/map + hooks
   → components/map — HwMap wrapper → dynamic(map-canvas) → react-map-gl/maplibre + maplibre-gl; `app/api/v1/maps/geocode` proxies upstreams (server-side only)
