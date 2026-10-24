@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ExternalLink, Loader2, MapPin } from 'lucide-react';
 import { useMapConfig } from '@/hooks/use-platform-config';
 import { buildMapStyleStack } from '@/lib/map/config';
+import { MapCreditTag } from './map-credit-tag';
 
 export interface MapMarker {
   id: string;
@@ -125,6 +126,7 @@ export function MapLocationFallback({
           {hrefLabel ?? 'Open in OpenStreetMap'} <ExternalLink className="w-3 h-3" aria-hidden="true" />
         </Link>
       )}
+      <MapCreditTag className="mt-1" />
     </div>
   );
 }
@@ -190,7 +192,7 @@ export function HwMap({
   }
 
   return (
-    <div style={style} className={className} data-testid={testId}>
+    <div style={style} className={className ? `${className} relative` : 'relative'} data-testid={testId}>
       <MapCanvas
         styleStack={styleStack}
         markers={markers}
@@ -206,6 +208,10 @@ export function HwMap({
         aria-label={ariaLabel}
         onStyleExhausted={() => setFailed(true)}
       />
+      {/* Config-driven partner info tag ("Powered by Along"); never intercepts map gestures. */}
+      <div className="pointer-events-none absolute bottom-2 left-2 z-10 flex items-end">
+        <MapCreditTag />
+      </div>
     </div>
   );
 }

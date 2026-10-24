@@ -1,9 +1,9 @@
 # Development Task Queue
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-27
+> - last-updated-by: execute-feature-session-28
 > - last-verified-against-code: 2026-10-24
-> - last-synced: 2026-10-24 (Session 27 — chat-agent deep link + conversation find-or-create, compose member directory, theme-toggle offset, map attribution off-map)
+> - last-synced: 2026-10-24 (Session 28 — Along map credit tag (config-driven), footer 3-col mobile grid + scroll-clearance padding, dev credit "Built by S.D." (config-driven))
 > - staleness-policy: re-verify before each session
 
 > **Overview:** Sprint-level task queue with complexity tagging. Agents execute tasks top to bottom within the current sprint. Each task is sized so it can be completed in a single session. Sprint 1–3 are complete; the current focus is hardening, Backlog items, and the next scheduled phase.
@@ -52,6 +52,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 | [L] | Map feature end-to-end + design-token readability pass (Session 26: used-but-unmapped tailwind colors mapped, status/status-bg tokens themed in dark + high-contrast, hardcoded hex maps tokenized, keyless MapLibre stack (OpenFreeMap → CARTO/OSM step-down) with server-proxied Photon/Nominatim geocode proxy, ListingMapSection + properties map view + MapPinPicker + JSON-LD geo + seeded Lagos coords) | [x] |
 | [BUG] | Run db migrations (Session 24: 0000–0005 applied via pooler `aws-1-eu-west-1` after direct host went AAAA-only; fixed silent skip — hand-set 0005 `when` predated runtime Date.now() journal row; seed-user password hashes backfilled + verified) | [x] |
 | [M] | Stakeholder feedback batch (Session 27: Chat Agent deep-links `/messages?to&property&context` with editable context prefill; conversation find-or-create + participant validation; `GET /messaging/directory` + compose dropdown replacing raw user-ID input; theme-toggle mobile offset 96→152px clearing the Chat Agent bar; MapLibre attribution hidden with provider credit moved to README) | [x] |
+| [S] | Along partner credit + footer polish (Session 28: config-driven map info tag "Powered by Along" → alongng.com via `map_config.credit` overlay/fallback-card surfaces + `MapCreditTag`; footer nav columns in a mobile-inclusive 3-col grid + mobile scroll-clearance bottom padding; config-driven footer dev credit "Built by S.D." → sotonye-dagogo.is-a.dev via `brand.developerCredit*`) | [x] |
 
 ---
 

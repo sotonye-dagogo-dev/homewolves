@@ -12,6 +12,20 @@ interface MapGeocodeConfig {
   cacheTtlSec: number;
 }
 
+/**
+ * Partner credit shown as the map info tag (e.g. "Powered by Along"
+ * linking to https://alongng.com). Admin-editable via `map_config`;
+ * tile-provider attribution intentionally lives off the surface.
+ */
+interface MapCreditConfig {
+  /** Render the info tag at all. */
+  enabled: boolean;
+  /** Short credit/CTA text. */
+  label: string;
+  /** Absolute https link the tag opens in a new tab. */
+  href: string;
+}
+
 interface MapConfig {
   /** Keyless vector tile style URLs (MapLibre style JSON). */
   vectorStyles: {
@@ -38,8 +52,14 @@ interface MapConfig {
   defaultZoom: number;
   /** Zoom used for a single pin. */
   detailZoom: number;
-  /** Basemap attribution string rendered with the map. */
+  /** Basemap attribution string (raster style objects only). */
   attribution: string;
+  /**
+   * Partner/platform info tag ("Powered by Along" by default). Optional
+   * for backward compatibility: absent values fall back to defaults,
+   * and `enabled: false` hides the tag.
+   */
+  credit?: MapCreditConfig;
   geocode: MapGeocodeConfig;
   /** Hard cap on markers rendered in the browse map (perf guard). */
   maxMarkers: number;

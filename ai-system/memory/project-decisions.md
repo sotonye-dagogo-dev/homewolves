@@ -1,7 +1,7 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-27
+> - last-updated-by: execute-feature-session-28
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
@@ -981,3 +981,25 @@ Raw IDs were unusable UX and also leaked the "who exists" surface arbitrarily; t
 **Implications:**
 - Any new chat-entry surface should link by directory id, not free-text ids.
 - Directory is capped (take ≤ 50); search-assisted directory UI is a future enhancement if the member base grows beyond a comfortable dropdown.
+
+---
+
+## Partner credit surfaces are config-driven: the map info tag is "Powered by Along" (https://alongng.com) and the footer carries the dev credit "Built by S.D." (https://sotonye-dagogo.is-a.dev)
+
+**Decision:** The map info tag is a partner credit — `map_config.credit` (`{ enabled, label, href }`, defaulting to "Powered by Along" → https://alongng.com) rendered as a bottom-left overlay on the live canvas and inline on `MapLocationFallback` cards via the reusable `MapCreditTag` component. The footer credit line carries the developer credit — `brand.developerCreditLabel` / `brand.developerCreditUrl` (defaulting to "Built by S.D." → https://sotonye-dagogo.is-a.dev). Tile-provider (OSM/CARTO) attribution stays off all surfaces and in the README.
+**Date:** 2026-10-24
+**Made by:** execute-feature (Session 28), stakeholder directive
+**Supersedes:** None (refines the Session 27 rule "map surfaces carry no provider branding" — provider branding stays off; the partner credit is a deliberate product surface, not provider attribution)
+**Superseded by:** None
+
+**Reason:**
+The Along project (https://alongng.com) is a future candidate for deeper integration (listers optionally uploading routes for their listings); a visible, config-controlled credit lays that groundwork. The developer credit was requested directly by the product owner.
+
+**Alternatives Considered:**
+- Hardcoding the credits in components (rejected: everything on this platform is config/metadata driven; credits must be editable or removable via `PUT /config/:key` without a deploy).
+- A generic `credits` config key rendered in both places (rejected: map tag and footer line have different lifecycles and styling; two small typed fields beat one shapeless list).
+
+**Implications:**
+- `MapConfig` gained optional `credit: MapCreditConfig`; `BrandConfig` gained optional `developerCreditLabel` / `developerCreditUrl` — all non-breaking (absent DB values fall back to defaults; `enabled: false` / empty label hides).
+- `normalizeMapCredit` merges stale/partial DB rows over defaults field-by-field and rejects malformed values (must be strict boolean, non-empty label, `https?://` href) — the tag simply never renders rather than rendering broken content.
+- Future route-integration work with Along should build on this same `map_config` surface.

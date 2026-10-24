@@ -44,13 +44,19 @@ const socialLinks = [
 export function Footer() {
   const { data: brand } = useBrand();
   const companyName = brand?.companyName || FALLBACK_BRAND.companyName;
+  const devCreditLabel = brand?.developerCreditLabel ?? FALLBACK_BRAND.developerCreditLabel;
+  const devCreditUrl = brand?.developerCreditUrl ?? FALLBACK_BRAND.developerCreditUrl;
+  const showDevCredit = Boolean(devCreditLabel && devCreditUrl);
+
   return (
     <footer
-      className="w-full py-16 lg:py-20 px-4 lg:px-10 bg-[var(--color-bg-elevated)] border-t border-border"
+      // Extra bottom padding on mobile so the fixed mobile menu bar can
+      // never cover the credit line at the end of the page scroll.
+      className="w-full py-16 pb-32 lg:pt-20 lg:pb-20 px-4 lg:px-10 bg-[var(--color-bg-elevated)] border-t border-border"
       role="contentinfo"
     >
       <div className="max-w-[1120px] mx-auto">
-        <div className="flex flex-col lg:flex-row justify-between gap-8 lg:gap-16 mb-12">
+        <div className="flex flex-col gap-8 lg:flex-row lg:justify-between lg:gap-16 mb-12">
           <div className="max-w-[260px]">
             <div className="mb-4">
               <BrandLogo size="md" />
@@ -61,24 +67,27 @@ export function Footer() {
             </p>
           </div>
 
-          {footerNav.map((col) => (
-            <div key={col.title} className="min-w-[140px]">
-              <div className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                {col.title}
+          {/* Link columns stay in a 3-column grid from the smallest viewport. */}
+          <div className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-16">
+            {footerNav.map((col) => (
+              <div key={col.title} className="min-w-0 lg:min-w-[140px]">
+                <div className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                  {col.title}
+                </div>
+                {col.links.map((link) => (
+                  <Link
+                    key={link.label}
+                    href={link.href}
+                    className="block font-body text-sm text-secondary py-1 transition-colors duration-fast hover:text-accent truncate lg:whitespace-normal"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
               </div>
-              {col.links.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className="block font-body text-sm text-secondary py-1 transition-colors duration-fast hover:text-accent"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          ))}
+            ))}
+          </div>
 
-          <div className="min-w-[140px]">
+          <div className="min-w-0 lg:min-w-[140px]">
             <div className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
               Social
             </div>
@@ -103,8 +112,20 @@ export function Footer() {
         </div>
 
         <div className="flex flex-col lg:flex-row items-center justify-between pt-8 border-t border-[var(--color-border-subtle)] gap-6">
-          <div className="text-xs text-muted-foreground order-2 lg:order-1">
-            &copy; {new Date().getFullYear()} {companyName} Inc. All rights reserved.
+          <div className="text-xs text-muted-foreground order-2 lg:order-1 flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 text-center">
+            <span>
+              &copy; {new Date().getFullYear()} {companyName} Inc. All rights reserved.
+            </span>
+            {showDevCredit && (
+              <a
+                href={devCreditUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 transition-colors duration-fast hover:text-accent underline-offset-2 hover:underline"
+              >
+                {devCreditLabel}
+              </a>
+            )}
           </div>
 
           <div className="flex items-center gap-6 bg-[var(--color-bg-glass)] backdrop-blur-[var(--glass-blur-subtle)] border border-[var(--color-border-glass)] rounded-lg px-6 py-4 shadow-glass order-1 lg:order-2">

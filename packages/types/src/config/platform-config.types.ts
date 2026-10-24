@@ -39,6 +39,10 @@ interface BrandConfig {
   ogImageUrl: string;
   companyName: string;
   tagline: string;
+  /** Footer credit text ("Built by S.D."). Empty string hides the credit. */
+  developerCreditLabel?: string;
+  /** Absolute https link for the developer credit. */
+  developerCreditUrl?: string;
 }
 
 // ─── PLATFORM CONFIG CLASS ──────────────────────────────────
