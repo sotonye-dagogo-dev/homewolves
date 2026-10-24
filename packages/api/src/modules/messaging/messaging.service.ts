@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { and, asc, desc, eq, inArray, ne, sql, isNull, count } from 'drizzle-orm';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { and, asc, desc, eq, inArray, ne, sql, isNull, count, ilike, or } from 'drizzle-orm';
 import { DrizzleService } from '../../drizzle/drizzle.service';
 import { ActivityService } from '../activity/activity.service';
 import { AnalyticsService } from '../analytics/analytics.service';
@@ -68,10 +68,60 @@ export class MessagingService {
     return { ...conversation, participants };
   }
 
+  private participantArraySql(ids: string[]) {
+    return sql`${conversations.participantIds} @> ARRAY[${sql.join(ids.map((id) => sql`${id}`), sql`, `)}]::text[]`;
+  }
+
+  private async findExistingConversation(
+    participantIds: string[],
+    propertyId?: string,
+  ) {
+    const rows = (await this.db
+      .select()
+      .from(conversations)
+      .where(this.participantArraySql(participantIds))) as Array<{
+      id: string;
+      participantIds: string[];
+      propertyId?: string | null;
+    }>;
+    const sameParticipants = (c: { participantIds?: string[] | null }) =>
+      Array.isArray(c.participantIds) &&
+      c.participantIds.length === participantIds.length &&
+      participantIds.every((id) => c.participantIds!.includes(id));
+    const matches = rows.filter(
+      (c) => sameParticipants(c) && (c.propertyId ?? null) === (propertyId ?? null),
+    );
+    // Newest matching conversation wins — deterministic when duplicates
+    // already exist from before dedupe landed.
+    const first = matches[0];
+    return first ?? null;
+  }
+
   async createConversation(participantIds: string[], propertyId?: string, creatorId?: string) {
+    const ids = Array.from(new Set(participantIds.filter(Boolean)));
+    if (creatorId && !ids.includes(creatorId)) ids.push(creatorId);
+    if (ids.length < 2) {
+      throw new BadRequestException('Select at least one other participant to message.');
+    }
+
+    const known = (await this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(inArray(users.id, ids))) as Array<{ id: string }>;
+    const missing = ids.filter((id) => !known.some((k) => k.id === id));
+    if (missing.length > 0) {
+      throw new NotFoundException(`User not found: ${missing[0]}`);
+    }
+
+    // Find-or-create: reuse an existing 1:1 conversation for the same
+    // participants + listing so repeated "Chat Agent" taps never spam the
+    // inbox with duplicate threads (idempotent, list-order insensitive).
+    const existing = await this.findExistingConversation(ids, propertyId);
+    if (existing) return existing;
+
     const [conversation] = await this.db
       .insert(conversations)
-      .values({ participantIds, propertyId })
+      .values({ participantIds: ids, propertyId })
       .returning();
     if (!conversation) throw new Error('Failed to create conversation');
 
@@ -87,6 +137,44 @@ export class MessagingService {
     }
 
     return conversation;
+  }
+
+  /**
+   * Messaging directory: minimal, privacy-safe list of messagable users.
+   * Exposes never phone/email — those only surface to conversation
+   * participants via the existing participant-profile queries.
+   */
+  async getDirectory(options: { search?: string; role?: string; take?: number; excludeUserId?: string }) {
+    const take = Math.max(1, Math.min(options.take ?? 25, 50));
+    const search = options.search?.trim();
+    const conditions = [];
+    if (search) {
+      conditions.push(
+        or(
+          ilike(users.firstName, `%${search}%`),
+          ilike(users.lastName, `%${search}%`),
+        ),
+      );
+    }
+    if (options.role) {
+      conditions.push(eq(users.role, options.role as never));
+    }
+    if (options.excludeUserId) {
+      conditions.push(ne(users.id, options.excludeUserId));
+    }
+    return this.db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+        avatar: users.avatar,
+        verified: users.verified,
+      })
+      .from(users)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(users.verified), asc(users.firstName))
+      .limit(take);
   }
 
   async sendMessage(conversationId: string, senderId: string, content: string, type = 'text', mediaUrl?: string) {

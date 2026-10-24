@@ -1,8 +1,8 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-26
-> - last-verified-against-code: 2026-10-21
+> - last-updated-by: execute-feature-session-27
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
 > **Overview:** Log of significant architectural, technical, and product decisions. Agents consult this before proposing changes to avoid contradicting prior reasoning. Uses supersedes/superseded-by links so contradictory entries are explicitly resolved rather than both appearing equally valid.
@@ -942,3 +942,42 @@ Zero vendor lock-in and zero billing risk; upstream tile/geocode providers are s
 - Map style failures must step down (vector → raster chain → styled fallback card), never render a broken tile grid.
 - Listing pins accept submitted `latitude`/`longitude` (exact) or geocoded city/area text (marked approximate); seeds ship Lagos coordinates.
 - Deps: `maplibre-gl@^4.7.1`, `react-map-gl@^7.1.9` (import from `react-map-gl/maplibre`).
+
+---
+
+**Decision:** Chat Agent actions start a conversation directly through the deep-link contract `/messages?to=<agentOwner>&property=<listingId>&context=<listingTitle>`; the messages page reuses an exactly-matching conversation (same participant set + property) or creates one, then prefills an editable draft — messages are never sent automatically on the user's behalf.
+**Date:** 2026-10-24
+**Made by:** execute-feature (Session 27), stakeholder feedback directive
+**Supersedes:** None (replaces the bare `router.push('/messages')` behavior of all Chat Agent buttons)
+**Superseded by:** None
+
+**Reason:**
+The previous flow dropped users on an empty messages pane; the stakeholder requires one-tap contact with the listing's agent plus listing context the user can edit before sending.
+
+**Alternatives Considered:**
+- Auto-sending an enquiry message (rejected: users must control the first message myself; prefilled draft is edit-or-send).
+- Web-side dedupe only (rejected: races/double taps; idempotency belongs and lives server-side as find-or-create).
+
+**Implications:**
+- `POST /messaging/conversations` is now find-or-create: participants validated (404 names the missing id), creator-only conversations rejected (400), exact participant-set + property match reuses the existing conversation. Response shape unchanged (non-breaking).
+- Legacy duplicate conversations are not migrated; exact-match reuse picks one deterministically.
+- Post-sign-in redirects preserve the deep link so the flow resumes after authentication.
+
+---
+
+**Decision:** Messaging recipient selection is directory-driven — `GET /messaging/directory` (JWT-guarded, zod `search/role/take` clamped ≤ 50) returns minimal privacy-safe fields (`id, firstName, lastName, role, avatar, verified`; never phone/email/passwordHash) and excludes the caller. The compose modal uses a design-system `HwSelect` over this directory; manual user-ID entry survives only as a degraded fallback when the directory fetch fails.
+**Date:** 2026-10-24
+**Made by:** execute-feature (Session 27), stakeholder feedback directive ("user shouldn't have to type a user id but rather a drop-down of available users with some context")
+**Supersedes:** None
+**Superseded by:** None
+
+**Reason:**
+Raw IDs were unusable UX and also leaked the "who exists" surface arbitrarily; the directory is a deliberate, minimal, authenticated surface.
+
+**Alternatives Considered:**
+- Public `/users` endpoint (rejected: broadest enumeration surface; unnecessary).
+- Including phone/email in directory results (rejected: those remain participant-gated via conversation profiles).
+
+**Implications:**
+- Any new chat-entry surface should link by directory id, not free-text ids.
+- Directory is capped (take ≤ 50); search-assisted directory UI is a future enhancement if the member base grows beyond a comfortable dropdown.

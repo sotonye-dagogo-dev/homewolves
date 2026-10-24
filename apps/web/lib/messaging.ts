@@ -72,6 +72,33 @@ export async function fetchUnreadCount() {
   return handleResponse(res);
 }
 
+export interface MessagingDirectoryEntry {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  role?: string | null;
+  avatar?: string | null;
+  verified?: boolean | null;
+}
+
+/**
+ * Fetch the messagable-user directory (privacy-safe: never phone/email).
+ * Normalizes envelope shapes like every other messaging fetch.
+ */
+export async function fetchMessagingDirectory(
+  params: { search?: string; role?: string; take?: number } = {},
+) {
+  const qs = new URLSearchParams();
+  if (params.search?.trim()) qs.set('search', params.search.trim());
+  if (params.role) qs.set('role', params.role);
+  if (params.take) qs.set('take', String(params.take));
+  const query = qs.toString();
+  const res = await fetch(`${getApiBase()}/messaging/directory${query ? `?${query}` : ''}`, {
+    headers: authHeaders(),
+  });
+  return toArray<MessagingDirectoryEntry>(await handleResponse(res));
+}
+
 // ─── WEB SOCKET ──────────────────────────────────────────
 
 // ─── REST send fallback ──────────────────────────────────

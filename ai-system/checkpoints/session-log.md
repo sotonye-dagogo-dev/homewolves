@@ -882,3 +882,41 @@ Backlog: WhatsApp integration, PWA/offline, push notifications, referral system;
 
 **Notes / Blockers:**
 - E2E (Playwright) not run; unit/component + typecheck/lint/build green. Map tiles need a live browser to be visually verified (WebGL absent in jsdom).
+
+---
+
+## Session 27 — 2026-10-24 (execute-feature: stakeholder feedback — chat-agent flow, compose directory, theme-toggle position, map attribution)
+
+**Completed:**
+- Chat Agent direct-conversation flow (directive: "Clicking on chat agent should directly start conversation with that agent with chat box prefilled with context"):
+  - `PropertyDetailClient.tsx` — all three Chat Agent/Chat entry points (mobile sticky bar, desktop action bar, agent card) now deep-link to `/messages?to=<agentId>&property=<listingId>&context=<listingTitle>` instead of a bare `/messages`; graceful toast fallback when a listing has no owner id; the sign-in CTA redirect (`useRequireAuth`) carries the same deep link so the flow resumes post-login
+  - `messages/page.tsx` — `MessagesPageContent` (Suspense boundary for `useSearchParams`) consumes `to|property|context` params once (`handledLinkRef`), reuses an exactly-matching conversation (participants {me, to} + property) or creates one, prefills the composer with an editable context draft (`Hi! I'm interested in "<title>". Is it still available?`) — nothing is sent automatically; URL consumed via `router.replace`; self-chat, offline and API-failure paths toast + open compose
+  - API find-or-create: `MessagingService.createConversation` now validates participants exist (404 names the missing id), rejects creator-only conversations (400), dedupes ids, and reuses an existing conversation with the exact same participant set + propertyId (idempotent listing enquiries — repeated "Chat Agent" taps never spam duplicate threads); response shape unchanged (`POST /messaging/conversations`)
+- Compose directory (directive: no more typing a raw user ID):
+  - API `GET /messaging/directory` (JWT-guarded, zod `search/role/take` ≤ 50) — minimal, privacy-safe fields (`id, firstName, lastName, role, avatar, verified`; never phone/email/passwordHash), caller excluded, agents/buyers/developers/homeowners all listed
+  - `lib/messaging.ts` `fetchMessagingDirectory()` + `use-messaging.ts` `useMessagingDirectory()` (react-query, 60s stale)
+  - `ComposeModal` redesign: design-system `HwSelect` recipient dropdown ("Select a member…", options `Name — Role`), selected-participant context card (initials avatar, role, Verified chip), loading/envelope-empty/directory-failure states; degraded manual-ID input only appears as an advanced fallback on directory-fetch failure
+- Theme toggle vs Chat Agent clash (directive: "positioning of the theme toggle slightly adjusted upwards on mobiles"):
+  - `theme-toggle.tsx` mobile bottom offset raised 96px → 152px (`calc(152px + env(safe-area-inset-bottom))`), clearing the listing-detail Chat-Agent sticky action bar (spans ~88–140px); desktop `lg:bottom-6` unchanged
+- Map info-tag provider names (directive: "No need to put the name of the providers in the map info tag"):
+  - `map-canvas.tsx` sets `attributionControl={false}` — MapLibre attribution (formerly `© OpenFreeMap · © OpenStreetMap contributors`) no longer renders on any map surface; provider credit preserved in README "Map Providers" section (OpenFreeMap, CARTO, OpenStreetMap, Photon/Nominatim)
+  - The `MapLocationFallback` "Open in OpenStreetMap" link is functional (location search), not a credit tag — unchanged
+- QA gate: typecheck 4/4, lint 4/4 (0 warnings), tests green (API 180 — new `messaging.service.spec.ts` ×7 incl. find-or-create, participant 404/400, directory minimal-fields + take clamp, non-participant regression; web suite green incl. 3 new directory lib tests), `next build` 48 routes
+- Docs: task-queue, project-decisions (×2 new), lessons-learned, dev-history, repo-map/dependency-graph, system-architecture (messaging flow), in-progress cleared
+
+**Files touched:**
+- packages/api/src/modules/messaging/{messaging.service.ts, messaging.controller.ts, messaging.service.spec.ts}
+- apps/web/lib/{messaging.ts, messaging.test.ts}, apps/web/hooks/use-messaging.ts
+- apps/web/app/(public)/messages/page.tsx, apps/web/components/listings/PropertyDetailClient.tsx
+- apps/web/components/shared/theme-toggle.tsx, apps/web/components/map/map-canvas.tsx
+- README.md + ai-system docs
+
+**Next Task:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when long-lived WS host exists.
+
+**Assumptions Made:**
+- Listing → agent ownership follows the now-typed `owner` relation (`listing.owner.id` with `listing.ownerId` fallback), so agent misattribution requires no extra resolution step.
+- Exact-match conversation reuse (same participant set + propertyId) is the correct "same topic" definition; threads with more participants or no property are left untouched.
+
+**Notes / Blockers:**
+- E2E not run (unit/component + build green). Live verification candidates: Chat Agent tap from a listing while signed out → sign-in → prefilled draft; duplicate-tap idempotency on the live DB.
