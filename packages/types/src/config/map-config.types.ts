@@ -24,6 +24,12 @@ interface MapCreditConfig {
   label: string;
   /** Absolute https link the tag opens in a new tab. */
   href: string;
+  /**
+   * Design-token key for the tag's text colour (e.g. `success` → the
+   * theme-aware `--color-success` variable). Unknown/missing values fall
+   * back to `success` so the tag stays deliberately green in every theme.
+   */
+  colorToken?: string;
 }
 
 interface MapConfig {

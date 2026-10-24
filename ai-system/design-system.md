@@ -1,5 +1,5 @@
-- last-updated-by: execute-feature-session-26
-> - last-verified-against-code: 2026-10-21
+- last-updated-by: execute-feature-session-29
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: re-verify if UI components or styling dependencies change
 
 > **Overview:** Homewolves uses a glassmorphism + bento grid aesthetic inspired by JamesEdition. The design communicates trust, luxury, and clarity for the African real estate market. All tokens are defined as CSS custom properties in `apps/web/app/globals.css` (and DESIGN.md in `ai-system/docs/`). This file is a quick-reference summary — agents building UI must read DESIGN.md in full before writing frontend code. The colour, typography, and spacing tables below are the **single source of truth** for design tokens (per `standards/engineering-principles.md` §5) — components must consume these tokens rather than redeclaring values.
@@ -84,6 +84,7 @@ Each wrapper: imports shadcn primitive → applies design tokens via `cn()` → 
 - **Status badges:** use `lib/status.ts` (`statusTone`, `statusToneStyle`) with the `--color-status-*` / `--color-*-bg` tokens; never hardcode green/amber/red Tailwind classes for status.
 - **Empty/error states:** use `components/shared/empty-state.tsx` (`EmptyState`, centered by default) with a lucide icon, title, description, and an action/CTA. Loading skeletons are acceptable only where content shape is known.
 - **Token rule (2026-10-20 audit):** feature surfaces use `--color-text-*`/`--color-bg-*`/`--color-border-*`; no `text-white`/`bg-white` except over-image overlays (`ad-banner`, transparent-hero nav), email-preview iframes, and the configured brand-logo disc. Icons are lucide-react, not emoji.
+- **Config-driven credit colours (2026-10-24):** admin config references design tokens by key, resolved by `lib/design-tokens.ts` (`designTokenVar`, allow-listed `TOKEN_VARS` → theme-aware `var(--…)`, unknown values fall back). Map info-tag text uses `map_config.credit.colorToken` (default `success` = green in every theme); footer dev credit uses `brand.developerCreditColorToken` (default `accent`). Both credit links carry the same lucide `ExternalLink` glyph. Never accept raw hex/colour strings from config.
 
 ### Cards / Containers
 - **Property Card:** 16:9 image, glass strip pinned to bottom with price + meta, hover lift `translateY(-4px)`

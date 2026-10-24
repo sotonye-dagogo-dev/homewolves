@@ -1,7 +1,7 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-28
+> - last-updated-by: execute-feature-session-29
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
@@ -1003,3 +1003,25 @@ The Along project (https://alongng.com) is a future candidate for deeper integra
 - `MapConfig` gained optional `credit: MapCreditConfig`; `BrandConfig` gained optional `developerCreditLabel` / `developerCreditUrl` — all non-breaking (absent DB values fall back to defaults; `enabled: false` / empty label hides).
 - `normalizeMapCredit` merges stale/partial DB rows over defaults field-by-field and rejects malformed values (must be strict boolean, non-empty label, `https?://` href) — the tag simply never renders rather than rendering broken content.
 - Future route-integration work with Along should build on this same `map_config` surface.
+
+---
+
+## Credit emphasis is expressed as an allow-listed design-token key, never a raw colour
+
+**Decision:** Config-driven credit surfaces select emphasis via a design-token key resolved to a theme-aware CSS variable by `apps/web/lib/design-tokens.ts` (`designTokenVar`). The map info tag uses `map_config.credit.colorToken` (default `success`, deliberately green in light/dark/high-contrast); the footer dev credit uses `brand.developerCreditColorToken` (default `accent`). Unknown/malformed keys fall back to the documented default instead of rendering an invisible or unsafe colour. Both credit links render the lucide `ExternalLink` glyph.
+**Date:** 2026-10-24
+**Made by:** execute-feature (Session 29), stakeholder directive ("map tagline text green, dev credit tagline use a design token for pop; dev credit should have the map tag's icon")
+**Supersedes:** None (extends the Session 28 config-driven credit decision with colour semantics)
+**Superseded by:** None
+
+**Reason:**
+A raw hex from admin config cannot react to theme changes, and arbitrary CSS values invite contrast regressions. Token keys are a small, auditable vocabulary with guaranteed light/dark/high-contrast variants.
+
+**Alternatives Considered:**
+- Accepting raw CSS colour strings in config (rejected: no theme awareness, unvalidated input, contrast risk).
+- Hardcoding green in the map tag and amber in the footer (rejected: violates the config-driven rule; admins could not restyle without a deploy).
+
+**Implications:**
+- Both fallback copies (`apps/web/config/fallbacks.ts`, `packages/config/src/fallbacks.ts`) seed `colorToken: 'success'` / `developerCreditColorToken: 'accent'`; existing DB rows without these fields fall back safely at render time.
+- New config-driven colours must add their token key to `TOKEN_VARS`, not accept free-form values.
+- The shared `ExternalLink` glyph keeps the two credit surfaces visually consistent.

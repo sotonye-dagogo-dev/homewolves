@@ -36,6 +36,7 @@ describe('Footer', () => {
     expect(credit.getAttribute('href')).toBe('https://sotonye-dagogo.is-a.dev');
     expect(credit.getAttribute('target')).toBe('_blank');
     expect(credit.getAttribute('rel')).toContain('noopener');
+    expect(credit.style.color).toBe('var(--color-brand-accent)');
   });
 
   it('keeps copyright and credit in one credit line', () => {

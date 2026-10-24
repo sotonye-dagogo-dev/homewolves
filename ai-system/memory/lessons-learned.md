@@ -534,3 +534,20 @@ Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeo
 **Apply When:**
 - Adding any optional field to an existing PlatformConfig key that ships in both `FALLBACK_*` consts and possibly-legacy DB rows.
 - Rendering a config-driven link/CTA: whitelist the URL scheme before it ever reaches `href`.
+
+---
+
+## §Config-driven colours belong in a token allow-list, not raw CSS strings
+
+**Context:**
+2026-10-24 execute-feature (Session 29) — stakeholder asked for the map info tag to be green and the footer dev credit to "pop" via a design token, both remaining config driven. Passing raw colour strings from PlatformConfig would have been easy but would not follow theme changes (dark/high-contrast) and would accept unvalidated input.
+
+**What We Learned:**
+- Resolve an allow-listed token *key* (`success`, `accent`, …) to `var(--color-…)` at render time (`lib/design-tokens.ts`): the same config value re-colours automatically per theme and cannot inject arbitrary CSS.
+- Keep pure resolvers separate from hooks: `normalizeMapCredit` keeps its original `{enabled,label,href}` shape (all existing call sites/tests non-breaking); colour is composed in `useMapCredit`.
+- Unknown/missing keys must fall back to the surface's documented default (`success` for map, `accent` for footer) so stale admin rows never blank text.
+- Reuse the same icon (`ExternalLink`) across credit surfaces so they read as one family.
+
+**Apply When:**
+- Adding any admin-configurable colour/emphasis setting.
+- Extending a config object consumed by multiple components: add the new field as optional and resolve it with a safe default rather than changing existing return shapes.

@@ -47,7 +47,7 @@ homewolves/
 │   │   │   ├── transactions/    ← Stepper, document upload, audit trail
 │   │   │   └── shared/          ← Layouts, ThemeProvider, loaders, EmptyState, ThemeToggle
 │   │   ├── hooks/               ← Custom React hooks (use-crm, use-messaging, use-notifications, use-analytics, use-listing-pin, use-property-map-markers, etc.)
-│   │   ├── lib/                 ← API clients (crm, messaging, notifications, analytics, transactions, blog), realtime socket layer (`realtime.ts`), data layers (`messaging.ts`, `status.ts`, `toast.ts`), keyless map helpers (`lib/map/config.ts`), null-safe formatters (`format.ts`) + server helpers (`lib/server/auth-local.ts`, `lib/property-filters.ts`, `lib/format-price.ts`) + colocated `*.test.ts`
+│   │   ├── lib/                 ← API clients (crm, messaging, notifications, analytics, transactions, blog), realtime socket layer (`realtime.ts`), data layers (`messaging.ts`, `status.ts`, `toast.ts`), config-driven design-token resolver (`design-tokens.ts` — credit colours), keyless map helpers (`lib/map/config.ts`), null-safe formatters (`format.ts`) + server helpers (`lib/server/auth-local.ts`, `lib/property-filters.ts`, `lib/format-price.ts`) + colocated `*.test.ts`
 │   │   ├── e2e/                 ← Playwright E2E journeys (smoke, guest, auth, agent-dashboard, admin-journey, transaction-stepper)
 │   │   ├── app/api/v1/auth/     ← Local email/OTP auth route (proxies NestJS when backendOrigin set; imports `postgres` — declared on this package)
 │   │   ├── app/api/v1/maps/     ← Keyless geocode proxy route (geocode/route.ts: Photon → Nominatim, never called browser-direct)

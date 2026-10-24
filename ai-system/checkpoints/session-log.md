@@ -950,3 +950,33 @@ Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referr
 
 **Notes / Blockers:**
 - No route/service-layer changes — external APIs (alongng.com) are only ever opened from an anchor tag, no fetches.
+
+---
+
+## Session 29 — 2026-10-24 (execute-feature: stakeholder directive — credit colour tokens + icon parity)
+
+**Completed:**
+- Design-token resolver `apps/web/lib/design-tokens.ts` (directive: config-driven colours, theme-safe): allow-listed `TOKEN_VARS` (accent, accent-alt, primary, secondary, success, warning, error, info, tag, foreground, muted) + `isDesignToken` + `designTokenVar(token, fallback)` → `var(--color-…)`; unknown/malformed values fall back to the surface default, so no raw hex ever reaches the DOM.
+- Map info tag green (directive: "map power tagline could have a styling effect of text color green, config driven"): `MapCreditConfig.colorToken?` (packages/types), fallback `colorToken: 'success'` in both config fallback copies; `useMapCredit` composes the resolved colour without changing `normalizeMapCredit`'s existing shape; `MapCreditTag` applies it to the label while keeping the neutral surface/border.
+- Dev credit gets the map tag's icon + a colour pop (directive: "dev credit tag could also have the icon that the map power tagline has … use some design token for extra colour"): footer anchor now renders lucide `ExternalLink` (aria-hidden) and `brand.developerCreditColorToken` (default `accent`), font-semibold + hover underline retained.
+- Types: `BrandConfig.developerCreditColorToken?` added (optional, non-breaking).
+- Tests: new `lib/design-tokens.test.ts` (resolution/fallback/allow-list); footer test asserts accent colour; hw-map test asserts green success colour. Full web suite 188 passed / 25 files.
+- QA gate: `npm install`; turbo typecheck 4/4; targeted eslint clean; `next build` web green (48 routes).
+
+**Files Modified:**
+- packages/types/src/config/{map-config.types.ts, platform-config.types.ts}
+- apps/web/lib/{design-tokens.ts, design-tokens.test.ts}
+- apps/web/components/map/map-credit-tag.tsx, apps/web/components/map/hw-map.test.tsx
+- apps/web/components/landing/footer.tsx, apps/web/components/landing/footer.test.tsx
+- apps/web/config/fallbacks.ts + packages/config/src/fallbacks.ts (parity)
+- ai-system docs (design-system, system-architecture, repo-map, task-queue, project-decisions, lessons-learned, dev-history, session-log)
+
+**Next Task:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when long-lived WS host exists.
+
+**Assumptions Made:**
+- "Green" is best expressed by the semantic `success` token (already themed per mode) rather than a new one-off green; admins can point either credit at any allow-listed token.
+- The dev credit remains inside the existing copyright line (no new layout row) — colour + icon provide the requested emphasis without disturbing the footer grid.
+
+**Notes / Blockers:**
+- No API/service changes; config fields are optional so existing DB rows render correctly without migration.

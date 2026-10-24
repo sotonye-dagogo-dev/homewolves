@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-27
+> - last-updated-by: execute-feature-session-29
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: historical entries do not go stale
 
@@ -593,6 +593,25 @@ Stakeholder directive: the map info tag now credits the Along project ("Powered 
 **Key Changes:**
 - Rule: credits are config products, not copy — `map_config.credit` and `brand.developerCredit*` are admin-editable/removable without deploys; `enabled: false` (map) or empty label (footer) hides them.
 - Rule: extending an existing PlatformConfig key must merge new optional sub-objects field-by-field over possibly-legacy DB rows, and whitelist link URL schemes before any `href`.
+
+**Next Sprint Focus:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable once a long-lived WS host exists.
+
+## 2026-10-24 — execute-feature: config-driven credit colours + icon parity (Session 29)
+
+**Summary:**
+Added a reusable, allow-listed design-token resolver so config-driven credit surfaces can express colour emphasis without raw hex or theme regressions. The map info tag is now deliberately green via `map_config.credit.colorToken` (default `success`), and the footer dev credit picked up the same `ExternalLink` glyph as the map tag plus an accent token colour for emphasis. Both remain fully admin-editable and fall back safely.
+
+**Completed:**
+- `apps/web/lib/design-tokens.ts`: `TOKEN_VARS` allow-list, `isDesignToken`, `designTokenVar(token, fallback)` → `var(--color-…)`; unknown keys fall back to the surface default; unit tests cover resolution, fallback, and allow-list
+- Types: optional `MapCreditConfig.colorToken` and `BrandConfig.developerCreditColorToken` (non-breaking); both fallback copies seed `success` / `accent`
+- `MapCreditTag`/`useMapCredit`: green success colour by default; `normalizeMapCredit`'s shape unchanged so existing consumers/tests stay intact
+- Footer dev credit: lucide `ExternalLink` glyph + accent token colour + semibold emphasis; map tag already carried the same glyph
+- QA: `npm install`, turbo typecheck 4/4, targeted eslint clean, web tests 188 passed (25 files), `next build` green (48 routes)
+
+**Key Changes:**
+- Rule: config-driven colours are token *keys* resolved at render time, never raw colour strings — theme changes are automatic and input stays allow-listed.
+- Rule: extending config objects consumed elsewhere adds optional fields and keeps existing resolver return shapes stable.
 
 **Next Sprint Focus:**
 Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable once a long-lived WS host exists.

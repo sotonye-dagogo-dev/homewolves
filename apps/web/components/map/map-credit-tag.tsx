@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { useMapConfig } from '@/hooks/use-platform-config';
 import { FALLBACK_MAP_CONFIG } from '@/config/fallbacks';
+import { designTokenVar } from '@/lib/design-tokens';
 
 /**
  * Pure resolver for the map info tag. Merges admin `map_config.credit`
@@ -24,10 +25,20 @@ export function normalizeMapCredit(
   return { enabled: merged.enabled, label: merged.label, href: merged.href };
 }
 
-/** Live hook variant of {@link normalizeMapCredit} driven by PlatformConfig. */
-export function useMapCredit(): { enabled: boolean; label: string; href: string } | null {
+/**
+ * Live hook variant of {@link normalizeMapCredit} driven by PlatformConfig.
+ * Adds the config-resolved, theme-aware text colour (green by default).
+ */
+export function useMapCredit(): {
+  enabled: boolean;
+  label: string;
+  href: string;
+  color: string;
+} | null {
   const { data: config } = useMapConfig();
-  return normalizeMapCredit(config?.credit ?? null);
+  const credit = normalizeMapCredit(config?.credit ?? null);
+  if (!credit) return null;
+  return { ...credit, color: designTokenVar(config?.credit?.colorToken, 'success') };
 }
 
 /**
@@ -52,7 +63,7 @@ export function MapCreditTag({ className }: { className?: string }) {
       style={{
         background: 'var(--color-bg-elevated)',
         border: '1px solid var(--color-border-default)',
-        color: 'var(--color-text-secondary)',
+        color: credit.color,
       }}
     >
       {credit.label}
