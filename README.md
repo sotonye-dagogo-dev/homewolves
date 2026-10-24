@@ -138,6 +138,22 @@ packages/types/    → Global TypeScript types (zero-import)
    GOOGLE_CLIENT_SECRET=your-client-secret
    ```
 
+## Map Providers
+
+The keyless map stack (MapLibre GL) sits on top of free, open map infrastructure —
+thank you to these providers. Per product decision, provider names are not shown
+in the map UI; their credit lives here:
+
+- [OpenFreeMap](https://openfreemap.org) — vector basemap styles (primary)
+- [CARTO](https://carto.com/basemaps) — raster basemap step-down
+- [OpenStreetMap](https://www.openstreetmap.org) — raster basemap step-down + outbound location links
+- [Photon (H Jaguar) + Nominatim](https://photon.komoot.io) — geocoding via the server-proxied `/api/v1/maps/geocode`
+
+**Partner:** the map info tag credits the
+[Along](https://alongng.com) project ("Powered by Along", driven by the
+`map_config.credit` platform config) — Along is a candidate for deeper integration
+in the future (e.g. listers uploading routes for their listings alongside this credit).
+
 ## License
 
 Proprietary — Homewolves Inc.

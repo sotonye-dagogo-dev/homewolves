@@ -882,3 +882,71 @@ Backlog: WhatsApp integration, PWA/offline, push notifications, referral system;
 
 **Notes / Blockers:**
 - E2E (Playwright) not run; unit/component + typecheck/lint/build green. Map tiles need a live browser to be visually verified (WebGL absent in jsdom).
+
+---
+
+## Session 27 — 2026-10-24 (execute-feature: stakeholder feedback — chat-agent flow, compose directory, theme-toggle position, map attribution)
+
+**Completed:**
+- Chat Agent direct-conversation flow (directive: "Clicking on chat agent should directly start conversation with that agent with chat box prefilled with context"):
+  - `PropertyDetailClient.tsx` — all three Chat Agent/Chat entry points (mobile sticky bar, desktop action bar, agent card) now deep-link to `/messages?to=<agentId>&property=<listingId>&context=<listingTitle>` instead of a bare `/messages`; graceful toast fallback when a listing has no owner id; the sign-in CTA redirect (`useRequireAuth`) carries the same deep link so the flow resumes post-login
+  - `messages/page.tsx` — `MessagesPageContent` (Suspense boundary for `useSearchParams`) consumes `to|property|context` params once (`handledLinkRef`), reuses an exactly-matching conversation (participants {me, to} + property) or creates one, prefills the composer with an editable context draft (`Hi! I'm interested in "<title>". Is it still available?`) — nothing is sent automatically; URL consumed via `router.replace`; self-chat, offline and API-failure paths toast + open compose
+  - API find-or-create: `MessagingService.createConversation` now validates participants exist (404 names the missing id), rejects creator-only conversations (400), dedupes ids, and reuses an existing conversation with the exact same participant set + propertyId (idempotent listing enquiries — repeated "Chat Agent" taps never spam duplicate threads); response shape unchanged (`POST /messaging/conversations`)
+- Compose directory (directive: no more typing a raw user ID):
+  - API `GET /messaging/directory` (JWT-guarded, zod `search/role/take` ≤ 50) — minimal, privacy-safe fields (`id, firstName, lastName, role, avatar, verified`; never phone/email/passwordHash), caller excluded, agents/buyers/developers/homeowners all listed
+  - `lib/messaging.ts` `fetchMessagingDirectory()` + `use-messaging.ts` `useMessagingDirectory()` (react-query, 60s stale)
+  - `ComposeModal` redesign: design-system `HwSelect` recipient dropdown ("Select a member…", options `Name — Role`), selected-participant context card (initials avatar, role, Verified chip), loading/envelope-empty/directory-failure states; degraded manual-ID input only appears as an advanced fallback on directory-fetch failure
+- Theme toggle vs Chat Agent clash (directive: "positioning of the theme toggle slightly adjusted upwards on mobiles"):
+  - `theme-toggle.tsx` mobile bottom offset raised 96px → 152px (`calc(152px + env(safe-area-inset-bottom))`), clearing the listing-detail Chat-Agent sticky action bar (spans ~88–140px); desktop `lg:bottom-6` unchanged
+- Map info-tag provider names (directive: "No need to put the name of the providers in the map info tag"):
+  - `map-canvas.tsx` sets `attributionControl={false}` — MapLibre attribution (formerly `© OpenFreeMap · © OpenStreetMap contributors`) no longer renders on any map surface; provider credit preserved in README "Map Providers" section (OpenFreeMap, CARTO, OpenStreetMap, Photon/Nominatim)
+  - The `MapLocationFallback` "Open in OpenStreetMap" link is functional (location search), not a credit tag — unchanged
+- QA gate: typecheck 4/4, lint 4/4 (0 warnings), tests green (API 180 — new `messaging.service.spec.ts` ×7 incl. find-or-create, participant 404/400, directory minimal-fields + take clamp, non-participant regression; web suite green incl. 3 new directory lib tests), `next build` 48 routes
+- Docs: task-queue, project-decisions (×2 new), lessons-learned, dev-history, repo-map/dependency-graph, system-architecture (messaging flow), in-progress cleared
+
+**Files touched:**
+- packages/api/src/modules/messaging/{messaging.service.ts, messaging.controller.ts, messaging.service.spec.ts}
+- apps/web/lib/{messaging.ts, messaging.test.ts}, apps/web/hooks/use-messaging.ts
+- apps/web/app/(public)/messages/page.tsx, apps/web/components/listings/PropertyDetailClient.tsx
+- apps/web/components/shared/theme-toggle.tsx, apps/web/components/map/map-canvas.tsx
+- README.md + ai-system docs
+
+**Next Task:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when long-lived WS host exists.
+
+**Assumptions Made:**
+- Listing → agent ownership follows the now-typed `owner` relation (`listing.owner.id` with `listing.ownerId` fallback), so agent misattribution requires no extra resolution step.
+- Exact-match conversation reuse (same participant set + propertyId) is the correct "same topic" definition; threads with more participants or no property are left untouched.
+
+**Notes / Blockers:**
+- E2E not run (unit/component + build green). Live verification candidates: Chat Agent tap from a listing while signed out → sign-in → prefilled draft; duplicate-tap idempotency on the live DB.
+## Session 28 — 2026-10-24 (execute-feature: stakeholder directive — Along map credit, footer grid + dev credit)
+
+**Completed:**
+- Map info tag credit to Along (directive: "let the maps info tag have credit to Along — something like powered by Along with a link/CTA linking to https://alongng.com"):
+  - `MapConfig` type: new optional `credit: MapCreditConfig` block (`{ enabled, label, href }`) — non-breaking; `BrandConfig`: optional `developerCreditLabel` / `developerCreditUrl`
+  - Fallbacks (web + @hw/config, parity): `credit: { enabled: true, label: 'Powered by Along', href: 'https://alongng.com' }` and dev credit `'Built by S.D.' → https://sotonye-dagogo.is-a.dev` — fully admin-editable via `PUT /config/map_config` / `/config/brand`
+  - New reusable `apps/web/components/map/map-credit-tag.tsx`: pure `normalizeMapCredit` (field-level merge over stale/partial DB rows, strict guards — non-empty label, `https?://` href, boolean enabled → malformed configs degrade to tag-absent) + `useMapCredit` hook + `MapCreditTag` anchor component
+  - `hw-map.tsx`: canvas wrapper now `relative` with a `pointer-events-none` bottom-left overlay holding the tag (never intercepts map gestures); `MapLocationFallback` carries the tag inline so the credit survives every fallback path; tile-provider attribution stays off-surface (README only, per Session 27)
+- Footer (directive: 3-column link grid from mobile, extra bottom padding on mobile, "Built by S.D." in the credit line):
+  - `footer.tsx` nav columns moved into `grid grid-cols-3 gap-4 sm:gap-6 lg:gap-16` (mobile-inclusive; `min-w-0` on mobile with `truncate`, desktop keeps `min-w-[140px]`); logo/social blocks stack around it; overflow-safe `truncate lg:whitespace-normal` on link cells
+  - Footer container bottom padding: `py-16` → `pt-16 pb-32 lg:pt-20 lg:pb-20` so the fixed mobile menu bar can never cover the credit line at the end of a mobile scroll
+  - Credit line: copyright + config-driven `Built by S.D.` anchor (target=_blank, rel=noopener) stacked on mobile / inline on desktop; hidden when the admin clears either field
+- QA gate: `turbo` typecheck (web/types/config/api) 4/4, lint 3/3, web tests 184 passed incl. new `footer.test.tsx` (×3) and extended `hw-map.test.tsx` (12 tests: credit tag on canvas + fallback card, `normalizeMapCredit` merge/disable/malformed cases, existing link assertions kept intact), `next build` green (48 routes)
+- Docs: session-log, dev-history, task-queue metadata, project-decisions (×1 new entry covering both credits), lessons-learned, system-architecture (map flow + config table), repo-map, dependency-graph (Along added as external integration), in-progress cleared
+
+**Files Modified:**
+- packages/types/src/config/{map-config.types.ts, platform-config.types.ts} — MapCreditConfig + MapConfig.credit; BrandConfig.developerCredit*
+- apps/web/config/fallbacks.ts + packages/config/src/fallbacks.ts — FALLBACK_MAP_CONFIG.credit + FALLBACK_BRAND.developerCredit* (kept in parity)
+- apps/web/components/map/{map-credit-tag.tsx, hw-map.tsx, map-canvas.tsx, hw-map.test.tsx} — tag component, overlays, comments, tests
+- apps/web/components/landing/{footer.tsx, footer.test.tsx} — grid, padding, dev credit, tests
+
+**Next Task:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when long-lived WS host exists.
+
+**Assumptions Made:**
+- The Along credit intentionally names the platform partner (per directive) while tile-provider names stay off the tag — Session 27's "no provider names" rule applies to basemap/geocoder attribution, not the partner surface.
+- Absent/legacy `map_config` DB rows should still show the new tag (field-level defaults), and admins disable it per-environment via `credit.enabled: false` rather than code.
+
+**Notes / Blockers:**
+- No route/service-layer changes — external APIs (alongng.com) are only ever opened from an anchor tag, no fetches.

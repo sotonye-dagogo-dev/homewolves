@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Search, Share2, Heart, Home, BedDouble, Bath, Maximize2, Calendar, Check, Zap, ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react';
@@ -45,7 +45,22 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
   const { data: similarData } = useListings({ take: '6' });
 
   const { user, accessToken } = useAuth();
-  const { requireAuth } = useRequireAuth('/messages');
+  // Chat Agent → deep link into /messages with the agent + listing context.
+  // The messages page reuses/creates the conversation and prefills an
+  // editable context draft; nothing is sent automatically.
+  const chatOwnerId = useMemo(
+    () => (listing as { owner?: { id?: string } } | undefined)?.owner?.id ?? (listing as { ownerId?: string } | null)?.ownerId ?? null,
+    [listing],
+  );
+  // Sign-in CTA redirect keeps the chat deep link so the context flow
+  // resumes right after authentication.
+  const chatRedirect = useMemo(() => {
+    if (!chatOwnerId) return '/messages';
+    const params = new URLSearchParams({ to: chatOwnerId, property: String(id) });
+    if (listing?.title) params.set('context', listing.title);
+    return `/messages?${params.toString()}`;
+  }, [chatOwnerId, id, listing?.title]);
+  const { requireAuth } = useRequireAuth(chatRedirect);
   const { data: savedCheck } = useCheckSaved(id);
   const isSaved = savedCheck?.saved ?? false;
   const toggleSaveMutation = useToggleSave();
@@ -66,6 +81,20 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
     if (!accessToken) { router.push('/auth'); return; }
     setSaved((p) => !p);
     toggleSaveMutation.mutate(id);
+  };
+
+  // Chat Agent → deep link into /messages with the agent + listing context.
+  // The messages page reuses/creates the conversation and prefills an
+  // editable context draft; nothing is sent automatically.
+  const startAgentChat = () => {
+    if (!requireAuth('Messaging')) return;
+    if (!chatOwnerId) {
+      emitToast('Agent contact is not available for this listing yet.', 'info');
+      return;
+    }
+    const params = new URLSearchParams({ to: chatOwnerId, property: String(id) });
+    if (listing?.title) params.set('context', listing.title);
+    router.push(`/messages?${params.toString()}`);
   };
 
   const media = listing?.media ?? [];
@@ -230,7 +259,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
           <button onClick={() => handleShare(listing.title)} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }} aria-label="Share">
             <Share2 className="w-5 h-5" />
           </button>
-          <button onClick={() => { if (requireAuth('Messaging')) router.push('/messages'); }} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
+          <button onClick={startAgentChat} className="px-4 py-2 rounded-full text-xs font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
             Chat Agent
           </button>
         </div>
@@ -276,7 +305,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
                 <button onClick={() => { if (requireAuth('Scheduling inspections')) setInspectionModalOpen(true); }} className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-bg-glass)', backdropFilter: 'var(--glass-blur-subtle)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>
                   Schedule Inspection
                 </button>
-                <button onClick={() => { if (requireAuth('Messaging')) router.push('/messages'); }} className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
+                <button onClick={startAgentChat} className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-sm)' }}>
                   Chat Agent
                 </button>
               </div>
@@ -488,7 +517,7 @@ export default function PropertyDetailClient({ initialListing }: { initialListin
                 </span>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => { if (requireAuth('Messaging')) router.push('/messages'); }} className="flex-1 px-4 py-2 rounded-full text-sm font-semibold transition-all" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
+                <button onClick={startAgentChat} className="flex-1 px-4 py-2 rounded-full text-sm font-semibold transition-all" style={{ background: 'var(--color-brand-accent)', color: 'var(--color-text-inverse)' }}>
                   Chat
                 </button>
                 <a href={listing.owner?.phone ? `tel:${listing.owner.phone}` : undefined} onClick={(e) => { if (!listing.owner?.phone) { e.preventDefault(); emitToast('Agent phone number is not available', 'info'); } }} className="flex-1 px-4 py-2 rounded-full text-sm font-semibold transition-all text-center" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border-glass)', color: 'var(--color-text-primary)' }}>

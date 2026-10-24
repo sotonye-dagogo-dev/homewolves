@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-27
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: historical entries do not go stale
 
 > **Overview:** Chronological log of completed development work. Each sprint ends with a summary entry. Agents add entries after completing tasks. Useful for understanding what has been built, when decisions were made, and what patterns have emerged.
@@ -556,3 +556,43 @@ Completed the design-token compliance directive (readability/visibility conflict
 
 **Next Sprint Focus:**
 Backlog unchanged: WhatsApp, PWA/offline, push notifications, referral system; realtime enable once long-lived WS host exists.
+
+## 2026-10-24 — execute-feature: stakeholder feedback round (Session 27)
+
+**Summary:**
+Resolved the stakeholder feedback batch: Chat Agent now starts a conversation directly (find-or-create on the API, editable listing-context draft prefilled in the composer), composing a new conversation uses a design-system member directory dropdown instead of a raw user-ID input, the mobile theme toggle was raised so it never coincides with the Chat Agent action bar, and map provider names were removed from the map info tag (credit moved to the README).
+
+**Completed:**
+- Deep-link chat flow: `/messages?to=<agentId>&property=<listingId>&context=<title>` from all three Chat Agent entry points on property detail; URL consumed once (ref guard), exact-match conversation reuse or create, editable prefill only (never auto-send); post-sign-in redirect preserves the deep link
+- API idempotency + safety: `POST /messaging/conversations` is find-or-create (exact participant set + property), validates participants (404 by name), rejects self-only conversations (400); new guarded `GET /messaging/directory` (JWT, zod, take ≤ 50, privacy-safe minimal fields excluding phone/email)
+- Compose modal: `HwSelect` directory dropdown with role labels, selected-user context card (initials, role, Verified), loading/empty/failure states + advanced manual-ID fallback only when the directory is unavailable
+- Theme toggle mobile bottom 96px → 152px (clears the 88–140px Chat Agent sticky bar); desktop unchanged
+- Map: `attributionControl={false}` on MapLibre canvas so provider names never render on-map; README "Map Providers" credit section (OpenFreeMap, CARTO, OpenStreetMap, Photon/Nominatim)
+- QA: typecheck 4/4, lint 4/4, API 180 tests (7 new in `messaging.service.spec.ts`), web suite green (3 new directory tests), `next build` 48 routes
+
+**Key Changes:**
+- Rule: conversation creation is idempotent — callers may repeat a listing enquiry safely; duplicates from listing taps are impossible (legacy duplicates untouched).
+- Rule: user enumeration stays restricted to the messaging directory (minimal fields, caller excluded); phone/email remain participant-only via conversation profiles.
+- Rule: map surfaces carry no provider branding; provider credit lives in README only.
+- New surfaces: `GET /messaging/directory`, `fetchMessagingDirectory`/`useMessagingDirectory`, deep-link contract `to|property|context` on `/messages`, `messaging.service.spec.ts`.
+
+**Next Sprint Focus:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable once a long-lived WS host exists.
+## 2026-10-24 — execute-feature: Along map credit + footer credit polish (Session 28)
+
+**Summary:**
+Stakeholder directive: the map info tag now credits the Along project ("Powered by Along" → https://alongng.com — groundwork for a possible future routes-on-listings integration), the footer link columns hold a 3-column grid from the smallest viewport, the footer credit line carries a config-driven "Built by S.D." dev credit, and the footer got mobile scroll-clearance padding so the fixed menu bar never covers the credit line.
+
+**Completed:**
+- `MapConfig.credit` (`MapCreditConfig`) type + `BrandConfig.developerCreditLabel/Url` — all optional/non-breaking; defaults in both config fallback copies ("Powered by Along" → alongng.com; "Built by S.D." → sotonye-dagogo.is-a.dev)
+- `MapCreditTag` (`components/map/map-credit-tag.tsx`): pure `normalizeMapCredit` (field-level merge over stale/partial DB rows; strict guards — boolean enabled, non-empty label, `https?://` href → malformed configs degrade to tag-absent, `javascript:` never reaches an href), `useMapCredit`, self-contained tag component
+- Overlaid bottom-left on the live canvas inside a `pointer-events-none` container (no map-gesture interception) and rendered inline on `MapLocationFallback` cards so the credit survives every fallback path; tile-provider attribution stays off-surface (README only)
+- Footer: `grid grid-cols-3` nav columns (mobile-inclusive, `min-w-0` + `truncate` cells), container `pt-16 pb-32 lg:pt-20 lg:pb-20`, credit line = copyright + dev-credit anchor (target=_blank, noopener), stack on mobile / inline on desktop
+- QA: turbo typecheck 4/4, lint green, web tests 184 passed (new `footer.test.tsx` ×3; `hw-map.test.tsx` grown to 12 tests), `next build` green (48 routes)
+
+**Key Changes:**
+- Rule: credits are config products, not copy — `map_config.credit` and `brand.developerCredit*` are admin-editable/removable without deploys; `enabled: false` (map) or empty label (footer) hides them.
+- Rule: extending an existing PlatformConfig key must merge new optional sub-objects field-by-field over possibly-legacy DB rows, and whitelist link URL schemes before any `href`.
+
+**Next Sprint Focus:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable once a long-lived WS host exists.

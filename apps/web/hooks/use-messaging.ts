@@ -7,6 +7,7 @@ import {
   fetchConversation,
   fetchMessages,
   fetchUnreadCount,
+  fetchMessagingDirectory,
   connectSocket,
   isSocketConnected,
   joinConversation,
@@ -55,6 +56,18 @@ export function useUnreadCount() {
     queryFn: fetchUnreadCount,
     staleTime: 15_000,
     refetchInterval: isRealtimeEnabled() ? false : 20_000,
+  });
+}
+
+export function useMessagingDirectory(
+  params: { search?: string; role?: string; take?: number } = {},
+) {
+  const { search = '', role, take } = params;
+  return useQuery({
+    queryKey: ['messaging', 'directory', { search, role, take }],
+    queryFn: () => fetchMessagingDirectory({ search: search || undefined, role, take }),
+    staleTime: 60_000,
+    retry: 1,
   });
 }
 

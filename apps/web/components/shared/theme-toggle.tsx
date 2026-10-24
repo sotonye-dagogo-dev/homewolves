@@ -10,7 +10,9 @@ const ORDER = ['light', 'dark', 'high-contrast'] as const;
  *
  * Rendered once from the root layout so it is available on every public,
  * auth, and dashboard page (previously the only controls lived inside two
- * dashboard screens). Sits above the mobile bottom bar and is safe-area aware.
+ * dashboard screens). Sits above the mobile bottom bar, the listing-detail
+ * Chat-Agent action bar, and contextual bars so buttons never overlap on
+ * mobiles. Safe-area aware.
  */
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -31,7 +33,7 @@ export function ThemeToggle() {
       title={label}
       className="fixed right-4 z-[150] grid h-11 w-11 place-items-center rounded-full shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:!bottom-6"
       style={{
-        bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))',
+        bottom: 'calc(152px + env(safe-area-inset-bottom, 0px))',
         background: 'var(--color-bg-elevated)',
         color: 'var(--color-text-secondary)',
         border: '1px solid var(--color-border-default)',

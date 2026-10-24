@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: execute-feature-session-28
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: auto-regenerable — can be derived from `Get-ChildItem -Recurse` or `tree` command. Manual content only where intent cannot be derived from structure.
 
 > **Overview:** Visual map of the Homewolves monorepo folder structure with purpose descriptions. Updated when the folder structure changes. This file is **auto-regenerable** — use tool-based discovery (filesystem MCP, git ls-tree) for ground truth, and treat manual entries here as supplementary context, not primary navigation.
@@ -41,7 +41,7 @@ homewolves/
 │   │   ├── components/
 │   │   │   ├── ui/              ← Hw* wrappers (HwButton, HwInput, HwSelect, HwTextarea, etc.) — the only import for UI primitives
 │   │   │   ├── landing/         ← Landing page zones (HeroSection, StatsStrip, CategoryBento, etc.)
-│   │   │   ├── map/             ← Keyless MapLibre stack: hw-map.tsx wrapper (dynamic import, theme observer, fallback card) + map-canvas.tsx (react-map-gl/maplibre, style step-down, pins/popups)
+│   │   │   ├── map/             ← Keyless MapLibre stack: hw-map.tsx wrapper (dynamic import, theme observer, fallback card) + map-canvas.tsx (react-map-gl/maplibre, style step-down, pins/popups) + map-credit-tag.tsx (config-driven partner info tag)
 │   │   │   ├── listings/        ← Property card, gallery, filter bar, forms (ListingForm uses MapPinPicker; PropertyDetailClient uses ListingMapSection)
 │   │   │   ├── dashboard/       ← Bento grid cells, KPI widgets, charts
 │   │   │   ├── transactions/    ← Stepper, document upload, audit trail
