@@ -135,7 +135,8 @@ HwMap / ListingMapSection / properties map view
     → exhausted → token-styled MapLocationFallback card (OSM outbound link)
   → MapCreditTag overlay (bottom-left) + inline on fallback cards = partner info tag
     (map_config.credit — "Powered by Along" → https://alongng.com; normalizeMapCredit merges
-    stale/partial DB rows over defaults and rejects malformed values; disabled via enabled:false)
+    stale/partial DB rows over defaults and rejects malformed values; disabled via enabled:false;
+    text colour via credit.colorToken → designTokenVar(..., 'success') = theme-aware green)
 Geocode (server-only):
   → Browser fetch GET /api/v1/maps/geocode?q=…&limit=5 (keyless, no API key in client)
     → route validates + rate-caps + TTL-caches (in-memory, 5 min, max 500)
@@ -164,6 +165,7 @@ Business event (e.g. transaction created)
 | `filter_pills` | Search filter options | PlatformConfig table | FALLBACK_FILTER_PILLS |
 | `map_config` | Keyless map rendering stack (vector styles, raster fallback chain, geocode endpoint/caches, marker colors, marker cap, partner `credit` info tag) — consumed via `useMapConfig()` | PlatformConfig table | FALLBACK_MAP_CONFIG (both config fallbacks) |
 | `brand.developerCreditLabel/Url` | Footer credit line entry ("Built by S.D." → https://sotonye-dagogo.is-a.dev); admin-editable via `brand` | PlatformConfig table | FALLBACK_BRAND fields (both config fallbacks) |
+| `brand.developerCreditColorToken` | Design-token key for the footer dev-credit colour (default `accent`; map tag uses `map_config.credit.colorToken`, default `success`). Resolved by `lib/design-tokens.ts` to a theme-aware CSS var; unknown keys fall back safely | PlatformConfig table | FALLBACK_BRAND / FALLBACK_MAP_CONFIG `colorToken` |
 | `nav_items` | Navigation menu structure | PlatformConfig table | FALLBACK_NAV_ITEMS |
 | `subscription_plans` | Agent subscription tiers and pricing | PlatformConfig table | FALLBACK_PLANS |
 | `feature_flags` | Feature toggles with role/rollout gates | PlatformConfig table | FALLBACK_FLAGS |

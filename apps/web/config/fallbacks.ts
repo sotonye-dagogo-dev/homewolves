@@ -10,6 +10,8 @@ export const FALLBACK_BRAND: BrandConfig = {
   // Footer credit — fully admin-editable via PlatformConfig `brand`.
   developerCreditLabel: 'Built by S.D.',
   developerCreditUrl: 'https://sotonye-dagogo.is-a.dev',
+  // Accent token gives the credit emphasis; themes swap the underlying hue.
+  developerCreditColorToken: 'accent',
 };
 
 export const FALLBACK_AMENITIES: AmenityConfig[] = [
@@ -107,7 +109,13 @@ export const FALLBACK_MAP_CONFIG: MapConfig = {
   // Partner info tag on the map surface ("Powered by Along") — the
   // Along project (https://alongng.com) may power future routing
   // integrations; tile-provider attribution stays off this tag.
-  credit: { enabled: true, label: 'Powered by Along', href: 'https://alongng.com' },
+  credit: {
+    enabled: true,
+    label: 'Powered by Along',
+    href: 'https://alongng.com',
+    // Deliberately green; the token follows the active theme.
+    colorToken: 'success',
+  },
   geocode: { endpoint: '/api/v1/maps/geocode', limit: 5, cacheTtlSec: 300 },
   maxMarkers: 200,
   markerColor: '#C8813A',

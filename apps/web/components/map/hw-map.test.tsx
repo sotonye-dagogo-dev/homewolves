@@ -73,6 +73,7 @@ describe('HwMap', () => {
     const credit = screen.getByTestId('map-credit-tag');
     expect(credit).toBeInTheDocument();
     expect(credit.getAttribute('href')).toBe('https://alongng.com');
+    expect(credit.style.color).toBe('var(--color-success)');
     expect(screen.getByText('Powered by Along')).toBeInTheDocument();
   });
 

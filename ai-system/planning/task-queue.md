@@ -1,9 +1,9 @@
 # Development Task Queue
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-28
+> - last-updated-by: execute-feature-session-29
 > - last-verified-against-code: 2026-10-24
-> - last-synced: 2026-10-24 (Session 28 — Along map credit tag (config-driven), footer 3-col mobile grid + scroll-clearance padding, dev credit "Built by S.D." (config-driven))
+> - last-synced: 2026-10-24 (Session 29 — config-driven credit colour tokens: map info tag green by default, footer dev credit accent + ExternalLink glyph; reusable `lib/design-tokens.ts`)
 > - staleness-policy: re-verify before each session
 
 > **Overview:** Sprint-level task queue with complexity tagging. Agents execute tasks top to bottom within the current sprint. Each task is sized so it can be completed in a single session. Sprint 1–3 are complete; the current focus is hardening, Backlog items, and the next scheduled phase.

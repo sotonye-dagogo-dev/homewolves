@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-28
+> - last-updated-by: execute-feature-session-29
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: this file is overwritten every session — always current
 
@@ -14,4 +14,4 @@
 
 **Status:** CLEAN — no work in progress.
 
-Session 28 (stakeholder directive: Along map-credit tag + footer credit polish — config-driven "Powered by Along" map info tag via `map_config.credit` overlaid on the live canvas and fallback cards, mobile-inclusive 3-column footer link grid, mobile scroll-clearance footer padding, config-driven "Built by S.D." footer dev credit via `brand.developerCredit*`) completed with the full QA gate green (turbo typecheck 4/4, lint clean, web tests 184 passed incl. new `footer.test.tsx` and grown `hw-map.test.tsx`, `next build` 48 routes) and the mandated `update-ai-system.md` deep sync applied. See `checkpoints/session-log.md` (Session 28) and `summaries/dev-history.md` for details.
+Session 29 (stakeholder directive: config-driven credit colours + icon parity — new `lib/design-tokens.ts` allow-list resolver, map info tag green via `map_config.credit.colorToken` default `success`, footer dev credit uses the same `ExternalLink` glyph plus `brand.developerCreditColorToken` accent emphasis) completed with the full QA gate green (npm install, turbo typecheck 4/4, targeted eslint clean, web tests 188 passed / 25 files, `next build` 48 routes) and the mandated `update-ai-system.md` deep sync applied. See `checkpoints/session-log.md` (Session 29) and `summaries/dev-history.md` for details.

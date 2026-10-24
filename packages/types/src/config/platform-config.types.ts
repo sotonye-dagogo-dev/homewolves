@@ -43,6 +43,12 @@ interface BrandConfig {
   developerCreditLabel?: string;
   /** Absolute https link for the developer credit. */
   developerCreditUrl?: string;
+  /**
+   * Design-token key for the developer credit colour (defaults to
+   * `accent`). Resolved to a theme-aware CSS variable so the credit keeps
+   * its emphasis in light, dark, and high-contrast themes.
+   */
+  developerCreditColorToken?: string;
 }
 
 // ─── PLATFORM CONFIG CLASS ──────────────────────────────────
