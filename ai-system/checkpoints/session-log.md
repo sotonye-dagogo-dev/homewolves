@@ -920,3 +920,33 @@ Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referr
 
 **Notes / Blockers:**
 - E2E not run (unit/component + build green). Live verification candidates: Chat Agent tap from a listing while signed out → sign-in → prefilled draft; duplicate-tap idempotency on the live DB.
+## Session 28 — 2026-10-24 (execute-feature: stakeholder directive — Along map credit, footer grid + dev credit)
+
+**Completed:**
+- Map info tag credit to Along (directive: "let the maps info tag have credit to Along — something like powered by Along with a link/CTA linking to https://alongng.com"):
+  - `MapConfig` type: new optional `credit: MapCreditConfig` block (`{ enabled, label, href }`) — non-breaking; `BrandConfig`: optional `developerCreditLabel` / `developerCreditUrl`
+  - Fallbacks (web + @hw/config, parity): `credit: { enabled: true, label: 'Powered by Along', href: 'https://alongng.com' }` and dev credit `'Built by S.D.' → https://sotonye-dagogo.is-a.dev` — fully admin-editable via `PUT /config/map_config` / `/config/brand`
+  - New reusable `apps/web/components/map/map-credit-tag.tsx`: pure `normalizeMapCredit` (field-level merge over stale/partial DB rows, strict guards — non-empty label, `https?://` href, boolean enabled → malformed configs degrade to tag-absent) + `useMapCredit` hook + `MapCreditTag` anchor component
+  - `hw-map.tsx`: canvas wrapper now `relative` with a `pointer-events-none` bottom-left overlay holding the tag (never intercepts map gestures); `MapLocationFallback` carries the tag inline so the credit survives every fallback path; tile-provider attribution stays off-surface (README only, per Session 27)
+- Footer (directive: 3-column link grid from mobile, extra bottom padding on mobile, "Built by S.D." in the credit line):
+  - `footer.tsx` nav columns moved into `grid grid-cols-3 gap-4 sm:gap-6 lg:gap-16` (mobile-inclusive; `min-w-0` on mobile with `truncate`, desktop keeps `min-w-[140px]`); logo/social blocks stack around it; overflow-safe `truncate lg:whitespace-normal` on link cells
+  - Footer container bottom padding: `py-16` → `pt-16 pb-32 lg:pt-20 lg:pb-20` so the fixed mobile menu bar can never cover the credit line at the end of a mobile scroll
+  - Credit line: copyright + config-driven `Built by S.D.` anchor (target=_blank, rel=noopener) stacked on mobile / inline on desktop; hidden when the admin clears either field
+- QA gate: `turbo` typecheck (web/types/config/api) 4/4, lint 3/3, web tests 184 passed incl. new `footer.test.tsx` (×3) and extended `hw-map.test.tsx` (12 tests: credit tag on canvas + fallback card, `normalizeMapCredit` merge/disable/malformed cases, existing link assertions kept intact), `next build` green (48 routes)
+- Docs: session-log, dev-history, task-queue metadata, project-decisions (×1 new entry covering both credits), lessons-learned, system-architecture (map flow + config table), repo-map, dependency-graph (Along added as external integration), in-progress cleared
+
+**Files Modified:**
+- packages/types/src/config/{map-config.types.ts, platform-config.types.ts} — MapCreditConfig + MapConfig.credit; BrandConfig.developerCredit*
+- apps/web/config/fallbacks.ts + packages/config/src/fallbacks.ts — FALLBACK_MAP_CONFIG.credit + FALLBACK_BRAND.developerCredit* (kept in parity)
+- apps/web/components/map/{map-credit-tag.tsx, hw-map.tsx, map-canvas.tsx, hw-map.test.tsx} — tag component, overlays, comments, tests
+- apps/web/components/landing/{footer.tsx, footer.test.tsx} — grid, padding, dev credit, tests
+
+**Next Task:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when long-lived WS host exists.
+
+**Assumptions Made:**
+- The Along credit intentionally names the platform partner (per directive) while tile-provider names stay off the tag — Session 27's "no provider names" rule applies to basemap/geocoder attribution, not the partner surface.
+- Absent/legacy `map_config` DB rows should still show the new tag (field-level defaults), and admins disable it per-environment via `credit.enabled: false` rather than code.
+
+**Notes / Blockers:**
+- No route/service-layer changes — external APIs (alongng.com) are only ever opened from an anchor tag, no fetches.

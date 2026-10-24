@@ -578,3 +578,21 @@ Resolved the stakeholder feedback batch: Chat Agent now starts a conversation di
 
 **Next Sprint Focus:**
 Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable once a long-lived WS host exists.
+## 2026-10-24 — execute-feature: Along map credit + footer credit polish (Session 28)
+
+**Summary:**
+Stakeholder directive: the map info tag now credits the Along project ("Powered by Along" → https://alongng.com — groundwork for a possible future routes-on-listings integration), the footer link columns hold a 3-column grid from the smallest viewport, the footer credit line carries a config-driven "Built by S.D." dev credit, and the footer got mobile scroll-clearance padding so the fixed menu bar never covers the credit line.
+
+**Completed:**
+- `MapConfig.credit` (`MapCreditConfig`) type + `BrandConfig.developerCreditLabel/Url` — all optional/non-breaking; defaults in both config fallback copies ("Powered by Along" → alongng.com; "Built by S.D." → sotonye-dagogo.is-a.dev)
+- `MapCreditTag` (`components/map/map-credit-tag.tsx`): pure `normalizeMapCredit` (field-level merge over stale/partial DB rows; strict guards — boolean enabled, non-empty label, `https?://` href → malformed configs degrade to tag-absent, `javascript:` never reaches an href), `useMapCredit`, self-contained tag component
+- Overlaid bottom-left on the live canvas inside a `pointer-events-none` container (no map-gesture interception) and rendered inline on `MapLocationFallback` cards so the credit survives every fallback path; tile-provider attribution stays off-surface (README only)
+- Footer: `grid grid-cols-3` nav columns (mobile-inclusive, `min-w-0` + `truncate` cells), container `pt-16 pb-32 lg:pt-20 lg:pb-20`, credit line = copyright + dev-credit anchor (target=_blank, noopener), stack on mobile / inline on desktop
+- QA: turbo typecheck 4/4, lint green, web tests 184 passed (new `footer.test.tsx` ×3; `hw-map.test.tsx` grown to 12 tests), `next build` green (48 routes)
+
+**Key Changes:**
+- Rule: credits are config products, not copy — `map_config.credit` and `brand.developerCredit*` are admin-editable/removable without deploys; `enabled: false` (map) or empty label (footer) hides them.
+- Rule: extending an existing PlatformConfig key must merge new optional sub-objects field-by-field over possibly-legacy DB rows, and whitelist link URL schemes before any `href`.
+
+**Next Sprint Focus:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable once a long-lived WS host exists.

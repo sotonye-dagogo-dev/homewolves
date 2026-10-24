@@ -7,6 +7,9 @@ export const FALLBACK_BRAND: BrandConfig = {
   ogImageUrl: '/og-image.png',
   companyName: 'Homewolves',
   tagline: 'African Real Estate Operating System',
+  // Footer credit — fully admin-editable via PlatformConfig `brand`.
+  developerCreditLabel: 'Built by S.D.',
+  developerCreditUrl: 'https://sotonye-dagogo.is-a.dev',
 };
 
 export const FALLBACK_AMENITIES: AmenityConfig[] = [
@@ -101,6 +104,10 @@ export const FALLBACK_MAP_CONFIG: MapConfig = {
   defaultZoom: 11,
   detailZoom: 15,
   attribution: '© OpenFreeMap · © OpenStreetMap contributors',
+  // Partner info tag on the map surface ("Powered by Along") — the
+  // Along project (https://alongng.com) may power future routing
+  // integrations; tile-provider attribution stays off this tag.
+  credit: { enabled: true, label: 'Powered by Along', href: 'https://alongng.com' },
   geocode: { endpoint: '/api/v1/maps/geocode', limit: 5, cacheTtlSec: 300 },
   maxMarkers: 200,
   markerColor: '#C8813A',

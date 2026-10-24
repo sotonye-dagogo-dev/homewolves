@@ -1,7 +1,7 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-27
+> - last-updated-by: execute-feature-session-28
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
@@ -518,3 +518,19 @@ Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeo
 ---
 
 **Session 27 (2026-10-24) — `useSearchParams` + static prerender:** adding query-param consumption to an existing `'use client'` page breaks `next build` prerendering unless the component is wrapped in a `<Suspense>` boundary (Next 14 requirement, exact-typo-class errors). Pattern: export a thin default-export wrapper with Suspense + a text fallback, move the real page to an inner component. Batch the whole query object into a single memoized string key and guard with a ref so the deep link resolves exactly once per navigation.
+
+---
+
+## §New optional config fields must merge field-by-field over stale DB rows
+
+**Context:**
+2026-10-24 execute-feature (Session 28) — the Along credit was added as an optional `credit` block inside `map_config` (and dev credit fields on `brand`), but `resolveConfig` returns the API value wholesale: any existing DB `map_config` row written before the field existed arrives without it, and a naive `config?.credit ?? FALLBACK` split hides defaults whenever any DB row exists.
+
+**What We Learned:**
+- Extending an existing PlatformConfig key with a *nested* block means every environment with that key already stored is "stale" relative to the new shape — resolve at the sub-object level (`{ ...FALLBACK.credit, ...config?.credit }`), not the key level.
+- Guards must be strict (`enabled !== true`, non-empty string label, `^https?:\\/\\//i` href) so a malformed admin value degrades to "tag absent", never to a broken or unsafe render.
+- Pure resolvers (`normalizeMapCredit`) beat hook-embedded logic: cheap to unit-test all merge/invalid permutations without a QueryClientProvider.
+
+**Apply When:**
+- Adding any optional field to an existing PlatformConfig key that ships in both `FALLBACK_*` consts and possibly-legacy DB rows.
+- Rendering a config-driven link/CTA: whitelist the URL scheme before it ever reaches `href`.

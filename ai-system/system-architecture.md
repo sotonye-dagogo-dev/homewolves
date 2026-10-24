@@ -1,7 +1,7 @@
 # System Architecture
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-27
+> - last-updated-by: execute-feature-session-28
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: re-verify before trusting if any architecture-affecting commits have been made since last-verified-against-code
 
@@ -133,6 +133,9 @@ HwMap / ListingMapSection / properties map view
   → markers: resolveListingCoords (exact submitted lat/lng) else geocoded area text (approximate)
   → render: react-map-gl/maplibre; style stack [OpenFreeMap vector] → CARTO/OSM raster styles on error
     → exhausted → token-styled MapLocationFallback card (OSM outbound link)
+  → MapCreditTag overlay (bottom-left) + inline on fallback cards = partner info tag
+    (map_config.credit — "Powered by Along" → https://alongng.com; normalizeMapCredit merges
+    stale/partial DB rows over defaults and rejects malformed values; disabled via enabled:false)
 Geocode (server-only):
   → Browser fetch GET /api/v1/maps/geocode?q=…&limit=5 (keyless, no API key in client)
     → route validates + rate-caps + TTL-caches (in-memory, 5 min, max 500)
@@ -159,7 +162,8 @@ Business event (e.g. transaction created)
 |------------|---------|----------|---------|
 | `amenities` | Property amenity icons and labels | PlatformConfig table | FALLBACK_AMENITIES |
 | `filter_pills` | Search filter options | PlatformConfig table | FALLBACK_FILTER_PILLS |
-| `map_config` | Keyless map rendering stack (vector styles, raster fallback chain, geocode endpoint/caches, marker colors, marker cap) — consumed via `useMapConfig()` | PlatformConfig table | FALLBACK_MAP_CONFIG (both config fallbacks) |
+| `map_config` | Keyless map rendering stack (vector styles, raster fallback chain, geocode endpoint/caches, marker colors, marker cap, partner `credit` info tag) — consumed via `useMapConfig()` | PlatformConfig table | FALLBACK_MAP_CONFIG (both config fallbacks) |
+| `brand.developerCreditLabel/Url` | Footer credit line entry ("Built by S.D." → https://sotonye-dagogo.is-a.dev); admin-editable via `brand` | PlatformConfig table | FALLBACK_BRAND fields (both config fallbacks) |
 | `nav_items` | Navigation menu structure | PlatformConfig table | FALLBACK_NAV_ITEMS |
 | `subscription_plans` | Agent subscription tiers and pricing | PlatformConfig table | FALLBACK_PLANS |
 | `feature_flags` | Feature toggles with role/rollout gates | PlatformConfig table | FALLBACK_FLAGS |

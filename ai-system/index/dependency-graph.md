@@ -1,7 +1,7 @@
 # Dependency Graph
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-27
+> - last-updated-by: execute-feature-session-28
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: auto-regenerable — can be derived from import analysis tools. Manual content only for conventions and rules that cannot be inferred from code.
 
@@ -118,7 +118,7 @@ apps/web (Next.js 14)
   → lib/messaging — REST send/read + socket hybrid; deep-link contract `to|property|context` resolved by `/messages` (find-or-create + directory dropdown)
   → lib/analytics — agent/admin analytics REST clients
   → lib/map/config — keyless map stack helpers (style-step-down chain, coordinate resolver) consumed by components/map + hooks
-  → components/map — HwMap wrapper → dynamic(map-canvas) → react-map-gl/maplibre + maplibre-gl; `app/api/v1/maps/geocode` proxies upstreams (server-side only)
+  → components/map — HwMap wrapper → dynamic(map-canvas) → react-map-gl/maplibre + maplibre-gl; map-credit-tag.tsx (config-driven partner info tag, consumed by hw-map incl. fallback cards); `app/api/v1/maps/geocode` proxies upstreams (server-side only)
   → Tailwind CSS (styling with CSS variable tokens)
 
 apps/mobile (React Native / Expo)
@@ -150,6 +150,7 @@ apps/mobile (React Native / Expo)
 | CARTO / OSM raster tiles | Keyless step-down basemaps on vector style failure | apps/web components/map |
 | Photon (geocoding) | Keyless forward-geocode primary — proxied via `app/api/v1/maps/geocode`, never browser-direct | apps/web API route |
 | Nominatim (geocoding) | Keyless forward-geocode fallback (proper User-Agent required) — same proxy | apps/web API route |
+| Along (alongng.com) | Partner credit — info tag on map surfaces via `map_config.credit`; future candidate for listing-route integration (not implemented) | apps/web components/map |
 
 ---
 

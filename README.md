@@ -149,6 +149,11 @@ in the map UI; their credit lives here:
 - [OpenStreetMap](https://www.openstreetmap.org) — raster basemap step-down + outbound location links
 - [Photon (H Jaguar) + Nominatim](https://photon.komoot.io) — geocoding via the server-proxied `/api/v1/maps/geocode`
 
+**Partner:** the map info tag credits the
+[Along](https://alongng.com) project ("Powered by Along", driven by the
+`map_config.credit` platform config) — Along is a candidate for deeper integration
+in the future (e.g. listers uploading routes for their listings alongside this credit).
+
 ## License
 
 Proprietary — Homewolves Inc.
