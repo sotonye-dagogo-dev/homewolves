@@ -1,7 +1,7 @@
 # Lessons Learned
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-28
+> - last-updated-by: execute-feature-session-30
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
@@ -534,3 +534,39 @@ Any build-time network step (DB migrate, registry fetch) needs a fail-soft timeo
 **Apply When:**
 - Adding any optional field to an existing PlatformConfig key that ships in both `FALLBACK_*` consts and possibly-legacy DB rows.
 - Rendering a config-driven link/CTA: whitelist the URL scheme before it ever reaches `href`.
+
+---
+
+## §Config-driven colours belong in a token allow-list, not raw CSS strings
+
+**Context:**
+2026-10-24 execute-feature (Session 29) — stakeholder asked for the map info tag to be green and the footer dev credit to "pop" via a design token, both remaining config driven. Passing raw colour strings from PlatformConfig would have been easy but would not follow theme changes (dark/high-contrast) and would accept unvalidated input.
+
+**What We Learned:**
+- Resolve an allow-listed token *key* (`success`, `accent`, …) to `var(--color-…)` at render time (`lib/design-tokens.ts`): the same config value re-colours automatically per theme and cannot inject arbitrary CSS.
+- Keep pure resolvers separate from hooks: `normalizeMapCredit` keeps its original `{enabled,label,href}` shape (all existing call sites/tests non-breaking); colour is composed in `useMapCredit`.
+- Unknown/missing keys must fall back to the surface's documented default (`success` for map, `accent` for footer) so stale admin rows never blank text.
+- Reuse the same icon (`ExternalLink`) across credit surfaces so they read as one family.
+
+**Apply When:**
+- Adding any admin-configurable colour/emphasis setting.
+- Extending a config object consumed by multiple components: add the new field as optional and resolve it with a safe default rather than changing existing return shapes.
+
+---
+
+## §Single-service deployments need a Next-local route per domain — the catch-all is not the API
+
+**Context:**
+2026-10-24 execute-feature (Session 30) — "API is not configured" toast on starting a chat and an empty member directory. The deployment is a single Next.js service (`backendOrigin` unset), so `/api/v1/messaging/*` fell through to `app/api/v1/[...path]/route.ts`, which returns `API not configured` (502) for mutations and a generic `{ fallback: true }` 200 for GETs. Auth already worked because it had its own Next-local handler against Postgres.
+
+**What We Learned:**
+- A generic catch-all that returns HTTP 200 for GETs is worse than a 502: `toArray()`-style clients silently coerce the envelope to `[]`, producing "no members" instead of an actionable error. Local handlers must return the real array shape or a coded error.
+- Share one server module for Postgres access (`lib/server/local-db.ts`: lazy `postgres` client, `prepare:false` for poolers, SSL rules, error predicates, backend-origin resolution) instead of copy-pasting 150+ lines into each route.
+- Mirror the Nest service's contract in a typed local domain module (`messaging-local.ts`) so validation, privacy rules, and response shapes stay identical whether the request is proxied or served locally; fall back locally on proxy network errors or upstream 5xx, but pass upstream 4xx through unchanged.
+- Raw SQL inserts must supply client-side defaults (`id`, `createdAt`, `updatedAt`) because Drizzle `$defaultFn` never runs for hand-written SQL.
+- Point browser clients at the same-origin base (`sameOriginApiBase()`), not the API base, or the Next-local handler is bypassed.
+
+**Apply When:**
+- Deploying to Vercel/single-service without a long-lived NestJS API.
+- Adding any browser-facing domain (messaging, notifications, CRM, …) whose calls currently hit `/api/v1/*`.
+- Debugging a feature that "works in the API tests" but returns 502 or empty data in production.

@@ -1,9 +1,9 @@
 # Development Task Queue
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-28
+> - last-updated-by: execute-feature-session-30
 > - last-verified-against-code: 2026-10-24
-> - last-synced: 2026-10-24 (Session 28 — Along map credit tag (config-driven), footer 3-col mobile grid + scroll-clearance padding, dev credit "Built by S.D." (config-driven))
+> - last-synced: 2026-10-24 (Session 30 — single-service messaging: Next-local `/api/v1/messaging/*` route + shared `lib/server/local-db.ts`, `sameOriginApiBase()`, theme toggle 208px mobile offset)
 > - staleness-policy: re-verify before each session
 
 > **Overview:** Sprint-level task queue with complexity tagging. Agents execute tasks top to bottom within the current sprint. Each task is sized so it can be completed in a single session. Sprint 1–3 are complete; the current focus is hardening, Backlog items, and the next scheduled phase.
@@ -53,6 +53,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 | [BUG] | Run db migrations (Session 24: 0000–0005 applied via pooler `aws-1-eu-west-1` after direct host went AAAA-only; fixed silent skip — hand-set 0005 `when` predated runtime Date.now() journal row; seed-user password hashes backfilled + verified) | [x] |
 | [M] | Stakeholder feedback batch (Session 27: Chat Agent deep-links `/messages?to&property&context` with editable context prefill; conversation find-or-create + participant validation; `GET /messaging/directory` + compose dropdown replacing raw user-ID input; theme-toggle mobile offset 96→152px clearing the Chat Agent bar; MapLibre attribution hidden with provider credit moved to README) | [x] |
 | [S] | Along partner credit + footer polish (Session 28: config-driven map info tag "Powered by Along" → alongng.com via `map_config.credit` overlay/fallback-card surfaces + `MapCreditTag`; footer nav columns in a mobile-inclusive 3-col grid + mobile scroll-clearance bottom padding; config-driven footer dev credit "Built by S.D." → sotonye-dagogo.is-a.dev via `brand.developerCredit*`) | [x] |
+| [BUG] | Chat broken on single-service deployment (Session 30: "API is not configured" toast + empty member directory — added Next-local `/api/v1/messaging/[...path]` route mirroring the Nest contract against Postgres, shared `lib/server/local-db.ts`/`messaging-local.ts`, `sameOriginApiBase()` for browser calls, auth helpers de-duplicated, theme-toggle mobile offset 152→208px; web 197 tests / 48-route build green) | [x] |
 
 ---
 
@@ -87,6 +88,7 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 
 | Task | Completed |
 |------|-----------|
+| Single-service messaging end-to-end (Session 30) — local Postgres `/api/v1/messaging/*` route (directory, conversations, messages, read receipts, unread) with JWT auth + proxy fallback; shared `lib/server/local-db.ts` adopted by auth; `sameOriginApiBase()`; theme toggle 152→208px; typecheck 4/4 + web 197 tests + 48-route build green | [x] |
 | Stakeholder feedback round (Session 27) — chat-agent deep link + editable listing-context prefill (never auto-send), idempotent find-or-create `POST /messaging/conversations` (participants validated, self-only rejected), privacy-safe `GET /messaging/directory` + design-system compose dropdown (manual-ID fallback only on directory failure), theme-toggle mobile offset 96→152px (no clash with Chat Agent bar), map attribution control hidden + README provider credits, typecheck/lint 4/4 + API 180/web tests + 48-route build green | [x] |
 | Platform hardening + design-system pass (Session 25) — Socket.io opt-in via `NEXT_PUBLIC_REALTIME_ENABLED` (+ REST/polling fallback, `/ws`), REST message send + participant profiles, role-aware nav/dashboards/admin guard, admin summary analytics, saved-listing hydration, tokenized admin/agent/client surfaces, real property map view, full legal pages, 173 API + 155 web tests green, 38-page build | [x] |
 | Design-token readability/visibility hardening + keyless map feature (Session 26) — tailwind semantic color mappings (elevated/canvas/glass/overlay/subtle/strong/brand), themed status tokens in dark + high-contrast, `chipToneStyle`/`tierBadgeStyle`, `HwMap`/`MapCanvas`/`MapPinPicker`/`ListingMapSection`, `app/api/v1/maps/geocode` proxy, `map_config` config + `map_view` flag, JSON-LD geo, seeded Lagos coords, typecheck/lint 4/4 + 172 web tests + 47-route build green | [x] |
@@ -109,6 +111,8 @@ Tags help agents self-select whether a task needs the full `execute-feature.md` 
 ---
 
 ## Notes
+
+- **Session 30 (2026-10-24):** single-service deployment contract — when `backendOrigin` is unset, `/api/v1/auth/*` and `/api/v1/messaging/*` are served by Next route handlers against `DATABASE_URL` (shared `lib/server/local-db.ts`); all other `/api/v1/*` paths hit the `[...path]` catch-all and must not be treated as a real API. Browser messaging calls use `sameOriginApiBase()`, and new browser-facing domains need their own Next-local handler.
 
 - **Session 27 (2026-10-24):** messaging flow contract — Chat Agent taps hit `/messages?to=<agentId>&property=<listingId>&context=<title>`; the page resolves exactly once per link (ref guard), reuses an exact-match conversation, or creates one (API-side find-or-create makes the tap idempotent), then prefills an editable draft. `/messages` requires a Suspense boundary around `useSearchParams` for static prerender. Recipient selection is directory-driven (`GET /messaging/directory`, minimal fields, caller excluded); manual-ID entry survives only as a degraded fallback when the directory fetch fails.
 

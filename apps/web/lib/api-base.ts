@@ -80,3 +80,18 @@ export function authApiBase(): string {
   if (typeof window === 'undefined') return getApiBase();
   return '/api/v1';
 }
+
+/**
+ * Base URL for routes that have a same-origin Next.js fallback handler
+ * (auth, messaging, maps).
+ *
+ * In the browser this is always relative `/api/v1`, so the request resolves
+ * against the Next.js route handlers (and any configured edge rewrite)
+ * without a cross-origin hop. That keeps local dev working even when the
+ * NestJS process is not running, and removes apex/www CORS entirely.
+ * Server-side callers still need an absolute URL from `getApiBase()`.
+ */
+export function sameOriginApiBase(): string {
+  if (typeof window === 'undefined') return getApiBase();
+  return '/api/v1';
+}

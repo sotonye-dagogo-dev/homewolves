@@ -1,7 +1,7 @@
 # System Architecture
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-28
+> - last-updated-by: execute-feature-session-30
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: re-verify before trusting if any architecture-affecting commits have been made since last-verified-against-code
 
@@ -135,7 +135,8 @@ HwMap / ListingMapSection / properties map view
     → exhausted → token-styled MapLocationFallback card (OSM outbound link)
   → MapCreditTag overlay (bottom-left) + inline on fallback cards = partner info tag
     (map_config.credit — "Powered by Along" → https://alongng.com; normalizeMapCredit merges
-    stale/partial DB rows over defaults and rejects malformed values; disabled via enabled:false)
+    stale/partial DB rows over defaults and rejects malformed values; disabled via enabled:false;
+    text colour via credit.colorToken → designTokenVar(..., 'success') = theme-aware green)
 Geocode (server-only):
   → Browser fetch GET /api/v1/maps/geocode?q=…&limit=5 (keyless, no API key in client)
     → route validates + rate-caps + TTL-caches (in-memory, 5 min, max 500)
@@ -164,6 +165,7 @@ Business event (e.g. transaction created)
 | `filter_pills` | Search filter options | PlatformConfig table | FALLBACK_FILTER_PILLS |
 | `map_config` | Keyless map rendering stack (vector styles, raster fallback chain, geocode endpoint/caches, marker colors, marker cap, partner `credit` info tag) — consumed via `useMapConfig()` | PlatformConfig table | FALLBACK_MAP_CONFIG (both config fallbacks) |
 | `brand.developerCreditLabel/Url` | Footer credit line entry ("Built by S.D." → https://sotonye-dagogo.is-a.dev); admin-editable via `brand` | PlatformConfig table | FALLBACK_BRAND fields (both config fallbacks) |
+| `brand.developerCreditColorToken` | Design-token key for the footer dev-credit colour (default `accent`; map tag uses `map_config.credit.colorToken`, default `success`). Resolved by `lib/design-tokens.ts` to a theme-aware CSS var; unknown keys fall back safely | PlatformConfig table | FALLBACK_BRAND / FALLBACK_MAP_CONFIG `colorToken` |
 | `nav_items` | Navigation menu structure | PlatformConfig table | FALLBACK_NAV_ITEMS |
 | `subscription_plans` | Agent subscription tiers and pricing | PlatformConfig table | FALLBACK_PLANS |
 | `feature_flags` | Feature toggles with role/rollout gates | PlatformConfig table | FALLBACK_FLAGS |
@@ -247,8 +249,9 @@ This is the "undo" instinct applied one layer up from data (§22 covers user-fac
 - **Google OAuth via Supabase (2026-08-19)** — web uses `@supabase/supabase-js`; provider client ID/secret live in the Supabase dashboard, not `.env`. `SUPABASE_JWT_SECRET` in `.env` verifies tokens at `POST /api/v1/auth/supabase`.
 - **Transactional email (2026-08-19)** — `@Global` EmailModule; templates in DB (`emailTemplates`), fallback constants in `packages/config/src/fallbacks.ts`; unset `RESEND_API_KEY` → simulated log-only delivery (by design).
 - **Notifications dispatch synchronously** — BullMQ async queue with retries is planned for production.
+- **Single-service deployments need Next-local domain routes** (2026-10-24) — when `backendOrigin` is unset (the usual Vercel deployment), browser `/api/v1/auth/*` and `/api/v1/messaging/*` calls are handled by Next route handlers against `DATABASE_URL` via shared `lib/server/local-db.ts` (`auth-local.ts`, `messaging-local.ts`). Unmatched `/api/v1/*` paths fall through to `app/api/v1/[...path]/route.ts`, which returns `API not configured` (502 for mutations) or generic fallbacks — so every new browser-facing domain needs a Next-local handler or it will fail silently/with a toast.
 - **Realtime is opt-in on serverless** (2026-10-20) — `NEXT_PUBLIC_REALTIME_ENABLED=false` by default. Messaging writes go through REST (`POST /messaging/conversations/:id/messages`) and reads poll; only set true when the API runs on a long-lived host that can terminate WebSockets. The browser never points at a hardcoded `wss://homewolves.com` socket when the flag is off.
-- **Chat-agent deep-link flow** (2026-10-24) — Chat Agent deep-links `/messages?to=<agentOwner>&property=<listingId>&context=<title>`; the page resolves exactly once per link (ref guard), reuses an exact-match conversation or creates one, and prefills an editable draft (never auto-sends). `POST /messaging/conversations` is find-or-create (participant validation + creator-only rejection, response shape unchanged); `GET /messaging/directory` (JWT, minimal privacy-safe fields, caller excluded, take ≤ 50) powers the compose dropdown. `/messages` wraps `useSearchParams` behind a Suspense boundary.
+- **Chat-agent deep-link flow** (2026-10-24) — Chat Agent deep-links `/messages?to=<agentOwner>&property=<listingId>&context=<title>`; the page resolves exactly once per link (ref guard), reuses an exact-match conversation or creates one, and prefills an editable draft (never auto-sends). `POST /messaging/conversations` is find-or-create (participant validation + creator-only rejection, response shape unchanged); `GET /messaging/directory` (JWT, minimal privacy-safe fields, caller excluded, take ≤ 50) powers the compose dropdown. `/messages` wraps `useSearchParams` behind a Suspense boundary. Messaging now uses the same-origin `/api/v1/messaging/*` route, so it works with or without an external NestJS API.
 - **Analytics endpoints are role-scoped** (2026-10-20) — agent/listing/funnel analytics are self-scoped; `GET /analytics/admin-summary` requires ADMIN/SUPER_ADMIN and aggregates pending/flagged listings, open bug reports, active transactions, and MTD confirmed revenue.
 - **Blog content uses `dangerouslySetInnerHTML`** — must be paired with sanitization in production.
 - **Activity points** — wired into service-layer hooks (9 rules: listing_created, listing_approved, listing_sold, transaction_created/completed, client_added, review_received, inspection_scheduled, message_sent, daily_login); a self-award endpoint (`POST /activity/award/:ruleKey`) remains for the web activity UI (own-account only, cooldowns enforced).

@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-26
-> - last-verified-against-code: 2026-10-21
+> - last-updated-by: execute-feature-session-30
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: append-only — never modify past entries
 
 > **Overview:** Append-only running log of development sessions. Each entry records what was completed, what comes next, and which files were modified. Agents write here at the end of every session so work can be resumed without re-reading the entire codebase. This file is the **append-only historical record** — use `checkpoints/in-progress.md` for current in-progress work.
@@ -950,3 +950,67 @@ Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referr
 
 **Notes / Blockers:**
 - No route/service-layer changes — external APIs (alongng.com) are only ever opened from an anchor tag, no fetches.
+
+---
+
+## Session 29 — 2026-10-24 (execute-feature: stakeholder directive — credit colour tokens + icon parity)
+
+**Completed:**
+- Design-token resolver `apps/web/lib/design-tokens.ts` (directive: config-driven colours, theme-safe): allow-listed `TOKEN_VARS` (accent, accent-alt, primary, secondary, success, warning, error, info, tag, foreground, muted) + `isDesignToken` + `designTokenVar(token, fallback)` → `var(--color-…)`; unknown/malformed values fall back to the surface default, so no raw hex ever reaches the DOM.
+- Map info tag green (directive: "map power tagline could have a styling effect of text color green, config driven"): `MapCreditConfig.colorToken?` (packages/types), fallback `colorToken: 'success'` in both config fallback copies; `useMapCredit` composes the resolved colour without changing `normalizeMapCredit`'s existing shape; `MapCreditTag` applies it to the label while keeping the neutral surface/border.
+- Dev credit gets the map tag's icon + a colour pop (directive: "dev credit tag could also have the icon that the map power tagline has … use some design token for extra colour"): footer anchor now renders lucide `ExternalLink` (aria-hidden) and `brand.developerCreditColorToken` (default `accent`), font-semibold + hover underline retained.
+- Types: `BrandConfig.developerCreditColorToken?` added (optional, non-breaking).
+- Tests: new `lib/design-tokens.test.ts` (resolution/fallback/allow-list); footer test asserts accent colour; hw-map test asserts green success colour. Full web suite 188 passed / 25 files.
+- QA gate: `npm install`; turbo typecheck 4/4; targeted eslint clean; `next build` web green (48 routes).
+
+**Files Modified:**
+- packages/types/src/config/{map-config.types.ts, platform-config.types.ts}
+- apps/web/lib/{design-tokens.ts, design-tokens.test.ts}
+- apps/web/components/map/map-credit-tag.tsx, apps/web/components/map/hw-map.test.tsx
+- apps/web/components/landing/footer.tsx, apps/web/components/landing/footer.test.tsx
+- apps/web/config/fallbacks.ts + packages/config/src/fallbacks.ts (parity)
+- ai-system docs (design-system, system-architecture, repo-map, task-queue, project-decisions, lessons-learned, dev-history, session-log)
+
+**Next Task:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when long-lived WS host exists.
+
+**Assumptions Made:**
+- "Green" is best expressed by the semantic `success` token (already themed per mode) rather than a new one-off green; admins can point either credit at any allow-listed token.
+- The dev credit remains inside the existing copyright line (no new layout row) — colour + icon provide the requested emphasis without disturbing the footer grid.
+
+**Notes / Blockers:**
+- No API/service changes; config fields are optional so existing DB rows render correctly without migration.
+
+---
+
+## Session 30 — 2026-10-24 (execute-feature: single-service messaging end-to-end)
+
+**Completed:**
+- Root cause: deployment is a single Next.js service (no external NestJS API), so `POST /api/v1/messaging/conversations` fell through to `app/api/v1/[...path]/route.ts` and returned `{ message: 'API not configured' }` (502), while `GET /api/v1/messaging/directory` returned a non-array envelope that the UI coerced to `[]` ("No other members available yet").
+- New shared server module `apps/web/lib/server/local-db.ts`: lazy `postgres` client, pooler-safe `prepare:false` (opt-in `PG_PREPARE`), SSL handling, error predicates/logging, host + backend-origin resolution. Auth route refactored to use it (duplicate local helpers removed).
+- New domain module `apps/web/lib/server/messaging-local.ts`: `listDirectory` (minimal fields, caller excluded, search/role/take), `listConversations` (last message + participants), `getConversation`, `createConversation` (idempotent exact participant set + property; validates users; supplies UUID/timestamps), `listMessages`, `sendMessage` (bumps `lastMessageAt`/`updatedAt`), `markRead`, `countUnread`.
+- New route `apps/web/app/api/v1/messaging/[...path]/route.ts`: proxy when `backendOrigin` is set, otherwise local; falls back local on network error/upstream 5xx, passes 4xx through; JWT verification (refresh rejected); zod-level manual validation; 401 `"Your session has expired. Please sign in again."`, 503 `DB_NOT_CONFIGURED`/`DB_NOT_MIGRATED`, sanitized 500.
+- `sameOriginApiBase()` in `lib/api-base.ts`; `lib/messaging.ts` now uses it for all calls; test mock updated.
+- Theme toggle mobile offset 152px → 208px to clear the mobile action bar (~80px) and the listing-detail sticky bar (top ~156px); desktop `lg:bottom-6` unchanged.
+- Tests: new `lib/server/messaging-local.test.ts` (9 tests: participant checks, directory privacy/exclusion, create validation/404/403, mark-read, unread coercion, sender hydration, send authorization).
+- QA gate: `npm run typecheck` 4/4; `npm run lint --workspace=@hw/web` 0 warnings/errors; `npm run test --workspace=@hw/web` 197 tests / 26 files green; `npm run build --workspace=@hw/web` green, 48 routes incl. `ƒ /api/v1/messaging/[...path]`.
+- Docs: repo-map, dependency-graph, system-architecture (constraints + chat note), task-queue, project-decisions, lessons-learned, dev-history, test-results, in-progress, README.
+
+**Files Modified:**
+- `apps/web/app/api/v1/auth/[action]/route.ts`, `apps/web/app/api/v1/messaging/[...path]/route.ts`
+- `apps/web/lib/server/{local-db.ts, messaging-local.ts, messaging-local.test.ts}`
+- `apps/web/lib/{api-base.ts, messaging.ts, messaging.test.ts}`
+- `apps/web/components/shared/theme-toggle.tsx`
+- `README.md` + ai-system docs
+
+**Next Task:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when long-lived WS host exists.
+
+**Assumptions Made:**
+- A single Postgres `DATABASE_URL` backs both local auth and messaging; the raw-SQL queries follow the quoted PascalCase Drizzle schema (`"User"`, `"Conversation"`, `"Message"`).
+- Local mode should win whenever no backend is configured, because that is the actual deployment; proxy mode remains for environments that do run NestJS.
+- An exact participant set + `propertyId` is still the definition of "same conversation" (matches the API's find-or-create).
+
+**Notes / Blockers:**
+- No `DATABASE_URL` in this workspace, so the new SQL was verified by typecheck/build/unit tests and schema review, not a live query. Live checks to run: sign in as two seed users, start a chat from a listing, send/reply, verify unread badge; confirm directory excludes the caller.
+- Build retains pre-existing warnings (SWC lockfile patch, missing env vars in `turbo.json`, npm audit).

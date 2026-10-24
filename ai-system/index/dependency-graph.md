@@ -1,7 +1,7 @@
 # Dependency Graph
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-28
+> - last-updated-by: execute-feature-session-30
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: auto-regenerable — can be derived from import analysis tools. Manual content only for conventions and rules that cannot be inferred from code.
 
@@ -107,15 +107,16 @@ apps/web (Next.js 14)
   → packages/types (global types — zero-import)
   → packages/config (fallbacks — compiled/bundled)
   → packages/api (REST client — type-safe)
-  → postgres (direct dep; server external via next.config experimental.serverComponentsExternalPackages — used by app/api/v1/auth/[action])
-  → app/api/v1/auth/[action] → lib/server/auth-local (local OTP/JWT when backendOrigin null; proxies NestJS otherwise); root `.env` loaded via dotenv in next.config.js
-  → lib/api-base — `getApiBase()` for general API calls; `authApiBase()` (same-origin `/api/v1` in the browser) for ALL `/auth/*` calls (use-auth, google-auth)
+  → postgres (direct dep; server external via next.config experimental.serverComponentsExternalPackages — used by app/api/v1/auth/[action] and app/api/v1/messaging/[...path])
+  → app/api/v1/auth/[action] → lib/server/{auth-local,local-db} (local OTP/JWT when backendOrigin null; proxies NestJS otherwise); root `.env` loaded via dotenv in next.config.js
+  → app/api/v1/messaging/[...path] → lib/server/{messaging-local,local-db} (local directory/conversations/messages/read receipts against Postgres when backendOrigin null; proxies NestJS otherwise, falling back locally on network errors or upstream 5xx)
+  → lib/api-base — `getApiBase()` for general API calls; `authApiBase()` and `sameOriginApiBase()` (same-origin `/api/v1` in the browser) for ALL `/auth/*` and messaging calls (use-auth, google-auth, lib/messaging)
   → lib/property-filters (URL↔pill sync for properties page)
   → shadcn/ui (Radix primitives — through Hw* wrappers only)
   → TanStack Query (server state)
   → Zustand (client state)
   → lib/realtime — opt-in ref-counted Socket.io client (`NEXT_PUBLIC_REALTIME_ENABLED`, namespace `/ws`); REST + polling fallback when disabled
-  → lib/messaging — REST send/read + socket hybrid; deep-link contract `to|property|context` resolved by `/messages` (find-or-create + directory dropdown)
+  → lib/messaging — same-origin REST send/read + socket hybrid; deep-link contract `to|property|context` resolved by `/messages` (find-or-create + directory dropdown)
   → lib/analytics — agent/admin analytics REST clients
   → lib/map/config — keyless map stack helpers (style-step-down chain, coordinate resolver) consumed by components/map + hooks
   → components/map — HwMap wrapper → dynamic(map-canvas) → react-map-gl/maplibre + maplibre-gl; map-credit-tag.tsx (config-driven partner info tag, consumed by hw-map incl. fallback cards); `app/api/v1/maps/geocode` proxies upstreams (server-side only)

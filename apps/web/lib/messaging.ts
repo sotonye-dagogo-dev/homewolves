@@ -1,6 +1,6 @@
 import type { Socket } from 'socket.io-client';
 import { useAuth } from '@/hooks/use-auth';
-import { getApiBase } from '@/lib/api-base';
+import { sameOriginApiBase } from '@/lib/api-base';
 import {
   acquireRealtimeSocket,
   getRealtimeSocket,
@@ -36,17 +36,17 @@ function toArray<T>(value: unknown): T[] {
 // ─── REST API ────────────────────────────────────────────
 
 export async function fetchConversations() {
-  const res = await fetch(`${getApiBase()}/messaging/conversations`, { headers: authHeaders() });
+  const res = await fetch(`${sameOriginApiBase()}/messaging/conversations`, { headers: authHeaders() });
   return toArray(await handleResponse(res));
 }
 
 export async function fetchConversation(id: string) {
-  const res = await fetch(`${getApiBase()}/messaging/conversations/${id}`, { headers: authHeaders() });
+  const res = await fetch(`${sameOriginApiBase()}/messaging/conversations/${id}`, { headers: authHeaders() });
   return handleResponse(res);
 }
 
 export async function createConversation(participantIds: string[], propertyId?: string) {
-  const res = await fetch(`${getApiBase()}/messaging/conversations`, {
+  const res = await fetch(`${sameOriginApiBase()}/messaging/conversations`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ participantIds, propertyId }),
@@ -55,12 +55,12 @@ export async function createConversation(participantIds: string[], propertyId?: 
 }
 
 export async function fetchMessages(conversationId: string) {
-  const res = await fetch(`${getApiBase()}/messaging/conversations/${conversationId}/messages`, { headers: authHeaders() });
+  const res = await fetch(`${sameOriginApiBase()}/messaging/conversations/${conversationId}/messages`, { headers: authHeaders() });
   return toArray(await handleResponse(res));
 }
 
 export async function markConversationRead(conversationId: string) {
-  const res = await fetch(`${getApiBase()}/messaging/conversations/${conversationId}/read`, {
+  const res = await fetch(`${sameOriginApiBase()}/messaging/conversations/${conversationId}/read`, {
     method: 'POST',
     headers: authHeaders(),
   });
@@ -68,7 +68,7 @@ export async function markConversationRead(conversationId: string) {
 }
 
 export async function fetchUnreadCount() {
-  const res = await fetch(`${getApiBase()}/messaging/unread`, { headers: authHeaders() });
+  const res = await fetch(`${sameOriginApiBase()}/messaging/unread`, { headers: authHeaders() });
   return handleResponse(res);
 }
 
@@ -93,7 +93,7 @@ export async function fetchMessagingDirectory(
   if (params.role) qs.set('role', params.role);
   if (params.take) qs.set('take', String(params.take));
   const query = qs.toString();
-  const res = await fetch(`${getApiBase()}/messaging/directory${query ? `?${query}` : ''}`, {
+  const res = await fetch(`${sameOriginApiBase()}/messaging/directory${query ? `?${query}` : ''}`, {
     headers: authHeaders(),
   });
   return toArray<MessagingDirectoryEntry>(await handleResponse(res));
@@ -113,7 +113,7 @@ export async function sendMessageRest(
   type = 'text',
   mediaUrl?: string,
 ) {
-  const res = await fetch(`${getApiBase()}/messaging/conversations/${conversationId}/messages`, {
+  const res = await fetch(`${sameOriginApiBase()}/messaging/conversations/${conversationId}/messages`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ content, type, ...(mediaUrl ? { mediaUrl } : {}) }),

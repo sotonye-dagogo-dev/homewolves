@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { Instagram, Twitter, Linkedin, Youtube } from 'lucide-react';
+import { ExternalLink, Instagram, Twitter, Linkedin, Youtube } from 'lucide-react';
 import { BrandLogo } from '@/components/shared/brand-logo';
 import { useBrand } from '@/hooks/use-platform-config';
 import { FALLBACK_BRAND } from '@/config/fallbacks';
+import { designTokenVar } from '@/lib/design-tokens';
 
 const footerNav = [
   {
@@ -46,6 +47,10 @@ export function Footer() {
   const companyName = brand?.companyName || FALLBACK_BRAND.companyName;
   const devCreditLabel = brand?.developerCreditLabel ?? FALLBACK_BRAND.developerCreditLabel;
   const devCreditUrl = brand?.developerCreditUrl ?? FALLBACK_BRAND.developerCreditUrl;
+  const devCreditColor = designTokenVar(
+    brand?.developerCreditColorToken ?? FALLBACK_BRAND.developerCreditColorToken,
+    'accent',
+  );
   const showDevCredit = Boolean(devCreditLabel && devCreditUrl);
 
   return (
@@ -121,9 +126,11 @@ export function Footer() {
                 href={devCreditUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 transition-colors duration-fast hover:text-accent underline-offset-2 hover:underline"
+                style={{ color: devCreditColor }}
+                className="inline-flex items-center gap-1 font-semibold transition-opacity duration-fast hover:opacity-80 underline-offset-2 hover:underline"
               >
                 {devCreditLabel}
+                <ExternalLink className="w-3 h-3 shrink-0" aria-hidden="true" />
               </a>
             )}
           </div>

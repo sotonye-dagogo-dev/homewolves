@@ -27,75 +27,18 @@ import {
   decodeResetToken,
   sendResetEmail,
 } from '@/lib/server/auth-local';
+import {
+  backendOrigin,
+  getSql,
+  isMissingColumnError,
+  isMissingTableError,
+  isUniqueViolationError,
+  logDbError,
+  type Row,
+  type SqlClient,
+} from '@/lib/server/local-db';
 
 export const dynamic = 'force-dynamic';
-
-type Row = Record<string, unknown>;
-
-// ─── Backend proxy detection (mirrors catch-all route.ts) ───────────────────
-function normalizeHost(host: string): string {
-  return host.trim().toLowerCase().replace(/^www\./, '');
-}
-
-function isSameSite(a: string, b: string): boolean {
-  if (!a || !b) return false;
-  const na = normalizeHost(a);
-  const nb = normalizeHost(b);
-  return na === nb;
-}
-
-function siteHost(): string {
-  const siteRaw = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.homewolves.com';
-  try {
-    return new URL(siteRaw).host;
-  } catch {
-    return '';
-  }
-}
-
-function backendOrigin(req?: NextRequest): string | null {
-  const explicit = process.env.API_PROXY_URL?.trim() || process.env.API_URL?.trim();
-  if (explicit && explicit.length > 0) {
-    try {
-      const expHost = new URL(explicit).host;
-      // Single-service Vercel deploys share apex/www between web + API.
-      // Proxying to a same-site origin would loop back into this same
-      // route (opaque 500s) — handle locally instead. Only proxy when the
-      // explicit target is truly off-site.
-      if (siteHost() && isSameSite(expHost, siteHost())) return null;
-      if (req) {
-        try {
-          if (isSameSite(expHost, req.nextUrl.host)) return null;
-        } catch {
-          // ignore — fall through to proxy
-        }
-      }
-      return new URL(explicit).origin;
-    } catch {
-      return null;
-    }
-  }
-  const pub = process.env.NEXT_PUBLIC_API_URL?.trim() ?? '';
-  if (!pub || pub.startsWith('/')) return null;
-  try {
-    const u = new URL(pub);
-    const sh = siteHost();
-    // Treat apex ↔ www as the same site (Vercel 308s apex → www; fetching
-    // the apex from a www page fails CORS with no ACAO header). Same-site
-    // means: handle locally via Postgres, never proxy.
-    if (sh && isSameSite(u.host, sh)) return null;
-    if (req) {
-      try {
-        if (isSameSite(u.host, req.nextUrl.host)) return null;
-      } catch {
-        // ignore
-      }
-    }
-    return u.origin;
-  } catch {
-    return null;
-  }
-}
 
 async function proxyToBackend(req: NextRequest, action: string): Promise<NextResponse> {
   const origin = backendOrigin(req);
@@ -158,78 +101,6 @@ function notConfigured() {
   );
 }
 
-// ─── Local Postgres (lazy, serverless-friendly) ─────────────────────────────
-type SqlClient = {
-  (strings: TemplateStringsArray, ...values: unknown[]): Promise<Row[]>;
-  end: () => Promise<void>;
-};
-
-let sqlPromise: Promise<SqlClient> | null = null;
-
-function pgOptionsFor(url: string): Record<string, unknown> {
-  // Config-driven postgres.js options (serverless-safe defaults):
-  // - `prepare: false` by default. Supabase/pgbouncer poolers (port 6543,
-  //   transaction mode) do NOT support prepared statements — every query
-  //   fails otherwise, surfacing as opaque 500s on auth. Opt back in with
-  //   PG_PREPARE=true (direct connections only).
-  // - `ssl: 'require'` for non-local hosts (Supabase mandates TLS). Opt out
-  //   with PG_SSL=disable or ?sslmode=disable.
-  const prepare = process.env.PG_PREPARE?.trim().toLowerCase() === 'true';
-  let ssl: unknown;
-  try {
-    const u = new URL(url);
-    const host = u.hostname.toLowerCase();
-    const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
-    const sslParam = (u.searchParams.get('sslmode') ?? '').toLowerCase();
-    const sslEnv = (process.env.PG_SSL ?? '').trim().toLowerCase();
-    if (sslEnv === 'disable' || sslParam === 'disable') {
-      ssl = false;
-    } else if (!isLocal) {
-      ssl = 'require';
-    }
-  } catch {
-    // Unparseable URL — let postgres throw its own descriptive error.
-  }
-  const opts: Record<string, unknown> = { max: 5, idle_timeout: 20, connect_timeout: 10, prepare };
-  if (ssl !== undefined) opts.ssl = ssl;
-  return opts;
-}
-
-async function getSql(): Promise<SqlClient | null> {
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) return null;
-  if (!sqlPromise) {
-    sqlPromise = (async () => {
-      const postgres = (await import('postgres')).default;
-      return postgres(url, pgOptionsFor(url)) as unknown as SqlClient;
-    })();
-  }
-  try {
-    return await sqlPromise;
-  } catch {
-    sqlPromise = null;
-    return null;
-  }
-}
-
-/**
- * Sanitized DB-error detail for server logs. Includes driver message/code
- * (needed to diagnose prod 500s) but never the connection string or query
- * parameters.
- */
-function dbErrorDetail(err: unknown): { message: string; code?: string } {
-  if (err instanceof Error) {
-    const code = (err as Error & { code?: unknown }).code;
-    return { message: err.message.slice(0, 300), code: typeof code === 'string' ? code : undefined };
-  }
-  return { message: String(err).slice(0, 300) };
-}
-
-function logDbError(tag: string, err: unknown): void {
-  const detail = dbErrorDetail(err);
-  console.error(tag, detail.code ? `${detail.code}: ${detail.message}` : detail.message);
-}
-
 async function findUserByEmail(sql: SqlClient, email: string): Promise<Row | null> {
   const rows = await sql`SELECT * FROM "User" WHERE email = ${email} LIMIT 1`;
   return rows[0] ?? null;
@@ -275,28 +146,6 @@ async function ensureAuthColumns(sql: SqlClient): Promise<boolean> {
     logDbError('[auth] ensure passwordHash column failed', err);
     return false;
   }
-}
-
-function isMissingColumnError(err: unknown): boolean {
-  const detail = err instanceof Error ? err.message : String(err);
-  return /passwordHash/i.test(detail) || /column.*does not exist/i.test(detail) || /undefined_column/i.test(detail);
-}
-
-function isUniqueViolationError(err: unknown): boolean {
-  const detail = err instanceof Error ? err.message : String(err);
-  const code = err instanceof Error ? (err as Error & { code?: unknown }).code : undefined;
-  return code === '23505' || /duplicate key|unique constraint|already exists/i.test(detail);
-}
-
-function isMissingTableError(err: unknown): boolean {
-  const detail = err instanceof Error ? err.message : String(err);
-  const code = err instanceof Error ? (err as Error & { code?: unknown }).code : undefined;
-  return (
-    code === '42P01' ||
-    /relation .* does not exist/i.test(detail) ||
-    /table .* does not exist/i.test(detail) ||
-    /undefined_table/i.test(detail)
-  );
 }
 
 async function handleRegisterPassword(req: NextRequest): Promise<NextResponse> {
