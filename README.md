@@ -93,6 +93,12 @@ Backups land in `packages/api/drizzle/backups/` (gitignored; override with `SEED
 - Seed demo accounts (`admin@homewolves.com`, `agent1@homewolves.com`, …) sign in with password `Homewolves123!` (hash shipped in `packages/api/drizzle/seed.data.ts` — demo only, rotate for real environments).
 - Auth failures return coded JSON (`DB_NOT_MIGRATED`, `DB_LOOKUP_FAILED`, `TOKEN_CONFIG`, …) — grep these in server logs when diagnosing.
 
+## Messaging Notes
+
+- Browser messaging calls are **always same-origin** (`/api/v1/messaging/*`) and use the Next.js messaging route. It proxies to the NestJS API when one is configured, and otherwise serves the same contract locally against Postgres (`DATABASE_URL`) — directory, conversations, messages, read receipts, and unread counts.
+- The local path shares `apps/web/lib/server/local-db.ts` with the auth route, so `DATABASE_URL` and pooler/SSL settings apply to both. Conversations are find-or-create by exact participant set + property, matching the NestJS service.
+- Unmatched `/api/v1/*` paths still fall through to the catch-all (`API not configured`); a new browser-facing domain needs its own Next-local route to work on single-service deployments.
+
 ## Environment Variables
 
 See [`.env.example`](.env.example) for the full reference. Key variables:

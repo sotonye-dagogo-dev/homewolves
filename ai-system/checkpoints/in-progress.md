@@ -2,7 +2,7 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-29
+> - last-updated-by: execute-feature-session-30
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: this file is overwritten every session — always current
 
@@ -14,4 +14,4 @@
 
 **Status:** CLEAN — no work in progress.
 
-Session 29 (stakeholder directive: config-driven credit colours + icon parity — new `lib/design-tokens.ts` allow-list resolver, map info tag green via `map_config.credit.colorToken` default `success`, footer dev credit uses the same `ExternalLink` glyph plus `brand.developerCreditColorToken` accent emphasis) completed with the full QA gate green (npm install, turbo typecheck 4/4, targeted eslint clean, web tests 188 passed / 25 files, `next build` 48 routes) and the mandated `update-ai-system.md` deep sync applied. See `checkpoints/session-log.md` (Session 29) and `summaries/dev-history.md` for details.
+Session 30 (chat "API is not configured" / empty member directory) completed: the web app now serves `/api/v1/messaging/*` locally against Postgres when no external NestJS API is configured, using shared `lib/server/local-db.ts` (also adopted by auth) and `lib/server/messaging-local.ts`; browser messaging calls use `sameOriginApiBase()`; the floating theme toggle moved to a 208px mobile offset. QA green (turbo typecheck 4/4, web lint clean, 197 web tests / 26 files, `next build` 48 routes). Live-DB verification remains blocked locally (no `DATABASE_URL`). See `checkpoints/session-log.md` (Session 30) and `summaries/dev-history.md`.

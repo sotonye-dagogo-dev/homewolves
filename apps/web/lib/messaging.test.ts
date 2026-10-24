@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const getApiBase = vi.fn(() => 'http://api.test/v1');
+const sameOriginApiBase = vi.fn(() => 'http://api.test/v1');
 
 vi.mock('@/lib/api-base', () => ({
-  getApiBase: () => getApiBase(),
-  backendOrigin: () => null,
+  sameOriginApiBase: () => sameOriginApiBase(),
 }));
 
 vi.mock('@/hooks/use-auth', () => ({
@@ -29,7 +28,7 @@ function jsonRes(body: unknown, ok = true, status = 200) {
 
 describe('messaging response normalization', () => {
   beforeEach(() => {
-    getApiBase.mockClear();
+    sameOriginApiBase.mockClear();
     vi.unstubAllGlobals();
   });
 
@@ -70,7 +69,7 @@ describe('messaging response normalization', () => {
 
 describe('fetchMessagingDirectory', () => {
   beforeEach(() => {
-    getApiBase.mockClear();
+    sameOriginApiBase.mockClear();
     vi.unstubAllGlobals();
   });
 

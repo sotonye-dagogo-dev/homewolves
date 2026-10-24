@@ -2,8 +2,8 @@
 
 > **Metadata**
 >
-> - last-updated-by: execute-feature-session-26
-> - last-verified-against-code: 2026-10-21
+> - last-updated-by: execute-feature-session-30
+> - last-verified-against-code: 2026-10-24
 > - staleness-policy: append-only — never modify past entries
 
 > **Overview:** Append-only running log of development sessions. Each entry records what was completed, what comes next, and which files were modified. Agents write here at the end of every session so work can be resumed without re-reading the entire codebase. This file is the **append-only historical record** — use `checkpoints/in-progress.md` for current in-progress work.
@@ -980,3 +980,37 @@ Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referr
 
 **Notes / Blockers:**
 - No API/service changes; config fields are optional so existing DB rows render correctly without migration.
+
+---
+
+## Session 30 — 2026-10-24 (execute-feature: single-service messaging end-to-end)
+
+**Completed:**
+- Root cause: deployment is a single Next.js service (no external NestJS API), so `POST /api/v1/messaging/conversations` fell through to `app/api/v1/[...path]/route.ts` and returned `{ message: 'API not configured' }` (502), while `GET /api/v1/messaging/directory` returned a non-array envelope that the UI coerced to `[]` ("No other members available yet").
+- New shared server module `apps/web/lib/server/local-db.ts`: lazy `postgres` client, pooler-safe `prepare:false` (opt-in `PG_PREPARE`), SSL handling, error predicates/logging, host + backend-origin resolution. Auth route refactored to use it (duplicate local helpers removed).
+- New domain module `apps/web/lib/server/messaging-local.ts`: `listDirectory` (minimal fields, caller excluded, search/role/take), `listConversations` (last message + participants), `getConversation`, `createConversation` (idempotent exact participant set + property; validates users; supplies UUID/timestamps), `listMessages`, `sendMessage` (bumps `lastMessageAt`/`updatedAt`), `markRead`, `countUnread`.
+- New route `apps/web/app/api/v1/messaging/[...path]/route.ts`: proxy when `backendOrigin` is set, otherwise local; falls back local on network error/upstream 5xx, passes 4xx through; JWT verification (refresh rejected); zod-level manual validation; 401 `"Your session has expired. Please sign in again."`, 503 `DB_NOT_CONFIGURED`/`DB_NOT_MIGRATED`, sanitized 500.
+- `sameOriginApiBase()` in `lib/api-base.ts`; `lib/messaging.ts` now uses it for all calls; test mock updated.
+- Theme toggle mobile offset 152px → 208px to clear the mobile action bar (~80px) and the listing-detail sticky bar (top ~156px); desktop `lg:bottom-6` unchanged.
+- Tests: new `lib/server/messaging-local.test.ts` (9 tests: participant checks, directory privacy/exclusion, create validation/404/403, mark-read, unread coercion, sender hydration, send authorization).
+- QA gate: `npm run typecheck` 4/4; `npm run lint --workspace=@hw/web` 0 warnings/errors; `npm run test --workspace=@hw/web` 197 tests / 26 files green; `npm run build --workspace=@hw/web` green, 48 routes incl. `ƒ /api/v1/messaging/[...path]`.
+- Docs: repo-map, dependency-graph, system-architecture (constraints + chat note), task-queue, project-decisions, lessons-learned, dev-history, test-results, in-progress, README.
+
+**Files Modified:**
+- `apps/web/app/api/v1/auth/[action]/route.ts`, `apps/web/app/api/v1/messaging/[...path]/route.ts`
+- `apps/web/lib/server/{local-db.ts, messaging-local.ts, messaging-local.test.ts}`
+- `apps/web/lib/{api-base.ts, messaging.ts, messaging.test.ts}`
+- `apps/web/components/shared/theme-toggle.tsx`
+- `README.md` + ai-system docs
+
+**Next Task:**
+Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when long-lived WS host exists.
+
+**Assumptions Made:**
+- A single Postgres `DATABASE_URL` backs both local auth and messaging; the raw-SQL queries follow the quoted PascalCase Drizzle schema (`"User"`, `"Conversation"`, `"Message"`).
+- Local mode should win whenever no backend is configured, because that is the actual deployment; proxy mode remains for environments that do run NestJS.
+- An exact participant set + `propertyId` is still the definition of "same conversation" (matches the API's find-or-create).
+
+**Notes / Blockers:**
+- No `DATABASE_URL` in this workspace, so the new SQL was verified by typecheck/build/unit tests and schema review, not a live query. Live checks to run: sign in as two seed users, start a chat from a listing, send/reply, verify unread badge; confirm directory excludes the caller.
+- Build retains pre-existing warnings (SWC lockfile patch, missing env vars in `turbo.json`, npm audit).

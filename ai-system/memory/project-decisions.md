@@ -1,7 +1,7 @@
 # Project Decisions
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-29
+> - last-updated-by: execute-feature-session-30
 > - last-verified-against-code: 2026-10-24
 > - staleness-policy: each entry has its own staleness — check supersedes links
 
@@ -1025,3 +1025,26 @@ A raw hex from admin config cannot react to theme changes, and arbitrary CSS val
 - Both fallback copies (`apps/web/config/fallbacks.ts`, `packages/config/src/fallbacks.ts`) seed `colorToken: 'success'` / `developerCreditColorToken: 'accent'`; existing DB rows without these fields fall back safely at render time.
 - New config-driven colours must add their token key to `TOKEN_VARS`, not accept free-form values.
 - The shared `ExternalLink` glyph keeps the two credit surfaces visually consistent.
+
+---
+
+## Messaging is available on single-service deployments via a Next-local route mirroring the NestJS contract
+
+**Decision:** The web app serves `/api/v1/messaging/*` from `apps/web/app/api/v1/messaging/[...path]/route.ts`. When an external NestJS API is configured (`backendOrigin`), it proxies there; when none is configured (the usual Vercel deployment) or the backend is unreachable/5xx, it handles the request locally against `DATABASE_URL` through `lib/server/messaging-local.ts` and the shared `lib/server/local-db.ts`. Supported endpoints: directory, unread count, conversations list/create/get, messages list/send, and mark-read. Browser messaging calls use `sameOriginApiBase()` so they always hit this route.
+**Date:** 2026-10-24
+**Made by:** execute-feature (Session 30), fixing the "API is not configured" chat failure
+**Supersedes:** None (extends the Session 23 local-auth pattern to a second domain)
+**Superseded by:** None
+
+**Reason:**
+The deployed app is a single Next.js service; without a Next-local messaging handler, POSTs fell through to the `[...path]` catch-all and returned 502 (`API not configured`), while GETs returned a non-array envelope that the UI rendered as "no members". Auth already proved the local-Postgres pattern works.
+
+**Alternatives Considered:**
+- Requiring a separately hosted NestJS API (rejected: deployment has none; would break chat again and add infra cost).
+- Returning an empty array from the catch-all (rejected: hides the outage and blocks diagnosis).
+- Duplicating SQL in the route handler (rejected: route stays thin; domain logic is testable in `messaging-local.ts`).
+
+**Implications:**
+- New browser-facing domains need the same Next-local route/domain-module treatment on single-service deployments, or the catch-all will return 502/generic fallbacks.
+- `lib/server/local-db.ts` is the single source for Postgres pooling/error predicates/backend-origin resolution; auth and messaging both import it.
+- Local handlers must mirror Nest validation, privacy rules, and response shapes so switching between proxied and local modes is non-breaking.
