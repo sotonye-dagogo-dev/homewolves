@@ -4,5 +4,6 @@
   "buildCommand": "npm run vercel-build",
   "installCommand": "npm install",
   "devCommand": "next dev",
+  "outputDirectory": "apps/web/.next",
   "regions": ["iad1"]
 }
