@@ -11,8 +11,11 @@ URLs.
 
 ## Configuration
 
-- `vercel.json` — root deploy config. `functions.regions` pins Serverless function
+- `vercel.json` — root deploy config. Project-level `regions` pins Serverless function
   execution to `iad1` (primary) + `fra1` (edge) so latency stays low for African users.
+  (This replaces the former `functions.regions` glob, which newer Vercel CLI versions
+  reject with `[unused_function]` because a Next.js app has no standalone `api/`
+  functions matching a catch-all `**/*.{ts,tsx,js}` pattern.)
 - `infra/regions.json` — declarative registry of supported regions (NG live, GH/KE
   planned). Each entry declares the Vercel project suffix, function regions, database
   topology, and region env overrides.

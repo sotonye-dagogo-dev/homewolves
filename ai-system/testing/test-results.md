@@ -1,8 +1,8 @@
 # Test Results
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-30
-> - last-verified-against-code: 2026-10-24
+> - last-updated-by: fix-build-session-31
+> - last-verified-against-code: 2026-11-09
 > - staleness-policy: overwritten on every test run — always current
 
 > **Overview:** Latest test run results. Updated by agents after running tests. Gives a quick snapshot of current project health.
@@ -11,18 +11,18 @@
 
 ## Last Run
 
-**Date:** 2026-10-24
-**Run by:** execute-feature (Session 30 — QA gate)
+**Date:** 2026-11-09
+**Run by:** fix-build (Session 31 — Vercel config repair)
 
 **Results:**
 | Suite | Passed | Failed | Skipped |
 |-------|--------|--------|---------|
 | API unit (vitest, @hw/api) | not run (last known 180) | — | — |
-| Web unit/component (vitest, @hw/web) | 197 | 0 | 0 |
+| Web unit/component (vitest, @hw/web) | not run (config-only change) | — | — |
 | E2E (Playwright, @hw/web) | not run | — | — |
-| Web production build (`next build`) | 48 routes | 0 | — |
+| Web production build (`next build`) | 49 routes | 0 | — |
 
-**Overall Status:** Green — web 197/197 (26 files, +9 `lib/server/messaging-local` tests), `npm run typecheck` 4/4 (0 TS errors), `npm run lint --workspace=@hw/web` clean, `npm run build --workspace=@hw/web` 48 routes incl. `ƒ /api/v1/messaging/[...path]`. API unit suite untouched in Session 30 (last known 180/180, 19 files).
+**Overall Status:** Green — `vercel.json` switched from the invalid `functions` glob to project-level `regions`; verified `npm run build --workspace=@hw/web` (49 routes) and root `SKIP_DB_MIGRATE=1 npm run vercel-build` (turbo build + `Verified Next.js output at apps/web/.next`). No application code touched, so unit/E2E suites not re-run.
 
 **API unit test files (19, last run Session 27):** including auth, listing, rate-limit, sms, storage, docuseal, health, app.e2e.spec, `messaging.service.spec.ts` + `drizzle/seed.backup.spec.ts`.
 **Web unit test files (26):** including property-filters, auth-local, messaging (+ `lib/server/messaging-local.test.ts` ×9), use-auth, top-nav, mobile-bar, hero-section, hw-button, post-form, footer, design-tokens, `lib/map/config.test.ts`, `components/map/hw-map.test.tsx`.

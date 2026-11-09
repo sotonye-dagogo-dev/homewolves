@@ -4,9 +4,5 @@
   "buildCommand": "npm run vercel-build",
   "installCommand": "npm install",
   "devCommand": "next dev",
-  "functions": {
-    "**/*.{ts,tsx,js}": {
-      "regions": ["iad1", "fra1"]
-    }
-  }
+  "regions": ["iad1", "fra1"]
 }
