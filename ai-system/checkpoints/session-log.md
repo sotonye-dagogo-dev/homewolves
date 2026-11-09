@@ -1014,3 +1014,42 @@ Backlog unchanged: WhatsApp integration, PWA/offline, push notifications, referr
 **Notes / Blockers:**
 - No `DATABASE_URL` in this workspace, so the new SQL was verified by typecheck/build/unit tests and schema review, not a live query. Live checks to run: sign in as two seed users, start a chat from a listing, send/reply, verify unread badge; confirm directory excludes the caller.
 - Build retains pre-existing warnings (SWC lockfile patch, missing env vars in `turbo.json`, npm audit).
+
+---
+
+## Session 31 — 2026-11-09 (fix-build: Vercel `unused_function` config error)
+
+**Completed:**
+- Diagnosed the deploy blocker: `vercel.json` contained a `functions` entry keyed by `**/*.{ts,tsx,js}` with `regions: ["iad1","fra1"]`. Vercel CLI 65.11.0 hard-fails with `[unused_function]` because a Next.js app has no standalone serverless function files matching that catch-all source glob.
+- Fix: removed the invalid `functions` block and added project-level `"regions": ["iad1", "fra1"]` — the documented equivalent that keeps the multi-region intent without an unmatched pattern.
+- Updated `infra/README.md` so its region-config description matches `vercel.json` and records why `functions.regions` was dropped.
+- Verified: `vercel.json` parses; `npm run build --workspace=@hw/web` green (49 routes); root `SKIP_DB_MIGRATE=1 npm run vercel-build` green (turbo build + `Verified Next.js output at apps/web/.next`).
+- Logged the pattern in `repair-system.md` and updated `testing/test-results.md`.
+
+**Files Modified:**
+- `vercel.json` — replaced invalid `functions` glob with project-level `regions`
+- `infra/README.md` — corrected region config documentation
+- `ai-system/repair-system.md` — new `[unused_function]` pattern entry
+- `ai-system/testing/test-results.md` — Session 31 verification row
+- `ai-system/checkpoints/in-progress.md` — written then cleared
+- `ai-system/checkpoints/session-log.md` — this entry
+
+**Next Task:**
+Backlog unchanged (WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when a long-lived WS host exists). Re-run the Vercel deployment to confirm the config validation passes; if the project is on the Hobby plan, Vercel only allows one function region — reduce `regions` to `["iad1"]` in that case.
+
+**Assumptions Made:**
+- The Vercel project supports multiple function regions (Pro/Enterprise); the previous config already requested `iad1` + `fra1`, so intent was unchanged.
+- No application code change was required — the failure was purely project-config validation.
+
+**Notes / Blockers:**
+- Could not invoke `vercel build` locally (no Vercel auth/project link), so validation was limited to JSON parsing plus local `next build` / `vercel-build` parity.
+- Build still emits pre-existing warnings (SWC lockfile patch, env vars missing from `turbo.json`, npm audit).
+
+---
+
+## Sync Check (Session 31)
+
+- `repair-system.md` entry added and current.
+- `infra/README.md` now matches `vercel.json` (was stale on `functions.regions`).
+- No changes to `index/repo-map.md` or `index/dependency-graph.md` — no app modules/imports touched.
+- No `task-queue.md` mutation, so no additional checkpoint chain required.

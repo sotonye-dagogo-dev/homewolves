@@ -398,3 +398,27 @@ Every root-level build/deploy script referenced by `vercel.json` must also exist
 **Files Affected:** `apps/web/lib/realtime.ts`, `apps/web/lib/messaging.ts`, `apps/web/hooks/use-messaging.ts`, `apps/web/hooks/use-notifications.ts`, `packages/api/src/modules/messaging/messaging.controller.ts`, `.env.example`, `turbo.json`
 **Date:** 2026-10-20
 **Status:** Active
+
+---
+
+### Vercel `[unused_function]` — `functions` glob doesn't match any Serverless Functions (Session 31, 2026-11-09)
+
+**Symptom:**
+`vercel build` aborts before dependency install:
+`Error: [unused_function] The pattern "**/*.{ts,tsx,js}" defined in \`functions\` doesn't match any Serverless Functions.`
+(Vercel CLI 65.11.0; earlier builds on CLI 59/62 tolerated the block.)
+
+**Root Cause:**
+`vercel.json` declared a project-wide `functions` entry keyed by `**/*.{ts,tsx,js}` with `regions: ["iad1","fra1"]`. In a Next.js app there are no standalone Vercel function files matching that catch-all source glob — App Router handlers live inside the Next build output, not as `api/*.ts` functions. Newer CLI versions hard-fail deployment when a `functions` pattern matches nothing.
+
+**Fix Applied:**
+- Replaced the invalid `functions` block with the documented project-level `"regions": ["iad1", "fra1"]` property, preserving the multi-region intent with no pattern to match.
+- Updated `infra/README.md` so its description of the region config matches `vercel.json` and records why `functions.regions` was removed.
+
+**Prevention:**
+Use project-level `regions` for Next.js deployments; only use `functions` with globs that match real function entrypoints (`api/*.js`, `app/api/**/*.ts`). Validate any `vercel.json` change against the current CLI, since unused-pattern rules tighten between versions.
+
+**Files Affected:**
+`vercel.json`, `infra/README.md`
+**Date:** 2026-11-09
+**Status:** Active
