@@ -1,8 +1,8 @@
 # Repair System — Error Knowledge Base
 
 > **Metadata**
-> - last-updated-by: execute-feature-session-25
-> - last-verified-against-code: 2026-10-20
+> - last-updated-by: fix-build-session-32
+> - last-verified-against-code: 2026-11-09
 > - staleness-policy: individual entries may be stale if the code has changed around them — verify fix still applies before reusing
 
 > **Overview:** Living knowledge base of errors encountered during development, their root causes, and how they were fixed. Agents must search this before diagnosing new errors and log every fixed bug to prevent recurrence.
@@ -420,5 +420,30 @@ Use project-level `regions` for Next.js deployments; only use `functions` with g
 
 **Files Affected:**
 `vercel.json`, `infra/README.md`
+**Date:** 2026-11-09
+**Status:** Active
+
+---
+
+### Vercel `[NEXT_OUTPUT_DIR_MISSING]` — monorepo build output not at repo-root `.next` (Session 32, 2026-11-09)
+
+**Symptom:**
+`vercel build` completes the web build, then aborts:
+`Error: [NEXT_OUTPUT_DIR_MISSING] The Next.js output directory ".next" was not found at "/vercel/path0/.next".`
+The preceding `[vercel-build]` lines show the turbo/Next build itself succeeded and `apps/web/.next` was produced.
+
+**Root Cause:**
+Vercel's Next.js framework preset resolves the output directory from the dashboard Root Directory (repo root/empty) plus an optional `outputDirectory`. `vercel.json` had no `outputDirectory`, so the preset defaulted to repo-root `.next`. This is an npm-workspaces monorepo whose Next app lives in `apps/web`, so the real output is `apps/web/.next` — Vercel therefore looked in the wrong place and failed after a successful build. The earlier assumption that "Turbo auto-detection already resolves `apps/web/.next`" only affects Turbo caching, not Vercel's framework output resolution.
+
+**Fix Applied:**
+- Added `"outputDirectory": "apps/web/.next"` to `vercel.json` (Root Directory remains the repo root). Relative to that root this resolves to `/vercel/path0/apps/web/.next`.
+- Aligned the post-build check messages in `scripts/vercel-build.mjs` with the explicit output directory so a future Root-Directory change (which would double the path) is obvious in the build log.
+- Updated `infra/README.md` to document the output-directory setting.
+
+**Prevention:**
+For a Next.js app inside a workspace monorepo deployed with the repo root as Root Directory, always set `outputDirectory` to the app's build dir (`apps/web/.next`). Keep the dashboard Output Directory empty (or identical) so `vercel.json` applies; setting Root to `apps/web` instead requires removing `outputDirectory` to avoid `apps/web/apps/web/.next`. Validate by building locally and confirming the BUILD_ID path matches the configured output directory.
+
+**Files Affected:**
+`vercel.json`, `scripts/vercel-build.mjs`, `infra/README.md`
 **Date:** 2026-11-09
 **Status:** Active

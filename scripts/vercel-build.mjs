@@ -154,25 +154,32 @@ if (build.status !== 0) {
   log(`Web build failed with code ${build.status}.`);
   process.exit(build.status);
 }
-// Post-build output check: Vercel expects apps/web/.next when the dashboard
-// Root Directory is the repo root (empty). If a future dashboard change sets
-// Root to apps/web, Vercel would look for apps/web/apps/web/.next (doubled)
-// and fail with "output directory not found" — this explicit check makes that
-// misconfiguration obvious in the build log instead of a silent stall.
+// Post-build output check: vercel.json sets `"outputDirectory": "apps/web/.next"`
+// because the dashboard Root Directory is the repo root (empty) — without it,
+// Vercel's Next.js framework preset looks for a repo-root `.next` and aborts
+// with `[NEXT_OUTPUT_DIR_MISSING]` even though the build succeeded. If a future
+// dashboard change sets Root to apps/web, Vercel would resolve the relative
+// output dir as apps/web/apps/web/.next (doubled) — this explicit check makes
+// both misconfigurations obvious in the build log instead of a silent stall.
 // REPO_ROOT is used (not process.cwd()) so the check is correct from either cwd.
 const __nextDir = join(REPO_ROOT, 'apps', 'web', '.next');
 if (existsSync(join(__nextDir, 'BUILD_ID')) || existsSync(join(__nextDir, 'build-manifest.json'))) {
-  log(`Verified Next.js output at apps/web/.next (Root Directory = repo root is correct).`);
-} else if (existsSync(join(REPO_ROOT, '.next', 'BUILD_ID')) || existsSync(join(process.cwd(), '.next', 'BUILD_ID'))) {
+  log(`Verified Next.js output at apps/web/.next (matches vercel.json outputDirectory).`);
+} else if (
+  existsSync(join(REPO_ROOT, '.next', 'BUILD_ID')) ||
+  existsSync(join(process.cwd(), '.next', 'BUILD_ID'))
+) {
   log(
     'WARNING: Next.js output found at .next instead of apps/web/.next — ' +
       'the build ran from apps/web as cwd (dashboard Root Directory may be apps/web). ' +
-      'Set Vercel dashboard Root Directory to the repo root (empty) for monorepo builds.',
+      'Set Vercel dashboard Root Directory to the repo root (empty) with ' +
+      'outputDirectory "apps/web/.next", or remove outputDirectory for an apps/web Root.',
   );
 } else {
   log(
     'WARNING: Next.js output not found at apps/web/.next — Vercel may report ' +
-      '"output directory not found". Check that the dashboard Root Directory is the repo root (empty).',
+      '"output directory not found". Check that the dashboard Root Directory is the repo root ' +
+      '(empty) and its Output Directory setting matches "apps/web/.next" (or is empty so vercel.json applies).',
   );
 }
 log('Web build completed.');

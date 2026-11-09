@@ -869,6 +869,8 @@ The Vercel CLI 62.7.0 build log truncated right after `Running "npm run vercel-b
 
 **Session 22 amendment (2026-10-15, fix-build):** the "Root is repo root" premise above is SUPERSEDED — the `Missing script: "vercel-build"` failure at `location /vercel/path0/apps/web` proves the dashboard Root is actually `apps/web`. The build now supports EITHER Root with no dashboard change: repo-root Root runs `scripts/vercel-build.mjs` (migrate + turbo, repo-root-aware via `findRepoRoot()`); `apps/web` Root runs `apps/web`'s own `vercel-build` (`next build` directly). Implication updated: prefer repo-root Root when build-time migration is wanted; `apps/web` Root remains supported (no build-time migrate — runtime auth self-heals columns).
 
+**Session 32 amendment (2026-11-09, fix-build):** the "explicit `outputDirectory` rejected" alternative above is REVERSED. The latest deploy log shows Root is back at the repo root (`/vercel/path0`, build command runs the root script) and Vercel aborted with `[NEXT_OUTPUT_DIR_MISSING]` looking for `/vercel/path0/.next`. Turbo output caching does not influence Vercel's framework output resolution. Decision: `vercel.json` now sets `"outputDirectory": "apps/web/.next"`, and the dashboard Output Directory must stay empty (so `vercel.json` applies) with Root = repo root. If Root is ever changed to `apps/web`, remove `outputDirectory` to avoid the doubled `apps/web/apps/web/.next` path. Documented in `repair-system.md` and `infra/README.md`.
+
 ---
 
 ## Apex and www are the same site (no self-proxy)

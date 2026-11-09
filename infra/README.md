@@ -16,6 +16,12 @@ URLs.
   (This replaces the former `functions.regions` glob, which newer Vercel CLI versions
   reject with `[unused_function]` because a Next.js app has no standalone `api/`
   functions matching a catch-all `**/*.{ts,tsx,js}` pattern.)
+  `outputDirectory` is set to `apps/web/.next` because the dashboard Root Directory is
+  the repo root; without it the Next.js preset looks for a non-existent repo-root
+  `.next` and aborts with `[NEXT_OUTPUT_DIR_MISSING]`. Keep the dashboard Output
+  Directory empty so this value applies. If the Root Directory is ever changed to
+  `apps/web`, remove `outputDirectory` (otherwise the path doubles to
+  `apps/web/apps/web/.next`).
 - `infra/regions.json` — declarative registry of supported regions (NG live, GH/KE
   planned). Each entry declares the Vercel project suffix, function regions, database
   topology, and region env overrides.
