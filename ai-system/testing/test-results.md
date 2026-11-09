@@ -1,7 +1,7 @@
 # Test Results
 
 > **Metadata**
-> - last-updated-by: fix-build-session-31
+> - last-updated-by: fix-build-session-32
 > - last-verified-against-code: 2026-11-09
 > - staleness-policy: overwritten on every test run — always current
 
@@ -12,7 +12,7 @@
 ## Last Run
 
 **Date:** 2026-11-09
-**Run by:** fix-build (Session 31 — Vercel config repair)
+**Run by:** fix-build (Session 32 — Vercel output-directory repair)
 
 **Results:**
 | Suite | Passed | Failed | Skipped |
@@ -20,9 +20,9 @@
 | API unit (vitest, @hw/api) | not run (last known 180) | — | — |
 | Web unit/component (vitest, @hw/web) | not run (config-only change) | — | — |
 | E2E (Playwright, @hw/web) | not run | — | — |
-| Web production build (`next build`) | 49 routes | 0 | — |
+| Web production build (`next build` via `vercel-build`) | 51 routes | 0 | — |
 
-**Overall Status:** Green — `vercel.json` switched from the invalid `functions` glob to project-level `regions`; verified `npm run build --workspace=@hw/web` (49 routes) and root `SKIP_DB_MIGRATE=1 npm run vercel-build` (turbo build + `Verified Next.js output at apps/web/.next`). No application code touched, so unit/E2E suites not re-run.
+**Overall Status:** Green — added explicit `"outputDirectory": "apps/web/.next"` to `vercel.json` so Vercel's Next.js preset resolves the monorepo build output instead of aborting with `[NEXT_OUTPUT_DIR_MISSING]` at repo-root `.next`. Verified with a clean `npm install` + `SKIP_DB_MIGRATE=1 npm run vercel-build` (turbo build, 51 routes, `apps/web/.next/BUILD_ID` present, `Verified Next.js output at apps/web/.next`). No application code touched, so unit/E2E suites not re-run.
 
 **API unit test files (19, last run Session 27):** including auth, listing, rate-limit, sms, storage, docuseal, health, app.e2e.spec, `messaging.service.spec.ts` + `drizzle/seed.backup.spec.ts`.
 **Web unit test files (26):** including property-filters, auth-local, messaging (+ `lib/server/messaging-local.test.ts` ×9), use-auth, top-nav, mobile-bar, hero-section, hw-button, post-form, footer, design-tokens, `lib/map/config.test.ts`, `components/map/hw-map.test.tsx`.
@@ -64,3 +64,4 @@
 | 2026-10-20 | 328 | 0 | execute-feature Session 25: API 173/173 (18 files), web 155/155 (21 files); typecheck 4/4, lint 4/4 (0 warnings), `next build` 38/38 pages; E2E not run |
 | 2026-10-21 | 345 | 0 | execute-feature Session 26: api 173/173 (18 files), web 172/172 (23 files — +17 map tests: `lib/map/config.test.ts` 11, `components/map/hw-map.test.tsx` 6); typecheck 4/4, lint 4/4 (0 warnings), `next build` 47 routes green; E2E not run |
 | 2026-10-24 | 197 | 0 | execute-feature Session 30: web 197/197 (26 files — +9 `lib/server/messaging-local` tests); turbo typecheck 4/4, web lint clean, `next build` 48 routes incl. `/api/v1/messaging/[...path]`; API suite not run; E2E not run |
+| 2026-11-09 | — | 0 | fix-build Session 32: no unit tests touched (deploy-config fix). `vercel.json` now sets `outputDirectory: "apps/web/.next"` (Root Directory = repo root); clean install + `SKIP_DB_MIGRATE=1 npm run vercel-build` green — turbo build 51 routes, `apps/web/.next/BUILD_ID` + `build-manifest.json` present, post-build check verified output; no repo-root `.next` created |

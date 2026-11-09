@@ -1053,3 +1053,46 @@ Backlog unchanged (WhatsApp integration, PWA/offline, push notifications, referr
 - `infra/README.md` now matches `vercel.json` (was stale on `functions.regions`).
 - No changes to `index/repo-map.md` or `index/dependency-graph.md` — no app modules/imports touched.
 - No `task-queue.md` mutation, so no additional checkpoint chain required.
+
+---
+
+## Session 32 — 2026-11-09 (fix-build: Vercel `NEXT_OUTPUT_DIR_MISSING` config error)
+
+**Completed:**
+- Diagnosed the deploy blocker: the build itself succeeded (`[vercel-build] Web build completed`, 51 routes), but Vercel aborted because its Next.js preset looked for `/vercel/path0/.next` while the monorepo output is `/vercel/path0/apps/web/.next`. The dashboard Root Directory is the repo root, and `vercel.json` had no `outputDirectory`, so the preset defaulted to repo-root `.next`.
+- Fix: added `"outputDirectory": "apps/web/.next"` to `vercel.json` (Root Directory stays repo root).
+- Aligned `scripts/vercel-build.mjs` post-build check log messages with the explicit output directory; the check still verifies `apps/web/.next` and warns about the doubled-path case.
+- Updated `infra/README.md` and `memory/project-decisions.md` (Session 32 amendment reverses the earlier "reject explicit outputDirectory" alternative).
+- Verified: `vercel.json` parses; clean `npm install`; `SKIP_DB_MIGRATE=1 npm run vercel-build` green (turbo build, 51 routes, `apps/web/.next/BUILD_ID` + `build-manifest.json` present, `Verified Next.js output at apps/web/.next`), and no repo-root `.next` was created.
+- Logged the pattern in `repair-system.md` and updated `testing/test-results.md`.
+
+**Files Modified:**
+- `vercel.json` — added `outputDirectory: "apps/web/.next"`
+- `scripts/vercel-build.mjs` — output-check messages reflect explicit output dir
+- `infra/README.md` — documents outputDirectory + Root Directory coupling
+- `ai-system/repair-system.md` — new `[NEXT_OUTPUT_DIR_MISSING]` pattern entry
+- `ai-system/memory/project-decisions.md` — Session 32 amendment
+- `ai-system/testing/test-results.md` — Session 32 verification row
+- `ai-system/checkpoints/in-progress.md` — written then cleared
+- `ai-system/checkpoints/session-log.md` — this entry
+
+**Next Task:**
+Redeploy on Vercel. If the dashboard Output Directory field is non-empty, clear it so `vercel.json`'s `apps/web/.next` applies (a dashboard value overrides the file). Backlog otherwise unchanged (WhatsApp integration, PWA/offline, push notifications, referral system; realtime enable when a long-lived WS host exists).
+
+**Assumptions Made:**
+- The dashboard Root Directory is the repo root (empty) — supported by the log showing `npm run vercel-build` running at `/vercel/path0` before the output check.
+- No application code change required; failure was project output-resolution config only.
+
+**Notes / Blockers:**
+- Could not invoke `vercel build` locally (no Vercel auth/project link); validation was local build parity plus config parsing.
+- Build still emits pre-existing warnings (SWC lockfile patch, env vars missing from `turbo.json`, npm audit).
+
+---
+
+## Sync Check (Session 32)
+
+- `repair-system.md` entry added and current.
+- `infra/README.md` and `memory/project-decisions.md` now match `vercel.json` (added `outputDirectory`; prior rejection reversed).
+- `scripts/vercel-build.mjs` comments/messages match the configured output directory.
+- No changes to `index/repo-map.md` or `index/dependency-graph.md` — no app modules/imports touched.
+- No `task-queue.md` mutation, so no additional checkpoint chain required.
